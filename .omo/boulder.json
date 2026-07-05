@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "active_work_id": "admin-settings-demo",
+  "works": {
+    "publish-static-demo": {
+      "work_id": "publish-static-demo",
+      "active_plan": ".omo/plans/publish-static-demo.md",
+      "plan_name": "publish-static-demo",
+      "session_ids": ["codex:desktop-current"],
+      "status": "completed",
+      "worktree_path": null
+    },
+    "admin-settings-demo": {
+      "work_id": "admin-settings-demo",
+      "active_plan": ".omo/plans/admin-settings-demo.md",
+      "plan_name": "admin-settings-demo",
+      "session_ids": ["codex:desktop-current"],
+      "status": "blocked",
+      "blocker": "Local admin demo is implemented and verified. Existing Netlify site update requires authentication; anonymous preview returned HTTP 401.",
+      "worktree_path": null
+    }
+  }
+}

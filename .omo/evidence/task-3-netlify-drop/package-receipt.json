@@ -1,0 +1,36 @@
+﻿{
+    "createdAt":  "2026-07-04T13:22:32.3179329+09:00",
+    "deployRoot":  "C:\\Users\\USER\\Documents\\timor crest app vr2\\.omo\\evidence\\task-3-netlify-drop\\deploy-root",
+    "zipPath":  "C:\\Users\\USER\\Documents\\timor crest app vr2\\.omo\\evidence\\task-3-netlify-drop\\timor-crest-static-demo.zip",
+    "zipLength":  10141,
+    "files":  [
+                  {
+                      "name":  "app.js",
+                      "length":  6588,
+                      "sha256":  "7BD72B36D3DE7DC89311E94296A6F8CFED059F29B46220FF248DE99A8C445C8D"
+                  },
+                  {
+                      "name":  "data.js",
+                      "length":  5024,
+                      "sha256":  "63CC9CC46F81C65AAEF7BF3E70F95F20A297FB496D4DCB3E9DB6BF428622A27C"
+                  },
+                  {
+                      "name":  "index.html",
+                      "length":  12414,
+                      "sha256":  "1DC36833491EC4BC30A60E44E3B1FC09853D59EAF37EA9FCE6CD107B79872B47"
+                  },
+                  {
+                      "name":  "styles.css",
+                      "length":  15439,
+                      "sha256":  "4364655966393A7E2DDFFF5CA8FAB9083864C96F5A303A0257A320991010606E"
+                  }
+              ],
+    "excludes":  [
+                     ".git",
+                     ".omo",
+                     "qa screenshots",
+                     "qa scripts",
+                     "README.md",
+                     "DESIGN.md"
+                 ]
+}

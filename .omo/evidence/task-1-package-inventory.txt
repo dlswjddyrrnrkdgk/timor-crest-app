@@ -1,0 +1,26 @@
+﻿TASK 1 PACKAGE INVENTORY
+Surface: PowerShell filesystem inventory
+Exact invocation: Get-ChildItem -File index.html,styles.css,data.js,app.js | Select-Object Name,Length,LastWriteTime
+Criterion: runtime package should contain exactly index.html, styles.css, data.js, app.js
+
+app.js`t6588`t2026-07-04T10:49:41.8980087+09:00
+data.js`t5024`t2026-07-04T10:48:54.9380415+09:00
+index.html`t12414`t2026-07-04T10:48:52.2025228+09:00
+styles.css`t15439`t2026-07-04T10:38:03.2282803+09:00
+
+ExpectedRuntimeFiles=index.html,styles.css,data.js,app.js
+ActualRuntimeFiles=app.js,data.js,index.html,styles.css
+MissingRuntimeFiles=NONE
+UnexpectedRuntimeFiles=NONE
+
+Support files intentionally excluded from runtime assets:
+qa-home-390x867.png`tExists=True`tRuntimeAsset=NO
+qa-journey-390x867.png`tExists=True`tRuntimeAsset=NO
+qa-my-390x867.png`tExists=True`tRuntimeAsset=NO
+qa-render.mjs`tExists=True`tRuntimeAsset=NO
+README.md`tExists=True`tRuntimeAsset=NO
+DESIGN.md`tExists=True`tRuntimeAsset=NO
+.git`tExists=True`tRuntimeAsset=NO
+.omo`tExists=True`tRuntimeAsset=NO
+
+Verdict=PASS

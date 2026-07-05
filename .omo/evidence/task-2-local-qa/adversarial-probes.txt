@@ -1,0 +1,24 @@
+dirty_worktree
+command: git -C "C:\Users\USER\Documents\timor crest app vr2" status --short
+?? .omo/
+?? DESIGN.md
+?? README.md
+?? app.js
+?? data.js
+?? index.html
+?? qa-home-390x867.png
+?? qa-journey-390x867.png
+?? qa-my-390x867.png
+?? qa-render.mjs
+?? styles.css
+
+stale_state
+source files checked: index.html, styles.css, data.js, app.js
+browser evidence generated: 2026-07-04T04:10:49Z through 2026-07-04T04:10:53Z after server start 2026-07-04T04:08:23Z
+runtime syntax checks: node --check app.js and node --check data.js exited 0 before browser smoke
+
+misleading_success_output
+first browser attempt failed because generic [data-view-target="payments"] resolved to hidden home-grid element; evidence runner was corrected to click visible bottom-nav data-view-target buttons.
+first misquoted server start wrote a root receipt outside the evidence directory; that receipt was moved to .omo/evidence/task-2-local-qa/first-start-wrong-root-receipt.json.
+final browser result inspected: indexHttpOk=true; activeViewsReached home/journey/payments/docs/my all true; no pageErrors; no failedRequests.
+visual screenshots inspected for all five target views; all target surfaces rendered. Console recorded one non-blocking 404 resource message, consistent with browser ancillary missing resource behavior, while required negative missing asset was separately proven with curl -i 404.

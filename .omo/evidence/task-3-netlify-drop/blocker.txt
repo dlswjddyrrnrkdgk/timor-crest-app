@@ -1,0 +1,18 @@
+﻿Todo 3 Netlify Drop blocker
+Surface: Browser UI via in-app browser control and local Node capability probes
+Exact invocation: browser.tabs.new(); tab.goto('https://app.netlify.com/drop'); inspect file inputs; attempt to find upload-capable browser API; local probe `node -e "require.resolve('playwright')"`
+Result: BLOCKED
+
+Observed:
+- Netlify Drop loaded at https://app.netlify.com/drop with title "Drop | Netlify".
+- Initial surface showed upload copy and file/folder inputs.
+- File upload inputs were present: file input accepts .zip,.html,.htm and folder input has webkitdirectory/directory.
+- No login wall or CAPTCHA was visible on the initial Netlify Drop surface.
+
+Blocker:
+- The available in-app browser Playwright locator surface does not expose setInputFiles; browser-upload-api-capabilities.json records hasSetInputFiles="undefined".
+- The worker session cannot show the in-app browser for native file chooser interaction; the visibility capability returned "IAB visibility is not supported in a subagent thread" and is recorded in browser-action-log.json.
+- Local standalone Playwright is not installed (`playwright=MISSING`, `@playwright/test=MISSING`), so no alternative real Playwright file-input runner was available without installing dependencies.
+- Because upload would transmit files to an external service, I did not bypass the browser upload control with guessed/private API calls.
+
+Preview URL: not produced; .omo/evidence/task-3-netlify-drop/preview-url.txt intentionally absent.

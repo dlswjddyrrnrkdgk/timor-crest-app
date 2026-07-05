@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "task": "Apply verified demo to live Netlify surface",
+  "existing_site_update": {
+    "ok": false,
+    "reason": "Netlify CLI reported authentication required. NETLIFY_AUTH_TOKEN is not set."
+  },
+  "anonymous_preview": {
+    "ok": false,
+    "url": "http://preeminent-cheesecake-bff2e9.netlify.app",
+    "reason": "Anonymous Netlify Drop preview returned HTTP 401 during browser smoke; it is not a public live demo."
+  },
+  "local_verification": {
+    "ok": true,
+    "evidence": [
+      ".omo/evidence/task-1-admin-settings-demo/admin-flow-smoke-result.json",
+      ".omo/evidence/task-2-admin-settings-demo/admin-flow-smoke-result.json",
+      ".omo/evidence/task-3-admin-settings-demo/admin-flow-smoke-result.json"
+    ]
+  },
+  "next_required_authority": "Provide Netlify authentication or claim/publish the anonymous drop outside Codex, then rerun live smoke."
+}

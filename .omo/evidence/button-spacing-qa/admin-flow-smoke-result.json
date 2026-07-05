@@ -1,0 +1,290 @@
+{
+  "ok": true,
+  "targetUrl": "http://127.0.0.1:4191/index.html",
+  "assertions": [
+    {
+      "name": "index.html returns ok",
+      "pass": true,
+      "status": 200
+    },
+    {
+      "name": "unauthenticated shows login",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hides bottom nav",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hides contractor home",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #admin stays on login",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #admin hides nav",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #payments stays on login",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #payments hides nav",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #journey stays on login",
+      "pass": true
+    },
+    {
+      "name": "unauthenticated hash #journey hides nav",
+      "pass": true
+    },
+    {
+      "name": "wrong contractor password message exact",
+      "pass": true
+    },
+    {
+      "name": "wrong A-102 password rejected",
+      "pass": true
+    },
+    {
+      "name": "contractor A-101 home visible",
+      "pass": true
+    },
+    {
+      "name": "contractor sees A-101 unit",
+      "pass": true
+    },
+    {
+      "name": "contractor does not see other seeded names",
+      "pass": true
+    },
+    {
+      "name": "contractor bottom nav visible",
+      "pass": true
+    },
+    {
+      "name": "contractor hash #admin does not expose admin",
+      "pass": true
+    },
+    {
+      "name": "contractor hash #payments does not expose admin",
+      "pass": true
+    },
+    {
+      "name": "contractor hash #journey does not expose admin",
+      "pass": true
+    },
+    {
+      "name": "contractor payments visible",
+      "pass": true
+    },
+    {
+      "name": "contractor journey visible",
+      "pass": true
+    },
+    {
+      "name": "contractor docs max three cards",
+      "pass": true
+    },
+    {
+      "name": "logout returns login",
+      "pass": true
+    },
+    {
+      "name": "wrong Admin password message exact",
+      "pass": true
+    },
+    {
+      "name": "admin dashboard visible",
+      "pass": true
+    },
+    {
+      "name": "admin contractor nav hidden",
+      "pass": true
+    },
+    {
+      "name": "dashboard metrics present",
+      "pass": true
+    },
+    {
+      "name": "XSS probe did not execute in admin",
+      "pass": true
+    },
+    {
+      "name": "old A-101 password rejected after admin edit",
+      "pass": true
+    },
+    {
+      "name": "A-101 sees edited contractor name",
+      "pass": true
+    },
+    {
+      "name": "edited contractor still scoped",
+      "pass": true
+    },
+    {
+      "name": "contractor sees edited payment fields",
+      "pass": true
+    },
+    {
+      "name": "contractor sees edited journey fields",
+      "pass": true
+    },
+    {
+      "name": "XSS probe renders as text",
+      "pass": true
+    },
+    {
+      "name": "XSS probe did not execute in contractor",
+      "pass": true
+    },
+    {
+      "name": "malformed localStorage falls back without crash",
+      "pass": true
+    },
+    {
+      "name": "seed restored after malformed storage",
+      "pass": true
+    },
+    {
+      "name": "wrong schema falls back without crash",
+      "pass": true
+    },
+    {
+      "name": "no page errors",
+      "pass": true,
+      "pageErrors": []
+    },
+    {
+      "name": "no unexpected console errors",
+      "pass": true,
+      "consoleErrors": []
+    },
+    {
+      "name": "no failed requests",
+      "pass": true,
+      "failedRequests": []
+    },
+    {
+      "name": "screenshots captured",
+      "pass": true,
+      "screenshots": [
+        "01-login-initial-390x867.png",
+        "02-contractor-a101-home-390x867.png",
+        "03-contractor-a101-payments-390x867.png",
+        "04-contractor-a101-journey-390x867.png",
+        "05-contractor-a101-docs-390x867.png",
+        "06-admin-dashboard-390x867.png",
+        "07-admin-units-edited-390x867.png",
+        "08-admin-payments-edited-390x867.png",
+        "09-admin-journey-edited-390x867.png",
+        "10-admin-docs-xss-edited-390x867.png",
+        "11-contractor-edited-home-390x867.png",
+        "12-contractor-edited-payments-390x867.png",
+        "13-contractor-edited-docs-xss-text-390x867.png"
+      ]
+    }
+  ],
+  "screenshots": [
+    "01-login-initial-390x867.png",
+    "02-contractor-a101-home-390x867.png",
+    "03-contractor-a101-payments-390x867.png",
+    "04-contractor-a101-journey-390x867.png",
+    "05-contractor-a101-docs-390x867.png",
+    "06-admin-dashboard-390x867.png",
+    "07-admin-units-edited-390x867.png",
+    "08-admin-payments-edited-390x867.png",
+    "09-admin-journey-edited-390x867.png",
+    "10-admin-docs-xss-edited-390x867.png",
+    "11-contractor-edited-home-390x867.png",
+    "12-contractor-edited-payments-390x867.png",
+    "13-contractor-edited-docs-xss-text-390x867.png"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "launchErrors": [
+    "launched:msedge"
+  ],
+  "actions": [
+    {
+      "at": "2026-07-04T21:16:51.056Z",
+      "event": "goto",
+      "targetUrl": "http://127.0.0.1:4191/index.html"
+    },
+    {
+      "at": "2026-07-04T21:16:52.223Z",
+      "event": "screenshot",
+      "file": "01-login-initial-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:53.131Z",
+      "event": "screenshot",
+      "file": "02-contractor-a101-home-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:53.749Z",
+      "event": "screenshot",
+      "file": "03-contractor-a101-payments-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:54.073Z",
+      "event": "screenshot",
+      "file": "04-contractor-a101-journey-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:54.451Z",
+      "event": "screenshot",
+      "file": "05-contractor-a101-docs-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:55.403Z",
+      "event": "screenshot",
+      "file": "06-admin-dashboard-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:55.721Z",
+      "event": "screenshot",
+      "file": "07-admin-units-edited-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:56.697Z",
+      "event": "screenshot",
+      "file": "08-admin-payments-edited-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:57.383Z",
+      "event": "screenshot",
+      "file": "09-admin-journey-edited-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:58.087Z",
+      "event": "screenshot",
+      "file": "10-admin-docs-xss-edited-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:59.037Z",
+      "event": "screenshot",
+      "file": "11-contractor-edited-home-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:59.358Z",
+      "event": "screenshot",
+      "file": "12-contractor-edited-payments-390x867.png"
+    },
+    {
+      "at": "2026-07-04T21:16:59.957Z",
+      "event": "screenshot",
+      "file": "13-contractor-edited-docs-xss-text-390x867.png"
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverStoppedByCaller": true
+  }
+}

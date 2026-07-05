@@ -1,0 +1,11 @@
+{
+  "command": "netlify deploy --allow-anonymous --dir .omo/evidence/task-3-netlify-drop/deploy-root --no-build --json",
+  "exitCode": 0,
+  "site_id": "15e464ff-14c9-4d81-9b87-ff96c66bfee9",
+  "site_url": "http://idyllic-sundae-33318f.netlify.app",
+  "live_url": "https://idyllic-sundae-33318f.netlify.app/",
+  "deploy_id": "6a48ab6975a309966b4ff9e1",
+  "claim_url": "REDACTED_IN_EVIDENCE_OUTPUT_IN_FINAL_RESPONSE",
+  "claim_command": "netlify claim --site 15e464ff-14c9-4d81-9b87-ff96c66bfee9 --token REDACTED_IN_EVIDENCE_OUTPUT_IN_FINAL_RESPONSE",
+  "password": "My-Drop-Site"
+}

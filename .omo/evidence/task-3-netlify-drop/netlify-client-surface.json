@@ -1,0 +1,437 @@
+{
+  "dropzone": [
+    {
+      "cls": "app tw-relative tw-size-full page-drop__wrapper",
+      "i": 0,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Skip to main content Netlify Drop Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder . Drag & drop. It’s online. Drop a folder with your project’s HTML, CSS, and JS files. We’ll give you a link to share it. Drop a proj"
+    },
+    {
+      "cls": "tw-inline-flex tw-px-0.5 tw-py-1 !tw-no-underline [--logoDiamond:theme('colors.teal.darkest/0')] hover:[--logoDiamond:theme('colors.teal.darkest/100')] hover:[--logoN:theme('colors.white')] hover:[--logoSpark:theme('colors.teal.DEFAULT')] dark:[--logoDiamond:theme('colors.white/0')] dark:hover:[--logoDiamond:theme('colors.white/100')] dark:hover:[--logoN:theme('colors.teal.darkest')] dark:hover:[--logoSpark:rgb(var(--colorRgbFacetsTeal400))] active",
+      "i": 1,
+      "id": null,
+      "tag": "A",
+      "testid": "logo-container",
+      "text": "Netlify Drop"
+    },
+    {
+      "cls": "tw-size-9",
+      "i": 2,
+      "id": null,
+      "tag": "svg",
+      "testid": "netlify-logo",
+      "text": "Netlify"
+    },
+    {
+      "cls": "page page-drop",
+      "i": 3,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder . Drag & drop. It’s online. Drop a folder with your project’s HTML, CSS, and JS files. We’ll give you a link to share it. Drop a project, make it yours Put your projec"
+    },
+    {
+      "cls": "drop-hero__landing",
+      "i": 4,
+      "id": null,
+      "tag": "SECTION",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder . Drag & drop. It’s online. Drop a folder with your project’s HTML, CSS, and JS files. We’ll give you a link to share it."
+    },
+    {
+      "cls": "drop-hero__media",
+      "i": 5,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-container",
+      "i": 6,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone",
+      "i": 7,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-content--with-image dropzone-content",
+      "i": 8,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-content__image tw-mx-auto tw-mb-3 tw-mt-1",
+      "i": 9,
+      "id": null,
+      "tag": "svg",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": null,
+      "i": 10,
+      "id": "icon-drop-folder_svg__a",
+      "tag": "linearGradient",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "dropzone-browse",
+      "i": 11,
+      "id": null,
+      "tag": "P",
+      "testid": null,
+      "text": "Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-browse-option",
+      "i": 12,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "browse files to upload"
+    },
+    {
+      "cls": "tw-sr-only",
+      "i": 13,
+      "id": "dropzone-file-upload",
+      "tag": "INPUT",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "dropzone-browse-option",
+      "i": 14,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "choose a folder"
+    },
+    {
+      "cls": "tw-sr-only",
+      "i": 15,
+      "id": "dropzone-folder-upload",
+      "tag": "INPUT",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-ring",
+      "i": 16,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-ring",
+      "i": 17,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-ring",
+      "i": 18,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-hero__content",
+      "i": 19,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag & drop. It’s online. Drop a folder with your project’s HTML, CSS, and JS files. We’ll give you a link to share it."
+    },
+    {
+      "cls": "drop-page__content",
+      "i": 20,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drop a project, make it yours Put your project online Drag and drop your project folder, and you’ll have your project in the cloud at a temporary URL. No account needed. Sign up to keep dropping By creating a free Netlify account, you can make changes to your project by dragging new versions into th"
+    },
+    {
+      "cls": "drop-story",
+      "i": 21,
+      "id": null,
+      "tag": "SECTION",
+      "testid": null,
+      "text": "Drop a project, make it yours Put your project online Drag and drop your project folder, and you’ll have your project in the cloud at a temporary URL. No account needed. Sign up to keep dropping By creating a free Netlify account, you can make changes to your project by dragging new versions into th"
+    },
+    {
+      "cls": "drop-templates",
+      "i": 22,
+      "id": "examples",
+      "tag": "DIV",
+      "testid": null,
+      "text": "Don’t have a project handy? We gotchu. Personal portfolio demo Works with Agent Runners HTML, CSS, JavaScript ThanosJS demo HTML, CSS Landing page demo HTML, CSS, Light/Dark Mode"
+    },
+    {
+      "cls": "drop-templates__list",
+      "i": 23,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Personal portfolio demo Works with Agent Runners HTML, CSS, JavaScript ThanosJS demo HTML, CSS Landing page demo HTML, CSS, Light/Dark Mode"
+    },
+    {
+      "cls": "drop-template__download",
+      "i": 24,
+      "id": null,
+      "tag": "A",
+      "testid": null,
+      "text": "Personal portfolio demo"
+    },
+    {
+      "cls": "drop-template__img",
+      "i": 25,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-template__link",
+      "i": 26,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "Personal portfolio demo"
+    },
+    {
+      "cls": "scalable-icon tw-inline !tw-fill-current tw-align-baseline drop-template__icon",
+      "i": 27,
+      "id": null,
+      "tag": "svg",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-template__agent-badge",
+      "i": 28,
+      "id": null,
+      "tag": "SMALL",
+      "testid": null,
+      "text": "Works with Agent Runners"
+    },
+    {
+      "cls": "drop-template__download",
+      "i": 29,
+      "id": null,
+      "tag": "A",
+      "testid": null,
+      "text": "ThanosJS demo"
+    },
+    {
+      "cls": "drop-template__img",
+      "i": 30,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-template__link",
+      "i": 31,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "ThanosJS demo"
+    },
+    {
+      "cls": "scalable-icon tw-inline !tw-fill-current tw-align-baseline drop-template__icon",
+      "i": 32,
+      "id": null,
+      "tag": "svg",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-template__download",
+      "i": 33,
+      "id": null,
+      "tag": "A",
+      "testid": null,
+      "text": "Landing page demo"
+    },
+    {
+      "cls": "drop-template__img",
+      "i": 34,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-template__link",
+      "i": 35,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "Landing page demo"
+    },
+    {
+      "cls": "scalable-icon tw-inline !tw-fill-current tw-align-baseline drop-template__icon",
+      "i": 36,
+      "id": null,
+      "tag": "svg",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "drop-secondary",
+      "i": 37,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Ready to try it out? You know what to do 👇 Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "media-figure dropzone-container",
+      "i": 38,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone",
+      "i": 39,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-content--with-image dropzone-content",
+      "i": 40,
+      "id": null,
+      "tag": "DIV",
+      "testid": null,
+      "text": "Drag and drop your project folder, zip file, or a single HTML file to deploy instantly. Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-content__image tw-mx-auto tw-mb-3 tw-mt-1",
+      "i": 41,
+      "id": null,
+      "tag": "svg",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": null,
+      "i": 42,
+      "id": "icon-drop-folder_svg__a",
+      "tag": "linearGradient",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "dropzone-browse",
+      "i": 43,
+      "id": null,
+      "tag": "P",
+      "testid": null,
+      "text": "Or browse files to upload or choose a folder ."
+    },
+    {
+      "cls": "dropzone-browse-option",
+      "i": 44,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "browse files to upload"
+    },
+    {
+      "cls": "tw-sr-only",
+      "i": 45,
+      "id": "dropzone-file-upload",
+      "tag": "INPUT",
+      "testid": null,
+      "text": ""
+    },
+    {
+      "cls": "dropzone-browse-option",
+      "i": 46,
+      "id": null,
+      "tag": "SPAN",
+      "testid": null,
+      "text": "choose a folder"
+    },
+    {
+      "cls": "tw-sr-only",
+      "i": 47,
+      "id": "dropzone-folder-upload",
+      "tag": "INPUT",
+      "testid": null,
+      "text": ""
+    }
+  ],
+  "forms": [],
+  "href": "https://app.netlify.com/drop",
+  "scripts": [
+    "https://www.googletagmanager.com/gtag/js?id=AW-957669464&cx=c&gtm=4e66u1",
+    "https://js.hubspot.com/web-interactives-embed.js",
+    "https://js.hs-banner.com/v2/7477936/banner.js",
+    "https://js.hsadspixel.net/pixels.js",
+    "https://js-na1.hs-scripts.com/7477936.js",
+    "https://www.googletagmanager.com/gtag/js?id=G-X2FMMZSSS9&cx=c&gtm=4e66u1",
+    "https://www.googletagmanager.com/gtm.js?id=GTM-WZQ32TR&l=dataLayer",
+    "https://js.hs-analytics.net/analytics/1783139100000/7477936.js",
+    "https://cdn.segment.com/next-integrations/integrations/vendor/commons.1b78f84a8c1751144d06.js.gz",
+    "https://cdn.segment.com/next-integrations/integrations/vendor/commons.59560acdd69ed701c941.js.gz",
+    "https://cdn.segment.com/next-integrations/integrations/visual-tagger/0.3.5/visual-tagger.dynamic.js.gz",
+    "https://cdn.segment.com/next-integrations/integrations/hubspot/2.2.5/hubspot.dynamic.js.gz",
+    "https://cdn.segment.com/next-integrations/integrations/google-tag-manager/2.5.3/google-tag-manager.dynamic.js.gz",
+    "https://cdn.segment.com/next-integrations/actions/amplitude-plugins/f12a4347e1080fb88155.js",
+    "https://join.netlify.com/pr/js",
+    "https://cdn.segment.com/analytics.js/v1/bHbADSxnRvrpFMYP6pMNP38JC4J7Av75/analytics.min.js",
+    "https://www.gstatic.com/recaptcha/releases/TnA7HacJFoBWt9hnlunBlYfK/recaptcha__ko.js",
+    "https://www.google.com/recaptcha/enterprise.js?render=6LexhEgsAAAAANL6JPUnOx6lWZViw8-TBON3_faT",
+    "https://js.stripe.com/v3",
+    "https://cdn.amplitude.com/engagement-browser/prod/split/index.js",
+    "https://www.googletagmanager.com/gtag/js?id=AW-957669464",
+    "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/957669464/?random=1783138987603&cv=11&fst=1783138987603&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45be66u1v9133104323za200zb78313367zd78313367xec&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938466~115938468~118395334~119027224~119576881~119576885~119576891~119576895&u_w=1707&u_h=1067&url=https%3A%2F%2Fapp.netlify.com%2Fdrop&rcb=4&frm=0&tiba=Drop%20%7C%20Netlify&did=dZTQ1Zm&gdid=dZTQ1Zm&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=835034427.1783138986&uaa=x86&uab=64&uafvl=Google%2520Chrome%3B149.0.7827.197%7CChromium%3B149.0.7827.197%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dgtag.config&ept=9&rfmt=3&fmt=4",
+    "https://cdn.sift.com/s.js",
+    "https://app.netlify.com/assets/js/runtime.98b803a9d3b206ee31f8.js",
+    "https://app.netlify.com/assets/js/monitoring.vendor.d1805674b444449104f1.js",
+    "https://app.netlify.com/assets/js/containers.665d273a45ce922f5d0a.js",
+    "https://app.netlify.com/assets/js/ui.e62bf9ffef8cd9651686.js",
+    "https://app.netlify.com/assets/js/lodash.vendor.981f0225097ea62e5596.js",
+    "https://app.netlify.com/assets/js/highcharts.vendor.94b5c2906e8881a31618.js",
+    "https://app.netlify.com/assets/js/helpers.64989e02c7feb76505dd.js",
+    "https://app.netlify.com/assets/js/buildInfo.vendor.3a34d46e03c2f6c76089.js",
+    "https://app.netlify.com/assets/js/lib.37b8181aee36fcc19af2.js",
+    "https://app.netlify.com/assets/js/actions.fb44270124cab6469a3a.js",
+    "https://app.netlify.com/assets/js/markdown.vendor.c39c3b27f00fb33ac0c0.js",
+    "https://app.netlify.com/assets/js/graphiql.vendor.de6f85b72aa61feab362.js",
+    "https://app.netlify.com/assets/js/relayRouterRedux.vendor.8bf03bd404073458c84f.js",
+    "https://app.netlify.com/assets/js/reactUiUtilities.vendor.6c8959d63f5e6325da1f.js",
+    "https://app.netlify.com/assets/js/react.vendor.0d55cc8ff663444642d1.js",
+    "https://app.netlify.com/assets/js/iso-3166.vendor.5f4f9ac61d452ae54a62.js",
+    "https://app.netlify.com/assets/js/graphql.vendor.0ecd5b93002b5f315f6d.js",
+    "https://app.netlify.com/assets/js/3950.76375d96851f90d8d178.js",
+    "https://app.netlify.com/assets/js/app.fa55bd363d2376d6d283.js",
+    "https://app.netlify.com/netlify-cnm/cnm.js",
+    "https://app.netlify.com/.netlify/scripts/rum",
+    "https://client-network-manager.netlify.app/cnm-main-client.js"
+  ]
+}

@@ -1,0 +1,8 @@
+﻿Probe: hung_or_long_commands
+Expected behavior: use bounded browser waits and command timeouts; record blocker instead of leaving a hanging upload/file-dialog process.
+Verdict: PASS
+Evidence:
+- Browser navigation/load/evaluate calls used bounded timeouts in node_repl invocations.
+- Local `node -e require.resolve(...)` probes exited quickly and reported missing Playwright.
+- No local server or deploy process was started for Todo 3.
+- Browser tab close was attempted and cleanup was recorded in cleanup-receipt.json.

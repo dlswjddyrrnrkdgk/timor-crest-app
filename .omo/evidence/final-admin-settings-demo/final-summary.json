@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "local_demo": {
+    "implemented": true,
+    "syntax_checks": ["node --check app.js", "node --check data.js"],
+    "qa_results": [
+      ".omo/evidence/task-1-admin-settings-demo/admin-flow-smoke-result.json",
+      ".omo/evidence/task-2-admin-settings-demo/admin-flow-smoke-result.json",
+      ".omo/evidence/task-3-admin-settings-demo/admin-flow-smoke-result.json"
+    ],
+    "visual_inspection": [
+      ".omo/evidence/task-2-admin-settings-demo/01-login-initial-390x867.png",
+      ".omo/evidence/task-2-admin-settings-demo/06-admin-dashboard-390x867.png",
+      ".omo/evidence/task-2-admin-settings-demo/11-contractor-edited-home-390x867.png",
+      ".omo/evidence/task-2-admin-settings-demo/12-contractor-edited-payments-390x867.png",
+      ".omo/evidence/task-2-admin-settings-demo/13-contractor-edited-docs-xss-text-390x867.png"
+    ]
+  },
+  "live_deploy": {
+    "ok": false,
+    "blocker": ".omo/evidence/task-5-admin-settings-demo/blocker.json"
+  },
+  "cleanup": {
+    "localServerStopped": true,
+    "sensitiveDeployEvidenceRedacted": true
+  }
+}

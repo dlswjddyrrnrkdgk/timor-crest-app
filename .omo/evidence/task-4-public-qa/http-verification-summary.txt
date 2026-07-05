@@ -1,0 +1,20 @@
+Public URL: https://idyllic-sundae-33318f.netlify.app/
+Initial unauthenticated GET: 401 Password protected site.
+Password POST with password My-Drop-Site: 302 then 200 OK for index.html.
+Authenticated asset checks:
+- styles.css: 200 OK, Content-Length 15439, Content-Type text/css
+- app.js: 200 OK, Content-Length 6588, Content-Type application/javascript
+- missing path /__missing_path_for_public_qa__: 404 Not Found
+Browser QA:
+- Journey view reached.
+- Payments view reached.
+- Docs view reached.
+- MY view reached.
+- Browser console error count: 0.
+Artifacts:
+- .omo/evidence/task-4-public-qa/browser-action-log.json
+- .omo/evidence/task-4-public-qa/browser-console-errors.json
+- .omo/evidence/task-4-public-qa/journey-public.png
+- .omo/evidence/task-4-public-qa/payments-public.png
+- .omo/evidence/task-4-public-qa/docs-public.png
+- .omo/evidence/task-4-public-qa/my-public.png

@@ -222,3 +222,52 @@ button:disabled {
 .login-card button:disabled {
   opacity: 0.72;
 }
+.admin-record-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  text-align: left;
+  box-shadow: var(--shadow-subtle);
+}
+.admin-record-card.is-selected {
+  border-color: var(--accent-primary);
+  background: var(--surface-blue-soft);
+}
+.admin-record-card span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.admin-record-card small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.compact-admin-form {
+  box-shadow: none;
+}
+.unit-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.unit-chip-list button {
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--accent-primary);
+  background: var(--surface-blue-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+.info-card .compact-info div {
+  min-height: 32px;
+}

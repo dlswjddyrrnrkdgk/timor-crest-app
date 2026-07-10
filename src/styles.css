@@ -271,3 +271,26 @@ button:disabled {
 .info-card .compact-info div {
   min-height: 32px;
 }
+.payment-context-card {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+}
+.payment-context-card strong {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--text-primary);
+  font-size: 18px;
+}
+.payment-item-form header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.payment-item-form h3 {
+  margin: 0;
+  font-size: 16px;
+}

@@ -8,6 +8,15 @@ import {
   updateContractor,
   updateUnit,
 } from "../services/contractorService.js";
+import {
+  calculatePaymentTotals,
+  createDefaultPaymentItems,
+  createPaymentPlan,
+  getPaymentItems,
+  getPaymentPlanByContractor,
+  updatePaymentItem,
+  updatePaymentPlan,
+} from "../services/paymentService.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = ["Dashboard", "호수 관리", "계약자 관리", "Journey 공정 관리", "납부 일정 관리", "문서 관리"];
@@ -32,6 +41,12 @@ const emptyContractorForm = {
   profile_id: "",
 };
 
+const emptyPaymentPlanForm = {
+  total_price: "",
+  currency: "USD",
+  status: "active",
+};
+
 export default function AdminLayout() {
   const navigate = useNavigate();
   const [units, setUnits] = useState([]);
@@ -40,6 +55,9 @@ export default function AdminLayout() {
   const [selectedContractorId, setSelectedContractorId] = useState("");
   const [unitForm, setUnitForm] = useState(emptyUnitForm);
   const [contractorForm, setContractorForm] = useState(emptyContractorForm);
+  const [paymentPlan, setPaymentPlan] = useState(null);
+  const [paymentItems, setPaymentItems] = useState([]);
+  const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -52,6 +70,10 @@ export default function AdminLayout() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    loadPaymentForContractor(selectedContractor);
+  }, [selectedContractorId]);
 
   async function loadDashboard() {
     setStatus("loading");
@@ -70,6 +92,34 @@ export default function AdminLayout() {
   async function handleLogout() {
     await signOut();
     navigate("/login", { replace: true });
+  }
+
+  async function loadPaymentForContractor(contractor) {
+    setPaymentPlan(null);
+    setPaymentItems([]);
+    setPaymentPlanForm(emptyPaymentPlanForm);
+    if (!contractor?.id) return;
+
+    const planResult = await getPaymentPlanByContractor(contractor.id);
+    if (planResult.error) {
+      setMessage(planResult.error);
+      return;
+    }
+    if (!planResult.data) return;
+
+    setPaymentPlan(planResult.data);
+    setPaymentPlanForm({
+      total_price: planResult.data.total_price ?? "",
+      currency: planResult.data.currency || "USD",
+      status: planResult.data.status || "active",
+    });
+
+    const itemsResult = await getPaymentItems(planResult.data.id);
+    if (itemsResult.error) {
+      setMessage(itemsResult.error);
+      return;
+    }
+    setPaymentItems(itemsResult.data || []);
   }
 
   function editUnit(unit) {
@@ -116,6 +166,10 @@ export default function AdminLayout() {
     setContractorForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
+  function updatePaymentPlanField(event) {
+    setPaymentPlanForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
   async function submitUnit(event) {
     event.preventDefault();
     setStatus("saving");
@@ -147,6 +201,80 @@ export default function AdminLayout() {
     await loadDashboard();
     setMessage(selectedContractorId ? "계약자 정보가 수정되었습니다." : "계약자 정보가 생성되었습니다.");
   }
+
+  async function submitPaymentPlan(event) {
+    event.preventDefault();
+    if (!paymentPlan) return;
+    setStatus("saving");
+    setMessage("");
+    const result = await updatePaymentPlan(paymentPlan.id, paymentPlanForm);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+    setPaymentPlan(result.data);
+    setStatus("ready");
+    setMessage("납부 계획이 수정되었습니다.");
+  }
+
+  async function createPlanForSelectedContractor() {
+    if (!selectedContractor) return;
+    setStatus("saving");
+    setMessage("");
+    const unit = selectedContractor.unit || {};
+    const result = await createPaymentPlan(
+      selectedContractor.id,
+      selectedContractor.unit_id,
+      unit.total_price || 0,
+      unit.currency || "USD",
+    );
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+    setPaymentPlan(result.data);
+    setPaymentPlanForm({
+      total_price: result.data.total_price ?? "",
+      currency: result.data.currency || "USD",
+      status: result.data.status || "active",
+    });
+    setStatus("ready");
+    setMessage("납부 계획이 생성되었습니다. 기본 8단계를 생성해 주세요.");
+  }
+
+  async function createDefaultItemsForPlan() {
+    if (!paymentPlan) return;
+    setStatus("saving");
+    setMessage("");
+    const result = await createDefaultPaymentItems(paymentPlan.id);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+    setPaymentItems(result.data || []);
+    setStatus("ready");
+    setMessage("기본 8단계 납부 항목이 생성되었습니다.");
+  }
+
+  async function submitPaymentItem(itemId, values) {
+    setStatus("saving");
+    setMessage("");
+    const result = await updatePaymentItem(itemId, values);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+    const itemsResult = await getPaymentItems(result.data.payment_plan_id);
+    setPaymentItems(itemsResult.data || []);
+    setStatus("ready");
+    setMessage("납부 단계가 수정되었습니다.");
+  }
+
+  const paymentTotals = calculatePaymentTotals(paymentPlan, paymentItems);
 
   return (
     <main className="demo-stage" aria-label="Timor Crest admin portal">
@@ -285,6 +413,64 @@ export default function AdminLayout() {
                 </div>
               </form>
             </section>
+
+            <section className="admin-panel">
+              <h2>Payment Management</h2>
+              {!selectedContractor ? (
+                <p>계약자 목록에서 계약자를 선택하면 납부 계획을 관리할 수 있습니다.</p>
+              ) : (
+                <>
+                  <div className="payment-context-card">
+                    <span className="eyebrow">SELECTED CONTRACTOR</span>
+                    <strong>{selectedContractor.full_name}</strong>
+                    <p>
+                      {selectedContractor.email || "이메일 없음"} / {selectedContractor.unit?.unit_code || "호수 미연결"}
+                    </p>
+                  </div>
+
+                  {!paymentPlan ? (
+                    <button className="primary-button" disabled={status === "saving"} onClick={createPlanForSelectedContractor} type="button">
+                      Create payment plan
+                    </button>
+                  ) : (
+                    <>
+                      <div className="metric-grid">
+                        <Metric label="총 계약금액" value={formatMoney(paymentTotals.totalPrice, paymentPlan.currency)} />
+                        <Metric label="납부 완료" value={formatMoney(paymentTotals.totalPaidAmount, paymentPlan.currency)} />
+                        <Metric label="미납 금액" value={formatMoney(paymentTotals.unpaidAmount, paymentPlan.currency)} />
+                        <Metric label="진행률" value={`${paymentTotals.progressPercent}%`} />
+                      </div>
+                      <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
+                        <TextField
+                          label="total_price"
+                          name="total_price"
+                          onChange={updatePaymentPlanField}
+                          type="number"
+                          value={paymentPlanForm.total_price}
+                        />
+                        <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
+                        <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
+                        <button className="primary-button" disabled={status === "saving"} type="submit">
+                          납부 계획 수정
+                        </button>
+                      </form>
+
+                      {!paymentItems.length ? (
+                        <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
+                          기본 8단계 payment_items 생성
+                        </button>
+                      ) : (
+                        <div className="admin-list">
+                          {paymentItems.map((item) => (
+                            <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </section>
           </section>
         </div>
       </section>
@@ -292,11 +478,64 @@ export default function AdminLayout() {
   );
 }
 
-function TextField({ label, name, onChange, required = false, type = "text", value }) {
+function TextField({ defaultValue, label, name, onChange, required = false, type = "text", value }) {
+  const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <input name={name} onChange={onChange} required={required} type={type} value={value} />
+      <input name={name} onChange={onChange} required={required} type={type} {...inputProps} />
     </label>
   );
+}
+
+function Metric({ label, value }) {
+  return (
+    <article className="metric-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function PaymentItemForm({ item, onSubmit, saving }) {
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
+  }
+
+  return (
+    <form className="admin-card payment-item-form" onSubmit={handleSubmit}>
+      <header>
+        <h3>
+          {item.step_no}. {item.title}
+        </h3>
+        <span className="status-chip">{item.status}</span>
+      </header>
+      <TextField label="title" name="title" defaultValue={item.title} />
+      <TextField label="required_amount" name="required_amount" defaultValue={item.required_amount} type="number" />
+      <TextField label="paid_amount" name="paid_amount" defaultValue={item.paid_amount} type="number" />
+      <TextField label="due_date" name="due_date" defaultValue={item.due_date || ""} type="date" />
+      <TextField label="paid_date" name="paid_date" defaultValue={item.paid_date || ""} type="date" />
+      <label className="field">
+        <span>status</span>
+        <select defaultValue={item.status || "unpaid"} name="status">
+          <option value="unpaid">unpaid</option>
+          <option value="partial">partial</option>
+          <option value="paid">paid</option>
+          <option value="overdue">overdue</option>
+        </select>
+      </label>
+      <label className="field">
+        <span>note</span>
+        <input defaultValue={item.note || ""} name="note" />
+      </label>
+      <button className="primary-button" disabled={saving} type="submit">
+        단계 저장
+      </button>
+    </form>
+  );
+}
+
+function formatMoney(value, currency = "USD") {
+  return `${Number(value || 0).toLocaleString("ko-KR")} ${currency}`;
 }

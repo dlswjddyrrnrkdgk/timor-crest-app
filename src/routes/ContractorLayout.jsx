@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyContractorSummary } from "../services/contractorService.js";
+import { getMyPaymentSummary } from "../services/paymentService.js";
 import { signOut } from "../services/authService.js";
 
 const contractorNav = ["홈", "Journey", "납부", "문서", "MY"];
@@ -8,6 +9,7 @@ const contractorNav = ["홈", "Journey", "납부", "문서", "MY"];
 export default function ContractorLayout() {
   const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
+  const [paymentSummary, setPaymentSummary] = useState(null);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -18,13 +20,14 @@ export default function ContractorLayout() {
   async function loadSummary() {
     setStatus("loading");
     setMessage("");
-    const result = await getMyContractorSummary();
-    if (result.error) {
-      setMessage(result.error);
+    const [contractResult, paymentResult] = await Promise.all([getMyContractorSummary(), getMyPaymentSummary()]);
+    if (contractResult.error || paymentResult.error) {
+      setMessage(contractResult.error || paymentResult.error);
       setStatus("ready");
       return;
     }
-    setSummary(result.data);
+    setSummary(contractResult.data);
+    setPaymentSummary(paymentResult.data);
     setStatus("ready");
   }
 
@@ -63,6 +66,7 @@ export default function ContractorLayout() {
               </section>
             ) : null}
             {summary ? <ContractSummary summary={summary} /> : null}
+            {summary ? <PaymentSummary paymentSummary={paymentSummary} /> : null}
 
             <button className="secondary-button logout-button" onClick={handleLogout} type="button">
               로그아웃
@@ -123,6 +127,87 @@ function ContractSummary({ summary }) {
         </article>
       </section>
     </>
+  );
+}
+
+function PaymentSummary({ paymentSummary }) {
+  if (!paymentSummary?.plan) {
+    return (
+      <section className="info-card">
+        <h3>Payment Summary</h3>
+        <p>납부 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+      </section>
+    );
+  }
+
+  const { items, plan, totals } = paymentSummary;
+
+  return (
+    <>
+      <section className="meter-card">
+        <h3>Payment Summary</h3>
+        <div className="amount-grid">
+          <div>
+            <span>총 계약금액</span>
+            <strong>{formatMoney(totals.totalPrice, plan.currency)}</strong>
+          </div>
+          <div>
+            <span>납부 완료</span>
+            <strong>{formatMoney(totals.totalPaidAmount, plan.currency)}</strong>
+          </div>
+          <div>
+            <span>미납 금액</span>
+            <strong>{formatMoney(totals.unpaidAmount, plan.currency)}</strong>
+          </div>
+        </div>
+        <div className="meter-row">
+          <span>납부 진행률</span>
+          <strong>{totals.progressPercent}%</strong>
+        </div>
+        <div className="progress-track">
+          <span style={{ width: `${totals.progressPercent}%` }} />
+        </div>
+      </section>
+      <section className="section-block">
+        <h3>8단계 납부 현황</h3>
+        <div className="payment-stage-list">
+          {items.length ? (
+            items.map((item) => <PaymentItemCard currency={plan.currency} item={item} key={item.id} />)
+          ) : (
+            <p>납부 단계가 아직 생성되지 않았습니다. 관리자에게 문의하세요.</p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PaymentItemCard({ currency, item }) {
+  return (
+    <article className="stage-card">
+      <header>
+        <h3>
+          {item.step_no}. {item.title}
+        </h3>
+        <span className="status-chip">{item.status}</span>
+      </header>
+      <div className="stage-meta">
+        <MiniStat label="납입해야 하는 금액" value={formatMoney(item.required_amount, currency)} />
+        <MiniStat label="납입한 금액" value={formatMoney(item.paid_amount, currency)} />
+        <MiniStat label="예정일" value={item.due_date || "미등록"} />
+        <MiniStat label="납부일" value={item.paid_date || "미등록"} />
+      </div>
+      {item.note ? <p>{item.note}</p> : null}
+    </article>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="mini-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 

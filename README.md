@@ -192,14 +192,32 @@ Admin routes:
 - `/admin/contractors` - contractor list plus create/edit forms.
 - `/admin/units` - unit list plus create/edit forms.
 - `/admin/payments` - contractor payment management, payment plan creation, default 8-step item creation, and payment item editing.
+- `/admin/journey` - shared Journey template management.
 
 Contractor routes:
 
 - `/contractor` - compact dashboard with Payment Summary and the `내 집 미리보기` button.
 - `/contractor/payments` - read-only Payment Summary plus the full 8-step payment item list.
+- `/contractor/journey` - read-only shared Journey schedule.
 - `/contractor/preview` - placeholder for the future home preview experience.
 
 Payment progress is shown with `AnimatedProgress`, which count-ups the number and fills the progress bar. It respects `prefers-reduced-motion` by showing the final value immediately.
+
+## Supabase Phase 4 Setup
+
+Run `supabase/migrations/0004_journey.sql` after the Phase 3 migration.
+
+This migration creates `public.journey_template_steps`: one project-wide Journey template, deliberately not linked to individual contractors or units. Every contractor reads the same 8-stage schedule. The seed preserves the legacy demo's stage titles, dates, statuses, progress values, and descriptions, and `on conflict (step_no) do nothing` prevents duplicate seed rows.
+
+Journey progress is calculated in the browser as `average(progress_percent)` across the shared steps. It is not stored as a contractor-, unit-, or project-specific column.
+
+RLS is intentionally narrow:
+
+- Admin users have full CRUD through `public.is_admin()`.
+- Contractor users can only select the shared template.
+- Anonymous users have no Journey access.
+
+Admins manage shared steps at `/admin/journey`. Contractors read the same schedule at `/contractor/journey`; there are no contractor-specific Journey rows or write controls. Continue to use only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in browser code. Never expose `SUPABASE_SERVICE_ROLE_KEY`, database passwords, or other secrets through a `VITE_` variable.
 
 ## Phase Boundaries
 
@@ -207,7 +225,6 @@ Phase 1 includes only Auth, role redirects, route guards, and protected shells. 
 
 Phase 1 through Phase 3 do not include:
 
-- Journey CRUD
 - File upload
 - CCTV streaming integration
 - Public sign up
@@ -216,7 +233,7 @@ Phase 1 through Phase 3 do not include:
 Payment and Journey structures are intentionally preserved for later phases:
 
 - Payment remains an 8-step contractor/unit-specific model and maps to `payment_plans` + `payment_items`.
-- Journey remains a shared site-wide 8-step model and will map to `journey_template_steps` only.
+- Journey is a shared site-wide 8-step model implemented by `journey_template_steps` only.
 
 Legacy demo files are retained for future migration reference:
 
@@ -232,6 +249,7 @@ Legacy demo files are retained for future migration reference:
 - `src/services/authService.js` - Auth/profile role helpers.
 - `src/services/contractorService.js` - Supabase unit/contractor data helpers.
 - `src/services/paymentService.js` - Supabase payment plan/item helpers.
+- `src/services/journeyService.js` - shared Journey template helpers.
 - `src/components/AnimatedProgress.jsx` - reusable progress count-up and progress bar.
 - `src/routes/` - Login, Admin dashboard/routes, Contractor dashboard/routes, route guard.
 - `src/app.js` - legacy demo renderer retained for later migration reference.

@@ -19,6 +19,7 @@ import {
   updatePaymentItem,
   updatePaymentPlan,
 } from "../services/paymentService.js";
+import { calculateJourneyOverallProgress, getJourneySteps, updateJourneyStep } from "../services/journeyService.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = [
@@ -26,6 +27,7 @@ const adminTabs = [
   ["contractors", "계약자 관리"],
   ["units", "호수 관리"],
   ["payments", "납부일정 관리"],
+  ["journey", "Journey 관리"],
 ];
 
 const emptyUnitForm = {
@@ -67,6 +69,8 @@ export default function AdminLayout() {
   const [paymentItems, setPaymentItems] = useState([]);
   const [paymentSummaries, setPaymentSummaries] = useState({});
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
+  const [journeySteps, setJourneySteps] = useState([]);
+  const [journeyMessage, setJourneyMessage] = useState("");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -87,7 +91,13 @@ export default function AdminLayout() {
   async function loadDashboard() {
     setStatus("loading");
     setMessage("");
-    const [unitResult, contractorResult, planResult] = await Promise.all([getUnits(), getAdminContractors(), getAdminPaymentPlans()]);
+    setJourneyMessage("");
+    const [unitResult, contractorResult, planResult, journeyResult] = await Promise.all([
+      getUnits(),
+      getAdminContractors(),
+      getAdminPaymentPlans(),
+      getJourneySteps(),
+    ]);
     if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
       setMessage(unitResult.error || contractorResult.error || planResult.error);
@@ -95,6 +105,8 @@ export default function AdminLayout() {
     }
     setUnits(unitResult.data || []);
     setContractors(contractorResult.data || []);
+    setJourneySteps(journeyResult.data || []);
+    setJourneyMessage(journeyResult.error || "");
     await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
   }
@@ -300,6 +312,21 @@ export default function AdminLayout() {
     setStatus("ready");
   }
 
+  async function submitJourneyStep(stepId, values) {
+    setStatus("saving");
+    setMessage("");
+    setJourneyMessage("");
+    const result = await updateJourneyStep(stepId, values);
+    if (result.error) {
+      setStatus("ready");
+      setJourneyMessage(result.error);
+      return;
+    }
+    setJourneySteps((current) => current.map((step) => (step.id === stepId ? result.data : step)));
+    setStatus("ready");
+    setMessage("Journey 단계가 수정되었습니다.");
+  }
+
   function selectPaymentContractor(contractor) {
     editContractor(contractor);
     window.setTimeout(() => paymentDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
@@ -308,6 +335,7 @@ export default function AdminLayout() {
   const activeContractors = contractors.filter((contractor) => contractor.status === "active").length;
   const activeUnits = units.filter((unit) => unit.status === "active").length;
   const paymentTotals = calculatePaymentTotals(paymentPlan, paymentItems);
+  const journeyOverallProgress = calculateJourneyOverallProgress(journeySteps);
 
   const shell = {
     activeContractors,
@@ -322,6 +350,9 @@ export default function AdminLayout() {
     paymentPlanForm,
     paymentSummaries,
     paymentTotals,
+    journeyOverallProgress,
+    journeyMessage,
+    journeySteps,
     resetContractorForm,
     resetUnitForm,
     selectPaymentContractor,
@@ -331,6 +362,7 @@ export default function AdminLayout() {
     submitContractor,
     submitPaymentItem,
     submitPaymentPlan,
+    submitJourneyStep,
     submitUnit,
     units,
     updateContractorField,
@@ -374,6 +406,7 @@ export default function AdminLayout() {
               <Route path="contractors" element={<ContractorsPage {...shell} />} />
               <Route path="units" element={<UnitsPage {...shell} />} />
               <Route path="payments" element={<PaymentsPage {...shell} />} />
+              <Route path="journey" element={<JourneyPage {...shell} />} />
             </Routes>
           </section>
         </div>
@@ -420,6 +453,7 @@ function AdminHome({ activeContractors, activeUnits, contractors, units }) {
           <Link className="primary-button" to="contractors">계약자 관리</Link>
           <Link className="secondary-button" to="units">호수 관리</Link>
           <Link className="secondary-button" to="payments">납부일정 관리</Link>
+          <Link className="secondary-button" to="journey">Journey 관리</Link>
         </div>
       </section>
     </>
@@ -660,12 +694,36 @@ function PaymentsPage({
   );
 }
 
-function TextField({ defaultValue, label, name, onChange, required = false, type = "text", value }) {
+function JourneyPage({ journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep }) {
+  return (
+    <>
+      <section className="admin-panel">
+        <span className="eyebrow">PROJECT JOURNEY</span>
+        <h2>Journey 공정 관리</h2>
+        <p>이 공정 정보는 전체 프로젝트 공통이며, 수정 내용은 모든 계약자에게 동일하게 표시됩니다.</p>
+        <AnimatedProgress label="전체 공정 진행률" value={journeyOverallProgress} />
+      </section>
+      {journeyMessage ? <p className="form-error">{journeyMessage}</p> : null}
+      <section className="admin-panel">
+        <h2>8단계 공정</h2>
+        <div className="admin-list">
+          {journeySteps.length ? (
+            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} onSubmit={submitJourneyStep} saving={status === "saving"} />)
+          ) : (
+            <p>Journey 단계가 아직 등록되지 않았습니다. migration seed를 확인해 주세요.</p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function TextField({ defaultValue, label, max, min, name, onChange, required = false, type = "text", value }) {
   const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <input name={name} onChange={onChange} required={required} type={type} {...inputProps} />
+      <input max={max} min={min} name={name} onChange={onChange} required={required} type={type} {...inputProps} />
     </label>
   );
 }
@@ -716,6 +774,66 @@ function PaymentItemForm({ item, onSubmit, saving }) {
       </button>
     </form>
   );
+}
+
+function JourneyStepForm({ item, onSubmit, saving }) {
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
+  }
+
+  return (
+    <form className="admin-card journey-step-form" onSubmit={handleSubmit}>
+      <header>
+        <div>
+          <span className="eyebrow">STEP {item.step_no}</span>
+          <h3>{item.title}</h3>
+        </div>
+        <JourneyStatusChip status={item.status} />
+      </header>
+      <TextField label="title" name="title" defaultValue={item.title} required />
+      <TextField label="subtitle" name="subtitle" defaultValue={item.subtitle || ""} />
+      <TextAreaField label="description" name="description" defaultValue={item.description || ""} />
+      <label className="field">
+        <span>status</span>
+        <select defaultValue={item.status || "pending"} name="status">
+          <option value="pending">pending</option>
+          <option value="in_progress">in_progress</option>
+          <option value="completed">completed</option>
+          <option value="delayed">delayed</option>
+        </select>
+      </label>
+      <TextField label="progress_percent" name="progress_percent" defaultValue={item.progress_percent} max="100" min="0" type="number" />
+      <TextField label="target_date" name="target_date" defaultValue={item.target_date || ""} type="date" />
+      <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
+      <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
+      <button className="primary-button" disabled={saving} type="submit">
+        Journey 저장
+      </button>
+    </form>
+  );
+}
+
+function TextAreaField({ defaultValue, label, name }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <textarea defaultValue={defaultValue ?? ""} name={name} rows="3" />
+    </label>
+  );
+}
+
+function JourneyStatusChip({ status }) {
+  return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status)}</span>;
+}
+
+function formatJourneyStatus(status) {
+  return {
+    completed: "완료",
+    delayed: "지연",
+    in_progress: "진행 중",
+    pending: "대기",
+  }[status] || status || "대기";
 }
 
 function formatMoney(value, currency = "USD") {

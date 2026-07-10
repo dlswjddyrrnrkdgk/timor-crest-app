@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
-import { calculateJourneyOverallProgress, getJourneySteps } from "../services/journeyService.js";
+import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
 import { signOut } from "../services/authService.js";
 
 const contractorNav = [
@@ -93,7 +93,7 @@ export default function ContractorLayout() {
   );
 }
 
-function ContractorHome({ message, paymentSummary, status, summary }) {
+function ContractorHome({ journeyMessage, journeySteps, message, paymentSummary, status, summary }) {
   return (
     <>
       <section className="home-hero">
@@ -117,9 +117,9 @@ function ContractorHome({ message, paymentSummary, status, summary }) {
       ) : null}
       {summary ? <ContractSummary summary={summary} compact /> : null}
       {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
+      {summary ? <JourneySummaryCard journeyMessage={journeyMessage} journeySteps={journeySteps} /> : null}
       <section className="management-action-grid">
         <Link className="primary-button" to="payments">납부 현황 보기</Link>
-        <Link className="secondary-button" to="journey">Journey 보기</Link>
         <Link className="secondary-button" to="preview">내 집 미리보기</Link>
       </section>
     </>
@@ -242,6 +242,43 @@ function PaymentSummaryCard({ paymentSummary }) {
         <Amount label="미납 금액" value={formatMoney(totals.unpaidAmount, plan.currency)} />
       </div>
       <AnimatedProgress label="납부 진행률" value={totals.progressPercent} />
+    </section>
+  );
+}
+
+function JourneySummaryCard({ journeyMessage, journeySteps }) {
+  if (journeyMessage) {
+    return (
+      <section className="info-card journey-summary-card">
+        <h3>Journey Summary</h3>
+        <p>{journeyMessage}</p>
+      </section>
+    );
+  }
+
+  if (!journeySteps.length) {
+    return (
+      <section className="info-card journey-summary-card">
+        <h3>Journey Summary</h3>
+        <p>Journey 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+      </section>
+    );
+  }
+
+  const currentStep = getCurrentJourneyStep(journeySteps);
+  const overallProgress = calculateJourneyOverallProgress(journeySteps);
+
+  return (
+    <section className="meter-card journey-summary-card">
+      <h3>Journey Summary</h3>
+      <div className="journey-current-step">
+        <span>현재 구간</span>
+        <strong>
+          {currentStep.step_no}. {currentStep.title}
+        </strong>
+        <small>{formatJourneyStatus(currentStep.status)} / 전체 평균 {overallProgress}%</small>
+      </div>
+      <AnimatedProgress label="현재 구간 진행률" value={currentStep.progress_percent} />
     </section>
   );
 }

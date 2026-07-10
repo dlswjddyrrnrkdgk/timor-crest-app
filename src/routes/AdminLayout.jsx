@@ -19,7 +19,12 @@ import {
   updatePaymentItem,
   updatePaymentPlan,
 } from "../services/paymentService.js";
-import { calculateJourneyOverallProgress, getJourneySteps, updateJourneyStep } from "../services/journeyService.js";
+import {
+  calculateJourneyOverallProgress,
+  ensureDefaultJourneySteps,
+  getJourneySteps,
+  updateJourneyStep,
+} from "../services/journeyService.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = [
@@ -103,10 +108,17 @@ export default function AdminLayout() {
       setMessage(unitResult.error || contractorResult.error || planResult.error);
       return;
     }
+    let nextJourneySteps = journeyResult.data || [];
+    let nextJourneyMessage = journeyResult.error || "";
+    if (!journeyResult.error && nextJourneySteps.length < 8) {
+      const ensuredResult = await ensureDefaultJourneySteps();
+      nextJourneySteps = ensuredResult.data || nextJourneySteps;
+      nextJourneyMessage = ensuredResult.error || "";
+    }
     setUnits(unitResult.data || []);
     setContractors(contractorResult.data || []);
-    setJourneySteps(journeyResult.data || []);
-    setJourneyMessage(journeyResult.error || "");
+    setJourneySteps(nextJourneySteps);
+    setJourneyMessage(nextJourneyMessage);
     await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
   }
@@ -327,6 +339,21 @@ export default function AdminLayout() {
     setMessage("Journey 단계가 수정되었습니다.");
   }
 
+  async function ensureJourneyDefaults() {
+    setStatus("saving");
+    setMessage("");
+    setJourneyMessage("");
+    const result = await ensureDefaultJourneySteps();
+    if (result.error) {
+      setStatus("ready");
+      setJourneyMessage(result.error);
+      return;
+    }
+    setJourneySteps(result.data || []);
+    setStatus("ready");
+    setMessage("기본 8단계 Journey가 생성 또는 보완되었습니다.");
+  }
+
   function selectPaymentContractor(contractor) {
     editContractor(contractor);
     window.setTimeout(() => paymentDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
@@ -353,6 +380,7 @@ export default function AdminLayout() {
     journeyOverallProgress,
     journeyMessage,
     journeySteps,
+    ensureJourneyDefaults,
     resetContractorForm,
     resetUnitForm,
     selectPaymentContractor,
@@ -694,7 +722,7 @@ function PaymentsPage({
   );
 }
 
-function JourneyPage({ journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep }) {
+function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep }) {
   return (
     <>
       <section className="admin-panel">
@@ -702,6 +730,11 @@ function JourneyPage({ journeyMessage, journeyOverallProgress, journeySteps, sta
         <h2>Journey 공정 관리</h2>
         <p>이 공정 정보는 전체 프로젝트 공통이며, 수정 내용은 모든 계약자에게 동일하게 표시됩니다.</p>
         <AnimatedProgress label="전체 공정 진행률" value={journeyOverallProgress} />
+        {journeySteps.length < 8 ? (
+          <button className="secondary-button journey-default-button" disabled={status === "saving"} onClick={ensureJourneyDefaults} type="button">
+            기본 8단계 Journey 생성/보완
+          </button>
+        ) : null}
       </section>
       {journeyMessage ? <p className="form-error">{journeyMessage}</p> : null}
       <section className="admin-panel">
@@ -718,12 +751,12 @@ function JourneyPage({ journeyMessage, journeyOverallProgress, journeySteps, sta
   );
 }
 
-function TextField({ defaultValue, label, max, min, name, onChange, required = false, type = "text", value }) {
+function TextField({ defaultValue, label, max, min, name, onChange, required = false, step, type = "text", value }) {
   const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <input max={max} min={min} name={name} onChange={onChange} required={required} type={type} {...inputProps} />
+      <input max={max} min={min} name={name} onChange={onChange} required={required} step={step} type={type} {...inputProps} />
     </label>
   );
 }
@@ -777,9 +810,19 @@ function PaymentItemForm({ item, onSubmit, saving }) {
 }
 
 function JourneyStepForm({ item, onSubmit, saving }) {
+  const [progress, setProgress] = useState(clampProgress(item.progress_percent));
+
+  useEffect(() => {
+    setProgress(clampProgress(item.progress_percent));
+  }, [item.progress_percent]);
+
   function handleSubmit(event) {
     event.preventDefault();
     onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
+  }
+
+  function updateProgress(event) {
+    setProgress(clampProgress(event.target.value));
   }
 
   return (
@@ -803,7 +846,11 @@ function JourneyStepForm({ item, onSubmit, saving }) {
           <option value="delayed">delayed</option>
         </select>
       </label>
-      <TextField label="progress_percent" name="progress_percent" defaultValue={item.progress_percent} max="100" min="0" type="number" />
+      <label className="field progress-edit-field">
+        <span>progress_percent</span>
+        <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={updateProgress} type="range" value={progress} />
+      </label>
+      <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={updateProgress} step="1" type="number" value={progress} />
       <TextField label="target_date" name="target_date" defaultValue={item.target_date || ""} type="date" />
       <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
       <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
@@ -825,6 +872,12 @@ function TextAreaField({ defaultValue, label, name }) {
 
 function JourneyStatusChip({ status }) {
   return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status)}</span>;
+}
+
+function clampProgress(value) {
+  const next = Number(value);
+  if (!Number.isFinite(next)) return 0;
+  return Math.max(0, Math.min(Math.round(next), 100));
 }
 
 function formatJourneyStatus(status) {

@@ -1,7 +1,10 @@
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { SUPABASE_CONFIG_MESSAGE } from "./authService.js";
+import { DEFAULT_JOURNEY_STEPS, calculateJourneyOverallProgress, getCurrentJourneyStep } from "./journeyModel.js";
 
 const JOURNEY_STEP_SELECT = "id, step_no, title, subtitle, description, status, progress_percent, target_date, completed_date, note";
+
+export { calculateJourneyOverallProgress, getCurrentJourneyStep };
 
 export async function getJourneySteps() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
@@ -36,12 +39,16 @@ export async function updateJourneyStep(stepId, values) {
   return respond(data, error);
 }
 
-export function calculateJourneyOverallProgress(steps) {
-  const rows = Array.isArray(steps) ? steps : [];
-  if (!rows.length) return 0;
+export async function ensureDefaultJourneySteps() {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
-  const total = rows.reduce((sum, step) => sum + Number(step.progress_percent || 0), 0);
-  return Math.round(total / rows.length);
+  const { error } = await supabase
+    .from("journey_template_steps")
+    .upsert(DEFAULT_JOURNEY_STEPS, { ignoreDuplicates: true, onConflict: "step_no" });
+
+  if (error) return fail(error.message);
+
+  return getJourneySteps();
 }
 
 function requiredText(value) {

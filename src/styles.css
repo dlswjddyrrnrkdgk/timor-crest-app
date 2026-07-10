@@ -314,6 +314,12 @@ button:disabled {
 .journey-stage-card .eyebrow { margin-bottom: var(--space-1); }
 .journey-subtitle { margin-top: var(--space-1); color: var(--text-secondary); font-weight: 700; }
 .journey-note { padding: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-secondary); }
+.journey-default-button { margin-top: var(--space-4); }
+.progress-edit-field input[type="range"] { min-height: 32px; padding: 0; accent-color: var(--accent-primary); }
+.journey-summary-card { margin-top: var(--space-3); }
+.journey-current-step { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface-secondary); }
+.journey-current-step span, .journey-current-step small { color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.journey-current-step strong { color: var(--accent-deep); font-size: 17px; line-height: 1.35; }
 .admin-tabs a {
   display: inline-flex;
   align-items: center;

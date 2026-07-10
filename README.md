@@ -196,7 +196,7 @@ Admin routes:
 
 Contractor routes:
 
-- `/contractor` - compact dashboard with Payment Summary and the `내 집 미리보기` button.
+- `/contractor` - compact dashboard with Payment Summary, Journey Summary, and the `내 집 미리보기` button.
 - `/contractor/payments` - read-only Payment Summary plus the full 8-step payment item list.
 - `/contractor/journey` - read-only shared Journey schedule.
 - `/contractor/preview` - placeholder for the future home preview experience.
@@ -207,7 +207,18 @@ Payment progress is shown with `AnimatedProgress`, which count-ups the number an
 
 Run `supabase/migrations/0004_journey.sql` after the Phase 3 migration.
 
-This migration creates `public.journey_template_steps`: one project-wide Journey template, deliberately not linked to individual contractors or units. Every contractor reads the same 8-stage schedule. The seed preserves the legacy demo's stage titles, dates, statuses, progress values, and descriptions, and `on conflict (step_no) do nothing` prevents duplicate seed rows.
+This migration creates `public.journey_template_steps`: one project-wide Journey template, deliberately not linked to individual contractors or units. Every contractor reads the same 8-stage schedule. The seed inserts the default construction Journey stages with `on conflict (step_no) do nothing`, so it fills missing rows without overwriting existing Admin edits.
+
+Default Journey steps:
+
+1. 계약 및 예약 확인
+2. 설계 및 인허가 준비
+3. 기초공사
+4. 골조공사
+5. 벽체 및 외장공사
+6. 지붕 / 천장 / 전기공사
+7. 내부 마감 및 점검
+8. 입주 준비 완료
 
 Journey progress is calculated in the browser as `average(progress_percent)` across the shared steps. It is not stored as a contractor-, unit-, or project-specific column.
 
@@ -217,7 +228,7 @@ RLS is intentionally narrow:
 - Contractor users can only select the shared template.
 - Anonymous users have no Journey access.
 
-Admins manage shared steps at `/admin/journey`. Contractors read the same schedule at `/contractor/journey`; there are no contractor-specific Journey rows or write controls. Continue to use only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in browser code. Never expose `SUPABASE_SERVICE_ROLE_KEY`, database passwords, or other secrets through a `VITE_` variable.
+Admins manage shared steps at `/admin/journey`. If fewer than 8 steps exist, the Admin page can create or supplement the default Journey rows through the browser using the logged-in admin session and RLS-protected insert permissions. Contractors see a short Journey Summary on `/contractor` and read the full schedule at `/contractor/journey`; there are no contractor-specific Journey rows or write controls. Continue to use only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in browser code. Never expose `SUPABASE_SERVICE_ROLE_KEY`, database passwords, or other secrets through a `VITE_` variable.
 
 ## Phase Boundaries
 

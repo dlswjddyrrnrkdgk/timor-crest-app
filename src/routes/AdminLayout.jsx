@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import {
   createContractor,
   createUnit,
@@ -12,6 +13,7 @@ import {
   calculatePaymentTotals,
   createDefaultPaymentItems,
   createPaymentPlan,
+  getAdminPaymentPlans,
   getPaymentItems,
   getPaymentPlanByContractor,
   updatePaymentItem,
@@ -19,7 +21,12 @@ import {
 } from "../services/paymentService.js";
 import { signOut } from "../services/authService.js";
 
-const adminTabs = ["Dashboard", "호수 관리", "계약자 관리", "Journey 공정 관리", "납부 일정 관리", "문서 관리"];
+const adminTabs = [
+  ["", "Dashboard"],
+  ["contractors", "계약자 관리"],
+  ["units", "호수 관리"],
+  ["payments", "납부일정 관리"],
+];
 
 const emptyUnitForm = {
   unit_code: "",
@@ -49,6 +56,7 @@ const emptyPaymentPlanForm = {
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const paymentDetailRef = useRef(null);
   const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [selectedUnitId, setSelectedUnitId] = useState("");
@@ -57,6 +65,7 @@ export default function AdminLayout() {
   const [contractorForm, setContractorForm] = useState(emptyContractorForm);
   const [paymentPlan, setPaymentPlan] = useState(null);
   const [paymentItems, setPaymentItems] = useState([]);
+  const [paymentSummaries, setPaymentSummaries] = useState({});
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
@@ -78,15 +87,27 @@ export default function AdminLayout() {
   async function loadDashboard() {
     setStatus("loading");
     setMessage("");
-    const [unitResult, contractorResult] = await Promise.all([getUnits(), getAdminContractors()]);
-    if (unitResult.error || contractorResult.error) {
+    const [unitResult, contractorResult, planResult] = await Promise.all([getUnits(), getAdminContractors(), getAdminPaymentPlans()]);
+    if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
-      setMessage(unitResult.error || contractorResult.error);
+      setMessage(unitResult.error || contractorResult.error || planResult.error);
       return;
     }
     setUnits(unitResult.data || []);
     setContractors(contractorResult.data || []);
+    await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
+  }
+
+  async function loadPaymentSummaries(plans) {
+    const entries = await Promise.all(
+      plans.map(async (plan) => {
+        const itemsResult = await getPaymentItems(plan.id);
+        const items = itemsResult.data || [];
+        return [plan.contractor_id, { plan, items, totals: calculatePaymentTotals(plan, items) }];
+      }),
+    );
+    setPaymentSummaries(Object.fromEntries(entries));
   }
 
   async function handleLogout() {
@@ -214,7 +235,7 @@ export default function AdminLayout() {
       return;
     }
     setPaymentPlan(result.data);
-    setStatus("ready");
+    await refreshPaymentState(selectedContractor);
     setMessage("납부 계획이 수정되었습니다.");
   }
 
@@ -240,7 +261,7 @@ export default function AdminLayout() {
       currency: result.data.currency || "USD",
       status: result.data.status || "active",
     });
-    setStatus("ready");
+    await refreshPaymentState(selectedContractor);
     setMessage("납부 계획이 생성되었습니다. 기본 8단계를 생성해 주세요.");
   }
 
@@ -255,7 +276,7 @@ export default function AdminLayout() {
       return;
     }
     setPaymentItems(result.data || []);
-    setStatus("ready");
+    await refreshPaymentState(selectedContractor);
     setMessage("기본 8단계 납부 항목이 생성되었습니다.");
   }
 
@@ -268,13 +289,58 @@ export default function AdminLayout() {
       setMessage(result.error);
       return;
     }
-    const itemsResult = await getPaymentItems(result.data.payment_plan_id);
-    setPaymentItems(itemsResult.data || []);
-    setStatus("ready");
+    await refreshPaymentState(selectedContractor);
     setMessage("납부 단계가 수정되었습니다.");
   }
 
+  async function refreshPaymentState(contractor) {
+    await loadPaymentForContractor(contractor);
+    const planResult = await getAdminPaymentPlans();
+    if (!planResult.error) await loadPaymentSummaries(planResult.data || []);
+    setStatus("ready");
+  }
+
+  function selectPaymentContractor(contractor) {
+    editContractor(contractor);
+    window.setTimeout(() => paymentDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  }
+
+  const activeContractors = contractors.filter((contractor) => contractor.status === "active").length;
+  const activeUnits = units.filter((unit) => unit.status === "active").length;
   const paymentTotals = calculatePaymentTotals(paymentPlan, paymentItems);
+
+  const shell = {
+    activeContractors,
+    activeUnits,
+    contractors,
+    editContractor,
+    editUnit,
+    message,
+    paymentDetailRef,
+    paymentItems,
+    paymentPlan,
+    paymentPlanForm,
+    paymentSummaries,
+    paymentTotals,
+    resetContractorForm,
+    resetUnitForm,
+    selectPaymentContractor,
+    selectedContractor,
+    selectedUnit,
+    status,
+    submitContractor,
+    submitPaymentItem,
+    submitPaymentPlan,
+    submitUnit,
+    units,
+    updateContractorField,
+    updatePaymentPlanField,
+    updateUnitField,
+    createDefaultItemsForPlan,
+    createPlanForSelectedContractor,
+    contractorForm,
+    unitForm,
+  };
 
   return (
     <main className="demo-stage" aria-label="Timor Crest admin portal">
@@ -294,187 +360,303 @@ export default function AdminLayout() {
                 로그아웃
               </button>
             </div>
-
             <div className="admin-tabs" aria-label="Admin sections">
-              {adminTabs.map((label, index) => (
-                <button className={index === 0 ? "is-active" : ""} disabled key={label} type="button">
+              {adminTabs.map(([path, label]) => (
+                <NavLink className={({ isActive }) => (isActive ? "is-active" : "")} end={path === ""} key={path || "home"} to={path}>
                   {label}
-                </button>
+                </NavLink>
               ))}
             </div>
-
-            <section className="admin-panel">
-              <div className="metric-grid">
-                <article className="metric-card">
-                  <span>계약자</span>
-                  <strong>{contractors.length}</strong>
-                </article>
-                <article className="metric-card">
-                  <span>호수</span>
-                  <strong>{units.length}</strong>
-                </article>
-              </div>
-              <p className="security-note">
-                계약자 로그인을 사용하려면 Supabase Auth에서 사용자를 먼저 생성한 뒤, 해당 User UID를 profile_id에 연결하세요.
-              </p>
-              {message ? <p className="form-error">{message}</p> : null}
-              {status === "loading" ? <p>계약자와 호수 정보를 불러오고 있습니다.</p> : null}
-            </section>
-
-            <section className="admin-panel">
-              <h2>계약자 목록</h2>
-              <div className="admin-list">
-                {contractors.length ? (
-                  contractors.map((contractor) => (
-                    <button
-                      className={`admin-record-card ${selectedContractor?.id === contractor.id ? "is-selected" : ""}`}
-                      key={contractor.id}
-                      onClick={() => editContractor(contractor)}
-                      type="button"
-                    >
-                      <span>
-                        <strong>{contractor.full_name}</strong>
-                        <small>{contractor.email || "이메일 없음"}</small>
-                      </span>
-                      <span>
-                        <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
-                        <small>{contractor.phone || "연락처 없음"}</small>
-                      </span>
-                      <span className="status-chip">{contractor.status || "active"}</span>
-                    </button>
-                  ))
-                ) : (
-                  <p>등록된 계약자가 없습니다.</p>
-                )}
-              </div>
-            </section>
-
-            <section className="admin-panel">
-              <h2>{selectedUnit ? "호수 수정" : "호수 생성"}</h2>
-              <form className="admin-form compact-admin-form" onSubmit={submitUnit}>
-                <TextField label="unit_code" name="unit_code" onChange={updateUnitField} required value={unitForm.unit_code} />
-                <TextField label="unit_name" name="unit_name" onChange={updateUnitField} value={unitForm.unit_name} />
-                <TextField label="property_type" name="property_type" onChange={updateUnitField} value={unitForm.property_type} />
-                <TextField
-                  label="total_price"
-                  name="total_price"
-                  onChange={updateUnitField}
-                  type="number"
-                  value={unitForm.total_price}
-                />
-                <TextField label="currency" name="currency" onChange={updateUnitField} value={unitForm.currency} />
-                <TextField label="status" name="status" onChange={updateUnitField} value={unitForm.status} />
-                <div className="button-row">
-                  <button className="primary-button" disabled={status === "saving"} type="submit">
-                    {selectedUnit ? "호수 수정" : "호수 생성"}
-                  </button>
-                  <button className="secondary-button" onClick={resetUnitForm} type="button">
-                    신규 입력
-                  </button>
-                </div>
-              </form>
-              <div className="unit-chip-list">
-                {units.map((unit) => (
-                  <button key={unit.id} onClick={() => editUnit(unit)} type="button">
-                    {unit.unit_code}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="admin-panel">
-              <h2>{selectedContractor ? "계약자 수정" : "계약자 생성"}</h2>
-              <form className="admin-form compact-admin-form" onSubmit={submitContractor}>
-                <TextField label="full_name" name="full_name" onChange={updateContractorField} required value={contractorForm.full_name} />
-                <TextField label="email" name="email" onChange={updateContractorField} type="email" value={contractorForm.email} />
-                <TextField label="phone" name="phone" onChange={updateContractorField} value={contractorForm.phone} />
-                <TextField label="passport_no" name="passport_no" onChange={updateContractorField} value={contractorForm.passport_no} />
-                <TextField label="address" name="address" onChange={updateContractorField} value={contractorForm.address} />
-                <TextField label="status" name="status" onChange={updateContractorField} value={contractorForm.status} />
-                <label className="field">
-                  <span>unit_id</span>
-                  <select name="unit_id" onChange={updateContractorField} value={contractorForm.unit_id}>
-                    <option value="">호수 선택</option>
-                    {units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.unit_code} {unit.unit_name ? `/ ${unit.unit_name}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <TextField label="profile_id" name="profile_id" onChange={updateContractorField} value={contractorForm.profile_id} />
-                <div className="button-row">
-                  <button className="primary-button" disabled={status === "saving"} type="submit">
-                    {selectedContractor ? "계약자 수정" : "계약자 생성"}
-                  </button>
-                  <button className="secondary-button" onClick={resetContractorForm} type="button">
-                    신규 입력
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section className="admin-panel">
-              <h2>Payment Management</h2>
-              {!selectedContractor ? (
-                <p>계약자 목록에서 계약자를 선택하면 납부 계획을 관리할 수 있습니다.</p>
-              ) : (
-                <>
-                  <div className="payment-context-card">
-                    <span className="eyebrow">SELECTED CONTRACTOR</span>
-                    <strong>{selectedContractor.full_name}</strong>
-                    <p>
-                      {selectedContractor.email || "이메일 없음"} / {selectedContractor.unit?.unit_code || "호수 미연결"}
-                    </p>
-                  </div>
-
-                  {!paymentPlan ? (
-                    <button className="primary-button" disabled={status === "saving"} onClick={createPlanForSelectedContractor} type="button">
-                      Create payment plan
-                    </button>
-                  ) : (
-                    <>
-                      <div className="metric-grid">
-                        <Metric label="총 계약금액" value={formatMoney(paymentTotals.totalPrice, paymentPlan.currency)} />
-                        <Metric label="납부 완료" value={formatMoney(paymentTotals.totalPaidAmount, paymentPlan.currency)} />
-                        <Metric label="미납 금액" value={formatMoney(paymentTotals.unpaidAmount, paymentPlan.currency)} />
-                        <Metric label="진행률" value={`${paymentTotals.progressPercent}%`} />
-                      </div>
-                      <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
-                        <TextField
-                          label="total_price"
-                          name="total_price"
-                          onChange={updatePaymentPlanField}
-                          type="number"
-                          value={paymentPlanForm.total_price}
-                        />
-                        <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
-                        <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
-                        <button className="primary-button" disabled={status === "saving"} type="submit">
-                          납부 계획 수정
-                        </button>
-                      </form>
-
-                      {!paymentItems.length ? (
-                        <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
-                          기본 8단계 payment_items 생성
-                        </button>
-                      ) : (
-                        <div className="admin-list">
-                          {paymentItems.map((item) => (
-                            <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </section>
+            {message ? <p className="form-error">{message}</p> : null}
+            {status === "loading" ? <p>데이터를 불러오고 있습니다.</p> : null}
+            <Routes>
+              <Route index element={<AdminHome {...shell} />} />
+              <Route path="contractors" element={<ContractorsPage {...shell} />} />
+              <Route path="units" element={<UnitsPage {...shell} />} />
+              <Route path="payments" element={<PaymentsPage {...shell} />} />
+            </Routes>
           </section>
         </div>
       </section>
     </main>
+  );
+}
+
+function AdminHome({ activeContractors, activeUnits, contractors, units }) {
+  return (
+    <>
+      <section className="admin-panel">
+        <div className="metric-grid">
+          <Metric label="전체 계약자" value={contractors.length} />
+          <Metric label="전체 호수" value={units.length} />
+          <Metric label="active 계약자" value={activeContractors} />
+          <Metric label="active 호수" value={activeUnits} />
+        </div>
+      </section>
+      <section className="admin-panel">
+        <h2>호수 목록</h2>
+        <div className="admin-list">
+          {units.length ? (
+            units.map((unit) => (
+              <article className="admin-record-card" key={unit.id}>
+                <span>
+                  <strong>{unit.unit_code}</strong>
+                  <small>{unit.status || "active"}</small>
+                </span>
+                <span>
+                  <strong>{unit.unit_name || "이름 미등록"}</strong>
+                  <small>{formatMoney(unit.total_price, unit.currency)}</small>
+                </span>
+              </article>
+            ))
+          ) : (
+            <p>등록된 호수가 없습니다.</p>
+          )}
+        </div>
+      </section>
+      <section className="admin-panel">
+        <h2>관리 바로가기</h2>
+        <div className="management-action-grid">
+          <Link className="primary-button" to="contractors">계약자 관리</Link>
+          <Link className="secondary-button" to="units">호수 관리</Link>
+          <Link className="secondary-button" to="payments">납부일정 관리</Link>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ContractorsPage({
+  contractorForm,
+  contractors,
+  editContractor,
+  resetContractorForm,
+  selectedContractor,
+  status,
+  submitContractor,
+  units,
+  updateContractorField,
+}) {
+  return (
+    <>
+      <section className="admin-panel">
+        <h2>계약자 목록</h2>
+        <p className="security-note">계약자 로그인을 사용하려면 Supabase Auth에서 사용자를 먼저 생성한 뒤, 해당 User UID를 profile_id에 연결하세요.</p>
+        <div className="admin-list">
+          {contractors.length ? (
+            contractors.map((contractor) => (
+              <button
+                className={`admin-record-card ${selectedContractor?.id === contractor.id ? "is-selected" : ""}`}
+                key={contractor.id}
+                onClick={() => editContractor(contractor)}
+                type="button"
+              >
+                <span>
+                  <strong>{contractor.full_name}</strong>
+                  <small>{contractor.status || "active"}</small>
+                </span>
+                <span>
+                  <strong>{contractor.email || "이메일 없음"}</strong>
+                  <small>{contractor.phone || "연락처 없음"}</small>
+                </span>
+                <span>
+                  <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
+                  <small>unit</small>
+                </span>
+              </button>
+            ))
+          ) : (
+            <p>등록된 계약자가 없습니다.</p>
+          )}
+        </div>
+      </section>
+      <section className="admin-panel">
+        <h2>{selectedContractor ? "계약자 수정" : "계약자 생성"}</h2>
+        <form className="admin-form compact-admin-form" onSubmit={submitContractor}>
+          <TextField label="full_name" name="full_name" onChange={updateContractorField} required value={contractorForm.full_name} />
+          <TextField label="email" name="email" onChange={updateContractorField} type="email" value={contractorForm.email} />
+          <TextField label="phone" name="phone" onChange={updateContractorField} value={contractorForm.phone} />
+          <TextField label="passport_no" name="passport_no" onChange={updateContractorField} value={contractorForm.passport_no} />
+          <TextField label="address" name="address" onChange={updateContractorField} value={contractorForm.address} />
+          <TextField label="status" name="status" onChange={updateContractorField} value={contractorForm.status} />
+          <label className="field">
+            <span>unit_id</span>
+            <select name="unit_id" onChange={updateContractorField} value={contractorForm.unit_id}>
+              <option value="">호수 선택</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.unit_code} {unit.unit_name ? `/ ${unit.unit_name}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <TextField label="profile_id" name="profile_id" onChange={updateContractorField} value={contractorForm.profile_id} />
+          <div className="button-row">
+            <button className="primary-button" disabled={status === "saving"} type="submit">
+              {selectedContractor ? "계약자 수정" : "계약자 생성"}
+            </button>
+            <button className="secondary-button" onClick={resetContractorForm} type="button">
+              신규 입력
+            </button>
+          </div>
+        </form>
+      </section>
+    </>
+  );
+}
+
+function UnitsPage({ editUnit, resetUnitForm, selectedUnit, status, submitUnit, unitForm, units, updateUnitField }) {
+  return (
+    <>
+      <section className="admin-panel">
+        <h2>호수 목록</h2>
+        <div className="admin-list">
+          {units.length ? (
+            units.map((unit) => (
+              <button className="admin-record-card" key={unit.id} onClick={() => editUnit(unit)} type="button">
+                <span>
+                  <strong>{unit.unit_code}</strong>
+                  <small>{unit.status || "active"}</small>
+                </span>
+                <span>
+                  <strong>{unit.unit_name || "이름 미등록"}</strong>
+                  <small>{unit.property_type || "타입 미등록"}</small>
+                </span>
+                <span>
+                  <strong>{formatMoney(unit.total_price, unit.currency)}</strong>
+                  <small>{unit.currency || "USD"}</small>
+                </span>
+              </button>
+            ))
+          ) : (
+            <p>등록된 호수가 없습니다.</p>
+          )}
+        </div>
+      </section>
+      <section className="admin-panel">
+        <h2>{selectedUnit ? "호수 수정" : "호수 생성"}</h2>
+        <form className="admin-form compact-admin-form" onSubmit={submitUnit}>
+          <TextField label="unit_code" name="unit_code" onChange={updateUnitField} required value={unitForm.unit_code} />
+          <TextField label="unit_name" name="unit_name" onChange={updateUnitField} value={unitForm.unit_name} />
+          <TextField label="property_type" name="property_type" onChange={updateUnitField} value={unitForm.property_type} />
+          <TextField label="total_price" name="total_price" onChange={updateUnitField} type="number" value={unitForm.total_price} />
+          <TextField label="currency" name="currency" onChange={updateUnitField} value={unitForm.currency} />
+          <TextField label="status" name="status" onChange={updateUnitField} value={unitForm.status} />
+          <div className="button-row">
+            <button className="primary-button" disabled={status === "saving"} type="submit">
+              {selectedUnit ? "호수 수정" : "호수 생성"}
+            </button>
+            <button className="secondary-button" onClick={resetUnitForm} type="button">
+              신규 입력
+            </button>
+          </div>
+        </form>
+      </section>
+    </>
+  );
+}
+
+function PaymentsPage({
+  contractors,
+  createDefaultItemsForPlan,
+  createPlanForSelectedContractor,
+  paymentDetailRef,
+  paymentItems,
+  paymentPlan,
+  paymentPlanForm,
+  paymentSummaries,
+  paymentTotals,
+  selectPaymentContractor,
+  selectedContractor,
+  status,
+  submitPaymentItem,
+  submitPaymentPlan,
+  updatePaymentPlanField,
+}) {
+  return (
+    <>
+      <section className="admin-panel">
+        <h2>납부일정 관리</h2>
+        <div className="admin-list">
+          {contractors.length ? (
+            contractors.map((contractor) => {
+              const summary = paymentSummaries[contractor.id];
+              return (
+                <button
+                  className={`admin-record-card payment-contractor-card ${selectedContractor?.id === contractor.id ? "is-selected" : ""}`}
+                  key={contractor.id}
+                  onClick={() => selectPaymentContractor(contractor)}
+                  type="button"
+                >
+                  <span>
+                    <strong>{contractor.full_name}</strong>
+                    <small>{contractor.email || "이메일 없음"}</small>
+                  </span>
+                  <span>
+                    <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
+                    <small>{formatMoney(contractor.unit?.total_price, contractor.unit?.currency)}</small>
+                  </span>
+                  <span>
+                    <strong>{summary ? `${summary.totals.progressPercent}%` : "미생성"}</strong>
+                    <small>{summary ? `${summary.items.length}/8 단계` : "payment plan 없음"}</small>
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            <p>등록된 계약자가 없습니다.</p>
+          )}
+        </div>
+      </section>
+      <section className="admin-panel" ref={paymentDetailRef}>
+        <h2>Payment Management</h2>
+        {!selectedContractor ? (
+          <p>계약자를 선택하면 납부 상세를 관리할 수 있습니다.</p>
+        ) : (
+          <>
+            <div className="payment-context-card">
+              <span className="eyebrow">SELECTED CONTRACTOR</span>
+              <strong>{selectedContractor.full_name}</strong>
+              <p>{selectedContractor.email || "이메일 없음"} / {selectedContractor.unit?.unit_code || "호수 미연결"}</p>
+            </div>
+            {!paymentPlan ? (
+              <button className="primary-button" disabled={status === "saving"} onClick={createPlanForSelectedContractor} type="button">
+                Create payment plan
+              </button>
+            ) : (
+              <>
+                <div className="metric-grid">
+                  <Metric label="총 계약금액" value={formatMoney(paymentTotals.totalPrice, paymentPlan.currency)} />
+                  <Metric label="납부 완료" value={formatMoney(paymentTotals.totalPaidAmount, paymentPlan.currency)} />
+                  <Metric label="미납 금액" value={formatMoney(paymentTotals.unpaidAmount, paymentPlan.currency)} />
+                  <Metric label="필요 금액 합계" value={formatMoney(paymentTotals.totalRequiredAmount, paymentPlan.currency)} />
+                </div>
+                <AnimatedProgress label="납부 진행률" value={paymentTotals.progressPercent} />
+                <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
+                  <TextField label="total_price" name="total_price" onChange={updatePaymentPlanField} type="number" value={paymentPlanForm.total_price} />
+                  <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
+                  <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
+                  <button className="primary-button" disabled={status === "saving"} type="submit">
+                    납부 계획 수정
+                  </button>
+                </form>
+                {!paymentItems.length ? (
+                  <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
+                    기본 8단계 payment_items 생성
+                  </button>
+                ) : (
+                  <div className="admin-list">
+                    {paymentItems.map((item) => (
+                      <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -537,5 +719,5 @@ function PaymentItemForm({ item, onSubmit, saving }) {
 }
 
 function formatMoney(value, currency = "USD") {
-  return `${Number(value || 0).toLocaleString("ko-KR")} ${currency}`;
+  return `${Number(value || 0).toLocaleString("ko-KR")} ${currency || "USD"}`;
 }

@@ -294,3 +294,54 @@ button:disabled {
   margin: 0;
   font-size: 16px;
 }
+.admin-tabs a {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--accent-primary);
+  background: var(--surface-blue-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.admin-tabs a.is-active {
+  color: var(--surface-elevated);
+  background: var(--accent-primary);
+}
+.bottom-nav a {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.bottom-nav a.is-active {
+  color: var(--surface-elevated);
+  background: var(--accent-primary);
+}
+.bottom-nav a.is-active .nav-icon {
+  color: var(--surface-elevated);
+}
+.management-action-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+.primary-button,
+.secondary-button {
+  text-decoration: none;
+}
+.payment-contractor-card strong {
+  overflow-wrap: anywhere;
+}
+.animated-progress {
+  margin-top: var(--space-3);
+}

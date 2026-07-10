@@ -1,6 +1,6 @@
 # Timor Crest Contractor Portal
 
-Vite + React web portal for Timor Crest contractor and Admin operations. Phase 3 adds contractor-specific 8-step payment management while keeping Journey, documents, and CCTV for later phases.
+Vite + React web portal for Timor Crest contractor and Admin operations. The current UI keeps Auth, contractor/unit management, and 8-step payment management while separating Admin and Contractor screens into focused mobile-first routes.
 
 ## Local Setup
 
@@ -156,7 +156,7 @@ The payment model keeps the existing demo's 8-step structure:
 Admin payment workflow:
 
 1. Sign in as Admin.
-2. Open `/admin`.
+2. Open `/admin/payments`.
 3. Select a contractor from the contractor list.
 4. In Payment Management, create a payment plan if one does not exist.
 5. The default `total_price` and `currency` use the selected contractor's unit when available.
@@ -167,9 +167,11 @@ Contractor payment workflow:
 
 1. Sign in as the contractor.
 2. Open `/contractor`.
-3. The page shows only the payment plan connected to the contractor row where `contractors.profile_id = auth.uid()`.
-4. Payment information is read-only for contractors.
-5. If no payment plan exists, the page asks the contractor to contact Admin.
+3. The dashboard shows a compact payment summary and preview button.
+4. Open `/contractor/payments` to see the full 8-step payment list.
+5. The page shows only the payment plan connected to the contractor row where `contractors.profile_id = auth.uid()`.
+6. Payment information is read-only for contractors.
+7. If no payment plan exists, the page asks the contractor to contact Admin.
 
 Payment summary calculations are not stored in the database:
 
@@ -180,9 +182,28 @@ Payment summary calculations are not stored in the database:
 
 Phase 3 still uses only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the browser. Do not put service role keys, database passwords, or secret tokens in frontend code.
 
+## UI Route Structure
+
+This UI refactor does not add a database migration.
+
+Admin routes:
+
+- `/admin` - dashboard home with summary cards, unit summary list, and management buttons.
+- `/admin/contractors` - contractor list plus create/edit forms.
+- `/admin/units` - unit list plus create/edit forms.
+- `/admin/payments` - contractor payment management, payment plan creation, default 8-step item creation, and payment item editing.
+
+Contractor routes:
+
+- `/contractor` - compact dashboard with Payment Summary and the `내 집 미리보기` button.
+- `/contractor/payments` - read-only Payment Summary plus the full 8-step payment item list.
+- `/contractor/preview` - placeholder for the future home preview experience.
+
+Payment progress is shown with `AnimatedProgress`, which count-ups the number and fills the progress bar. It respects `prefers-reduced-motion` by showing the final value immediately.
+
 ## Phase Boundaries
 
-Phase 1 includes only Auth, role redirects, route guards, and protected shells. Phase 2 includes contractor/unit tables, RLS, Admin unit/contractor forms, Admin lists, and Contractor My Contract Summary. Phase 3 includes contractor-specific payment plans, 8 payment items, Admin payment editing, and Contractor read-only payment summary.
+Phase 1 includes only Auth, role redirects, route guards, and protected shells. Phase 2 includes contractor/unit tables, RLS, Admin unit/contractor forms, Admin lists, and Contractor My Contract Summary. Phase 3 includes contractor-specific payment plans, 8 payment items, Admin payment editing, and Contractor read-only payment summary. The dashboard refactor separates these features into focused routes without changing RLS or table shape.
 
 Phase 1 through Phase 3 do not include:
 
@@ -211,7 +232,8 @@ Legacy demo files are retained for future migration reference:
 - `src/services/authService.js` - Auth/profile role helpers.
 - `src/services/contractorService.js` - Supabase unit/contractor data helpers.
 - `src/services/paymentService.js` - Supabase payment plan/item helpers.
-- `src/routes/` - Login, Admin dashboard, Contractor summary, route guard.
+- `src/components/AnimatedProgress.jsx` - reusable progress count-up and progress bar.
+- `src/routes/` - Login, Admin dashboard/routes, Contractor dashboard/routes, route guard.
 - `src/app.js` - legacy demo renderer retained for later migration reference.
 - `src/data.js` - legacy localStorage demo data retained for later migration reference.
 - `src/styles.css` - mobile web design system styling.

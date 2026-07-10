@@ -109,15 +109,15 @@ All spacing derives from 4px.
 
 ### Progress Meter
 - **Structure**: animated number plus progress bar.
-- **Variants**: construction progress, payment progress.
+- **Variants**: construction progress, payment progress, Journey progress.
 - **Spacing**: --space-3 and --space-4.
 - **States**: loading animation, complete value.
 - **Accessibility**: `aria-label` carries final value.
-- **Motion**: transform-free width animation and number count-up.
+- **Motion**: transform-based bar fill and number count-up.
 
 ### Stage Card
 - **Structure**: stage name, state chip, percent, date, guide text.
-- **Variants**: complete, current, upcoming, waiting.
+- **Variants**: Journey complete, in progress, pending, delayed; payment stage variants.
 - **Spacing**: --space-3 and --space-4.
 - **States**: selected/current, complete, waiting.
 - **Accessibility**: status text is visible, not color-only.

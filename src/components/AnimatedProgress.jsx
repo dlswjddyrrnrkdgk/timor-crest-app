@@ -37,7 +37,7 @@ export default function AnimatedProgress({ duration = 900, label = "진행률", 
         </strong>
       </div>
       <div className="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={target}>
-        <span style={{ width: `${barValue}%` }} />
+        <span style={{ transform: `scaleX(${barValue / 100})` }} />
       </div>
     </div>
   );

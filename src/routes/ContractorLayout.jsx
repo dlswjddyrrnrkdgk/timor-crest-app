@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
+import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
 import { signOut } from "../services/authService.js";
 
 const contractorNav = [
@@ -17,6 +18,8 @@ export default function ContractorLayout() {
   const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
+  const [journeySteps, setJourneySteps] = useState([]);
+  const [journeyMessage, setJourneyMessage] = useState("");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -27,7 +30,12 @@ export default function ContractorLayout() {
   async function loadSummary() {
     setStatus("loading");
     setMessage("");
-    const [contractResult, paymentResult] = await Promise.all([getMyContractorSummary(), getMyPaymentSummary()]);
+    setJourneyMessage("");
+    const [contractResult, paymentResult, journeyResult] = await Promise.all([
+      getMyContractorSummary(),
+      getMyPaymentSummary(),
+      getJourneySteps(),
+    ]);
     if (contractResult.error || paymentResult.error) {
       setMessage(contractResult.error || paymentResult.error);
       setStatus("ready");
@@ -35,6 +43,8 @@ export default function ContractorLayout() {
     }
     setSummary(contractResult.data);
     setPaymentSummary(paymentResult.data);
+    setJourneySteps(journeyResult.data || []);
+    setJourneyMessage(journeyResult.error || "");
     setStatus("ready");
   }
 
@@ -43,7 +53,7 @@ export default function ContractorLayout() {
     navigate("/login", { replace: true });
   }
 
-  const shell = { message, paymentSummary, status, summary };
+  const shell = { journeyMessage, journeySteps, message, paymentSummary, status, summary };
 
   return (
     <main className="demo-stage" aria-label="Timor Crest contractor portal">
@@ -56,7 +66,7 @@ export default function ContractorLayout() {
           <section className="view-screen is-active phase-shell">
             <Routes>
               <Route index element={<ContractorHome {...shell} />} />
-              <Route path="journey" element={<PlaceholderPage kicker="JOURNEY" title="Journey" message="Journey 기능은 다음 단계에서 연결됩니다." />} />
+              <Route path="journey" element={<ContractorJourney {...shell} />} />
               <Route path="payments" element={<ContractorPayments {...shell} />} />
               <Route path="documents" element={<PlaceholderPage kicker="DOCUMENTS" title="문서" message="문서 기능은 다음 단계에서 연결됩니다." />} />
               <Route path="preview" element={<ContractorPreview />} />
@@ -83,7 +93,7 @@ export default function ContractorLayout() {
   );
 }
 
-function ContractorHome({ message, paymentSummary, status, summary }) {
+function ContractorHome({ journeyMessage, journeySteps, message, paymentSummary, status, summary }) {
   return (
     <>
       <section className="home-hero">
@@ -107,6 +117,7 @@ function ContractorHome({ message, paymentSummary, status, summary }) {
       ) : null}
       {summary ? <ContractSummary summary={summary} compact /> : null}
       {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
+      {summary ? <JourneySummaryCard journeyMessage={journeyMessage} journeySteps={journeySteps} /> : null}
       <section className="management-action-grid">
         <Link className="primary-button" to="payments">납부 현황 보기</Link>
         <Link className="secondary-button" to="preview">내 집 미리보기</Link>
@@ -123,6 +134,40 @@ function ContractorPayments({ message, paymentSummary, status, summary }) {
       {message ? <p className="form-error">{message}</p> : null}
       {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
       {summary ? <PaymentItemsList paymentSummary={paymentSummary} /> : null}
+    </>
+  );
+}
+
+function ContractorJourney({ journeyMessage, journeySteps, message, status }) {
+  const overallProgress = calculateJourneyOverallProgress(journeySteps);
+
+  return (
+    <>
+      <PageHeading kicker="PROJECT JOURNEY" title="Journey" />
+      {status === "loading" ? <section className="info-card"><p>Journey 정보를 불러오고 있습니다.</p></section> : null}
+      {message ? <p className="form-error">{message}</p> : null}
+      {journeyMessage ? <p className="form-error">{journeyMessage}</p> : null}
+      {status === "ready" && !journeySteps.length ? (
+        <section className="info-card">
+          <h3>등록 대기</h3>
+          <p>Journey 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+        </section>
+      ) : null}
+      {journeySteps.length ? (
+        <>
+          <section className="meter-card">
+            <h3>전체 공정 진행률</h3>
+            <p>모든 계약자에게 동일하게 적용되는 프로젝트 공정 현황입니다.</p>
+            <AnimatedProgress label="전체 공정 진행률" value={overallProgress} />
+          </section>
+          <section className="section-block">
+            <h3>8단계 Journey</h3>
+            <div className="stage-list">
+              {journeySteps.map((step) => <JourneyStageCard item={step} key={step.id} />)}
+            </div>
+          </section>
+        </>
+      ) : null}
     </>
   );
 }
@@ -201,6 +246,43 @@ function PaymentSummaryCard({ paymentSummary }) {
   );
 }
 
+function JourneySummaryCard({ journeyMessage, journeySteps }) {
+  if (journeyMessage) {
+    return (
+      <section className="info-card journey-summary-card">
+        <h3>Journey Summary</h3>
+        <p>{journeyMessage}</p>
+      </section>
+    );
+  }
+
+  if (!journeySteps.length) {
+    return (
+      <section className="info-card journey-summary-card">
+        <h3>Journey Summary</h3>
+        <p>Journey 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+      </section>
+    );
+  }
+
+  const currentStep = getCurrentJourneyStep(journeySteps);
+  const overallProgress = calculateJourneyOverallProgress(journeySteps);
+
+  return (
+    <section className="meter-card journey-summary-card">
+      <h3>Journey Summary</h3>
+      <div className="journey-current-step">
+        <span>현재 구간</span>
+        <strong>
+          {currentStep.step_no}. {currentStep.title}
+        </strong>
+        <small>{formatJourneyStatus(currentStep.status)} / 전체 평균 {overallProgress}%</small>
+      </div>
+      <AnimatedProgress label="현재 구간 진행률" value={currentStep.progress_percent} />
+    </section>
+  );
+}
+
 function PaymentItemsList({ paymentSummary }) {
   if (!paymentSummary?.plan) return null;
   const { items, plan } = paymentSummary;
@@ -235,6 +317,28 @@ function PaymentItemCard({ currency, item }) {
         <MiniStat label="납부일" value={item.paid_date || "미등록"} />
       </div>
       {item.note ? <p>{item.note}</p> : null}
+    </article>
+  );
+}
+
+function JourneyStageCard({ item }) {
+  return (
+    <article className="stage-card journey-stage-card">
+      <header>
+        <div>
+          <span className="eyebrow">STEP {item.step_no}</span>
+          <h3>{item.title}</h3>
+          {item.subtitle ? <p className="journey-subtitle">{item.subtitle}</p> : null}
+        </div>
+        <JourneyStatusChip status={item.status} />
+      </header>
+      {item.description ? <p>{item.description}</p> : null}
+      <AnimatedProgress label="단계 진행률" value={item.progress_percent} />
+      <div className="stage-meta">
+        <MiniStat label="목표일" value={item.target_date || "미등록"} />
+        <MiniStat label="완료일" value={item.completed_date || "미등록"} />
+      </div>
+      {item.note ? <p className="journey-note">{item.note}</p> : null}
     </article>
   );
 }
@@ -275,6 +379,19 @@ function MiniStat({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function JourneyStatusChip({ status }) {
+  return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status)}</span>;
+}
+
+function formatJourneyStatus(status) {
+  return {
+    completed: "완료",
+    delayed: "지연",
+    in_progress: "진행 중",
+    pending: "대기",
+  }[status] || status || "대기";
 }
 
 function formatMoney(value, currency) {

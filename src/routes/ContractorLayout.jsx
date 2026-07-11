@@ -6,6 +6,7 @@ import { getMyPaymentSummary } from "../services/paymentService.js";
 import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
 import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/documentService.js";
 import { formatFileSize } from "../services/documentModel.js";
+import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { signOut } from "../services/authService.js";
 
 const contractorNav = [
@@ -21,11 +22,11 @@ export default function ContractorLayout() {
   const [summary, setSummary] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [journeySteps, setJourneySteps] = useState([]);
-  const [journeyMessage, setJourneyMessage] = useState("");
+  const [journeyMessage, setJourneyMessage] = useAutoDismissMessage("", 10000);
   const [documentSummary, setDocumentSummary] = useState(null);
-  const [documentMessage, setDocumentMessage] = useState("");
+  const [documentMessage, setDocumentMessage] = useAutoDismissMessage("", 10000);
   const [status, setStatus] = useState("loading");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useAutoDismissMessage("", 10000);
 
   useEffect(() => {
     loadSummary();
@@ -134,7 +135,7 @@ function ContractorHome({ documentMessage, documentSummary, journeyMessage, jour
         </section>
       ) : null}
       {summary ? <ContractSummary hint="Journey 상세 보기" summary={summary} to="journey" compact /> : null}
-      {summary ? <PaymentSummaryCard hint="납부 상세 보기" paymentSummary={paymentSummary} to="payments" /> : null}
+      {summary ? <PaymentSummaryCard hint="납부 상세 보기" paymentSummary={paymentSummary} summary={summary} to="payments" /> : null}
       {summary ? <JourneySummaryCard hint="Journey 상세 보기" journeyMessage={journeyMessage} journeySteps={journeySteps} to="journey" /> : null}
       {summary ? <DocumentSummaryCard documentMessage={documentMessage} documentSummary={documentSummary} hint="문서함 열기" to="documents" /> : null}
       {summary ? <PreviewSummaryCard /> : null}
@@ -148,7 +149,7 @@ function ContractorPayments({ message, paymentSummary, status, summary }) {
       <PageHeading kicker="PAYMENT" title="납부 현황" />
       {status === "loading" ? <section className="info-card"><p>납부 정보를 불러오고 있습니다.</p></section> : null}
       {message ? <p className="form-error">{message}</p> : null}
-      {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
+      {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} summary={summary} /> : null}
       {summary ? <PaymentItemsList paymentSummary={paymentSummary} /> : null}
     </>
   );
@@ -232,17 +233,19 @@ function ContractSummary({ compact = false, hint, summary, to }) {
         {compact ? null : <InfoRow label="전화번호" value={summary.phone} />}
         <InfoRow label="호수" value={unit.unit_code} />
         <InfoRow label="타입" value={unit.property_type} />
+        <PaymentMethodRows contractor={summary} label="납부방법" />
       </dl>
     </SummaryCardShell>
   );
 }
 
-function PaymentSummaryCard({ hint, paymentSummary, to }) {
+function PaymentSummaryCard({ hint, paymentSummary, summary, to }) {
   if (!paymentSummary?.plan) {
     return (
       <SummaryCardShell className="info-card" hint={hint} to={to}>
         <h3>Payment Summary</h3>
         <p>납부 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+        {summary ? <PaymentMethodPanel contractor={summary} label="결제수단" /> : null}
       </SummaryCardShell>
     );
   }
@@ -257,6 +260,7 @@ function PaymentSummaryCard({ hint, paymentSummary, to }) {
         <Amount label="납부 완료" value={formatMoney(totals.totalPaidAmount, plan.currency)} />
         <Amount label="미납 금액" value={formatMoney(totals.unpaidAmount, plan.currency)} />
       </div>
+      {summary ? <PaymentMethodPanel contractor={summary} label="결제수단" /> : null}
       <AnimatedProgress label="납부 진행률" value={totals.progressPercent} />
     </SummaryCardShell>
   );
@@ -464,6 +468,30 @@ function PageHeading({ kicker, title }) {
   );
 }
 
+function PaymentMethodRows({ contractor, label }) {
+  const methodLabel = formatPaymentMethod(contractor?.payment_method);
+  if (contractor?.payment_method !== "bank_transfer") {
+    return <InfoRow label={label} value={methodLabel} />;
+  }
+
+  return (
+    <>
+      <InfoRow label={label} value={methodLabel} />
+      <InfoRow label="은행명" value={contractor.bank_name} />
+      <InfoRow label="계좌번호" value={contractor.bank_account_number} />
+      <InfoRow label="계좌명" value={contractor.bank_account_holder} />
+    </>
+  );
+}
+
+function PaymentMethodPanel({ contractor, label }) {
+  return (
+    <dl className="payment-method-panel">
+      <PaymentMethodRows contractor={contractor} label={label} />
+    </dl>
+  );
+}
+
 function Amount({ label, value }) {
   return (
     <div>
@@ -507,6 +535,13 @@ function formatJourneyStatus(status) {
 function formatMoney(value, currency) {
   if (value === null || value === undefined || value === "") return "미등록";
   return `${Number(value).toLocaleString("ko-KR")} ${currency || "USD"}`;
+}
+
+function formatPaymentMethod(value) {
+  return {
+    bank_transfer: "계좌이체",
+    cash: "현금",
+  }[value] || "미설정";
 }
 
 function formatDate(value) {

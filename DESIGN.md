@@ -131,11 +131,19 @@ All spacing derives from 4px.
 - **Accessibility**: pagination buttons announce selected page.
 - **Motion**: page buttons use common button press.
 
+### Clickable Summary Card
+- **Structure**: whole-card link wrapping the summary content, with a small text hint at the bottom instead of a separate CTA button.
+- **Variants**: contract summary to Journey, payment summary to payment detail, document summary to document detail, preview summary to preview.
+- **Spacing**: same as `info-card` and `meter-card`; no nested button inside the card.
+- **States**: default, hover/focus border emphasis, active press.
+- **Accessibility**: use a real link for navigation so keyboard focus and Enter activation work naturally.
+- **Motion**: subtle lift on hover/focus and minimal scale on active press.
+
 ### Expandable Select List
 - **Structure**: section title, item count, circular chevron toggle, one visible record while collapsed, scrollable card list while expanded.
 - **Variants**: contractor selector, unit selector, payment contractor selector, document contractor selector.
 - **Spacing**: --space-2 through --space-3, with record cards reusing the Admin Record Card rhythm.
-- **States**: collapsed, expanded, selected, archived action disabled.
+- **States**: collapsed, expanded, selected, delete action.
 - **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; records are real buttons when selectable.
 - **Motion**: toggle press uses common button press; list expansion uses bounded height without layout animation loops.
 

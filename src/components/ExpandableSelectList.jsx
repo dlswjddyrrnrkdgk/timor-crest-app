@@ -10,6 +10,7 @@ export default function ExpandableSelectList({
   onSelect,
   renderActions,
   renderItem,
+  renderPreviewItem,
   selectedId = "",
   title,
 }) {
@@ -44,14 +45,15 @@ export default function ExpandableSelectList({
           visibleItems.map((item) => {
             const itemId = getItemId(item);
             const selected = itemId === selectedId;
+            const preview = !expanded && Boolean(renderPreviewItem);
             return (
-              <div className="expandable-select-row" key={itemId}>
+              <div className={`expandable-select-row ${preview ? "is-preview" : ""}`} key={itemId}>
                 <button
                   className={`admin-record-card ${selected ? "is-selected" : ""}`}
                   onClick={() => onSelect?.(item)}
                   type="button"
                 >
-                  {renderItem(item, { selected })}
+                  {preview ? renderPreviewItem(item, { selected }) : renderItem(item, { selected })}
                 </button>
                 {renderActions ? <div className="expandable-select-actions">{renderActions(item)}</div> : null}
               </div>

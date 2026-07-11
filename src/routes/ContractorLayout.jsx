@@ -133,15 +133,11 @@ function ContractorHome({ documentMessage, documentSummary, journeyMessage, jour
           <p>계약자 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
         </section>
       ) : null}
-      {summary ? <ContractSummary summary={summary} compact /> : null}
-      {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
-      {summary ? <JourneySummaryCard journeyMessage={journeyMessage} journeySteps={journeySteps} /> : null}
-      {summary ? <DocumentSummaryCard documentMessage={documentMessage} documentSummary={documentSummary} /> : null}
-      <section className="management-action-grid">
-        <Link className="primary-button" to="payments">납부 현황 보기</Link>
-        <Link className="secondary-button" to="documents">문서 보기</Link>
-        <Link className="secondary-button" to="preview">내 집 미리보기</Link>
-      </section>
+      {summary ? <ContractSummary hint="Journey 상세 보기" summary={summary} to="journey" compact /> : null}
+      {summary ? <PaymentSummaryCard hint="납부 상세 보기" paymentSummary={paymentSummary} to="payments" /> : null}
+      {summary ? <JourneySummaryCard hint="Journey 상세 보기" journeyMessage={journeyMessage} journeySteps={journeySteps} to="journey" /> : null}
+      {summary ? <DocumentSummaryCard documentMessage={documentMessage} documentSummary={documentSummary} hint="문서함 열기" to="documents" /> : null}
+      {summary ? <PreviewSummaryCard /> : null}
     </>
   );
 }
@@ -223,11 +219,11 @@ function PlaceholderPage({ kicker, message, title }) {
   );
 }
 
-function ContractSummary({ compact = false, summary }) {
+function ContractSummary({ compact = false, hint, summary, to }) {
   const unit = summary.unit || {};
 
   return (
-    <section className="info-card">
+    <SummaryCardShell className="info-card" hint={hint} to={to}>
       <h3>My Contract Summary</h3>
       <dl className="compact-info">
         <InfoRow label="이름" value={summary.full_name} />
@@ -237,24 +233,24 @@ function ContractSummary({ compact = false, summary }) {
         <InfoRow label="호수" value={unit.unit_code} />
         <InfoRow label="타입" value={unit.property_type} />
       </dl>
-    </section>
+    </SummaryCardShell>
   );
 }
 
-function PaymentSummaryCard({ paymentSummary }) {
+function PaymentSummaryCard({ hint, paymentSummary, to }) {
   if (!paymentSummary?.plan) {
     return (
-      <section className="info-card">
+      <SummaryCardShell className="info-card" hint={hint} to={to}>
         <h3>Payment Summary</h3>
         <p>납부 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
-      </section>
+      </SummaryCardShell>
     );
   }
 
   const { plan, totals } = paymentSummary;
 
   return (
-    <section className="meter-card">
+    <SummaryCardShell className="meter-card" hint={hint} to={to}>
       <h3>Payment Summary</h3>
       <div className="amount-grid">
         <Amount label="총 계약금액" value={formatMoney(totals.totalPrice, plan.currency)} />
@@ -262,26 +258,26 @@ function PaymentSummaryCard({ paymentSummary }) {
         <Amount label="미납 금액" value={formatMoney(totals.unpaidAmount, plan.currency)} />
       </div>
       <AnimatedProgress label="납부 진행률" value={totals.progressPercent} />
-    </section>
+    </SummaryCardShell>
   );
 }
 
-function JourneySummaryCard({ journeyMessage, journeySteps }) {
+function JourneySummaryCard({ hint, journeyMessage, journeySteps, to }) {
   if (journeyMessage) {
     return (
-      <section className="info-card journey-summary-card">
+      <SummaryCardShell className="info-card journey-summary-card" hint={hint} to={to}>
         <h3>Journey Summary</h3>
         <p>{journeyMessage}</p>
-      </section>
+      </SummaryCardShell>
     );
   }
 
   if (!journeySteps.length) {
     return (
-      <section className="info-card journey-summary-card">
+      <SummaryCardShell className="info-card journey-summary-card" hint={hint} to={to}>
         <h3>Journey Summary</h3>
         <p>Journey 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.</p>
-      </section>
+      </SummaryCardShell>
     );
   }
 
@@ -289,7 +285,7 @@ function JourneySummaryCard({ journeyMessage, journeySteps }) {
   const overallProgress = calculateJourneyOverallProgress(journeySteps);
 
   return (
-    <section className="meter-card journey-summary-card">
+    <SummaryCardShell className="meter-card journey-summary-card" hint={hint} to={to}>
       <h3>Journey Summary</h3>
       <div className="journey-current-step">
         <span>현재 구간</span>
@@ -299,17 +295,17 @@ function JourneySummaryCard({ journeyMessage, journeySteps }) {
         <small>{formatJourneyStatus(currentStep.status)} / 전체 평균 {overallProgress}%</small>
       </div>
       <AnimatedProgress label="현재 구간 진행률" value={currentStep.progress_percent} />
-    </section>
+    </SummaryCardShell>
   );
 }
 
-function DocumentSummaryCard({ documentMessage, documentSummary }) {
+function DocumentSummaryCard({ documentMessage, documentSummary, hint, to }) {
   if (documentMessage) {
     return (
-      <section className="info-card document-summary-card">
+      <SummaryCardShell className="info-card document-summary-card" hint={hint} to={to}>
         <h3>Documents</h3>
         <p>{documentMessage}</p>
-      </section>
+      </SummaryCardShell>
     );
   }
 
@@ -317,14 +313,35 @@ function DocumentSummaryCard({ documentMessage, documentSummary }) {
   const latest = documentSummary?.latest || null;
 
   return (
-    <section className="info-card document-summary-card">
+    <SummaryCardShell className="info-card document-summary-card" hint={hint} to={to}>
       <h3>Documents</h3>
       <dl className="compact-info">
         <InfoRow label="등록 문서" value={`${count}개`} />
         <InfoRow label="최근 문서" value={latest?.title || "등록된 문서 없음"} />
       </dl>
-      <Link className="secondary-button document-summary-button" to="documents">문서 보기</Link>
-    </section>
+    </SummaryCardShell>
+  );
+}
+
+function PreviewSummaryCard() {
+  return (
+    <SummaryCardShell className="info-card preview-summary-card" hint="미리보기 열기" to="preview">
+      <h3>내 집 미리보기</h3>
+      <p>준비 중인 공간 미리보기 화면으로 이동합니다.</p>
+    </SummaryCardShell>
+  );
+}
+
+function SummaryCardShell({ children, className, hint, to }) {
+  if (!to) {
+    return <section className={className}>{children}</section>;
+  }
+
+  return (
+    <Link className={`${className} clickable-card`} to={to}>
+      {children}
+      {hint ? <span className="card-link-hint">{hint}</span> : null}
+    </Link>
   );
 }
 

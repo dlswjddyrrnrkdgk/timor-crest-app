@@ -3,9 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import {
-  archiveContractor,
   createContractor,
   createContractorWithAuth,
+  deleteContractor,
   createUnit,
   getAdminContractors,
   getUnits,
@@ -37,7 +37,7 @@ import {
   uploadDocument,
 } from "../services/documentService.js";
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
-import { isArchivedContractor, sortContractors, sortUnits } from "../services/adminListModel.js";
+import { sortContractors, sortUnits } from "../services/adminListModel.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = [
@@ -302,13 +302,30 @@ export default function AdminLayout() {
     }
   }
 
-  async function archiveContractorRecord(contractor) {
+  async function deleteContractorRecord(contractor) {
     if (!contractor?.id) return;
-    if (!window.confirm("이 계약자를 삭제하시겠습니까? 연결된 계약 정보, 납부 정보, 문서 정보에 영향을 줄 수 있습니다.")) return;
+    if (!window.confirm("이 계약자를 완전히 삭제하시겠습니까? 이 작업은 목록에서 계약자를 제거하며, 연결된 납부/문서 메타데이터에도 영향을 줄 수 있습니다. Auth 계정은 삭제되지 않습니다.")) return;
 
     setStatus("saving");
     setMessage("");
-    const result = await archiveContractor(contractor.id);
+
+    const documentResult = await getDocumentsByContractor(contractor.id);
+    if (documentResult.error) {
+      setStatus("ready");
+      setMessage(`계약자 문서 확인에 실패했습니다: ${documentResult.error}`);
+      return;
+    }
+
+    for (const document of documentResult.data || []) {
+      const deletedDocument = await deleteDocument(document.id);
+      if (deletedDocument.error) {
+        setStatus("ready");
+        setMessage(`계약자 문서 Storage cleanup에 실패했습니다: ${deletedDocument.error}`);
+        return;
+      }
+    }
+
+    const result = await deleteContractor(contractor.id);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
@@ -324,7 +341,7 @@ export default function AdminLayout() {
     }
 
     await loadDashboard();
-    setMessage("계약자가 archived 상태로 변경되었습니다. Auth user와 profile은 삭제되지 않았습니다.");
+    setMessage("계약자가 목록에서 완전히 삭제되었습니다. Auth user와 profile은 삭제되지 않았습니다.");
   }
 
   async function submitPaymentPlan(event) {
@@ -591,7 +608,7 @@ export default function AdminLayout() {
     ensureJourneyDefaults,
     resetContractorForm,
     resetUnitForm,
-    archiveContractorRecord,
+    deleteContractorRecord,
     selectPaymentContractor,
     selectedContractor,
     selectedContractorId,
@@ -677,7 +694,6 @@ export default function AdminLayout() {
 function AdminHome({
   activeContractors,
   activeUnits,
-  archiveContractorRecord,
   editContractor,
   editUnit,
   selectedContractorId,
@@ -700,6 +716,7 @@ function AdminHome({
           emptyMessage="등록된 호수가 없습니다."
           items={sortedUnits}
           onSelect={editUnit}
+          renderPreviewItem={renderUnitPreview}
           renderItem={renderUnitRecord}
           selectedId={selectedUnitId}
           title="호수 목록"
@@ -710,7 +727,7 @@ function AdminHome({
           emptyMessage="등록된 계약자가 없습니다."
           items={sortedContractors}
           onSelect={editContractor}
-          renderActions={(contractor) => <ArchiveContractorButton contractor={contractor} onArchive={archiveContractorRecord} />}
+          renderPreviewItem={renderContractorPreview}
           renderItem={renderContractorRecord}
           selectedId={selectedContractorId}
           title="계약자 목록"
@@ -722,7 +739,7 @@ function AdminHome({
 
 function ContractorsPage({
   contractorForm,
-  archiveContractorRecord,
+  deleteContractorRecord,
   editContractor,
   manualContractorMode,
   resetContractorForm,
@@ -748,7 +765,7 @@ function ContractorsPage({
           emptyMessage="등록된 계약자가 없습니다."
           items={sortedContractors}
           onSelect={editContractor}
-          renderActions={(contractor) => <ArchiveContractorButton contractor={contractor} onArchive={archiveContractorRecord} />}
+          renderActions={(contractor) => <DeleteContractorButton contractor={contractor} onDelete={deleteContractorRecord} />}
           renderItem={renderContractorRecord}
           selectedId={selectedContractorId}
           title="계약자 목록"
@@ -1128,12 +1145,22 @@ function renderUnitRecord(unit) {
   );
 }
 
-function ArchiveContractorButton({ contractor, onArchive }) {
-  const archived = isArchivedContractor(contractor);
-
+function renderContractorPreview(contractor) {
   return (
-    <button className="danger-button archive-button" disabled={archived} onClick={() => onArchive(contractor)} type="button">
-      {archived ? "archived" : "삭제"}
+    <span className="compact-preview-name">{contractor.full_name || "이름 미등록"}</span>
+  );
+}
+
+function renderUnitPreview(unit) {
+  return (
+    <span className="compact-preview-name">{unit.unit_code || unit.unit_name || "호수 미등록"}</span>
+  );
+}
+
+function DeleteContractorButton({ contractor, onDelete }) {
+  return (
+    <button className="danger-button delete-button" onClick={() => onDelete(contractor)} type="button">
+      삭제
     </button>
   );
 }

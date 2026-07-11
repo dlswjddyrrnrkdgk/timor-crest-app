@@ -90,17 +90,11 @@ export async function updateContractor(id, input) {
   return respond(data, error);
 }
 
-export async function archiveContractor(id) {
+export async function deleteContractor(id) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
-  const { data, error } = await supabase
-    .from("contractors")
-    .update({ status: "archived" })
-    .eq("id", id)
-    .select(CONTRACTOR_SELECT)
-    .single();
-
-  return respond(data, error);
+  const { error } = await supabase.from("contractors").delete().eq("id", id);
+  return error ? fail(error.message) : respond(true, null);
 }
 
 export async function getUnits() {

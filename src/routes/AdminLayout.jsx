@@ -80,6 +80,7 @@ const emptyDocumentForm = {
 export default function AdminLayout() {
   const navigate = useNavigate();
   const paymentDetailRef = useRef(null);
+  const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [selectedUnitId, setSelectedUnitId] = useState("");
@@ -392,6 +393,7 @@ export default function AdminLayout() {
     setDocumentMessage("");
     setDocumentForm(emptyDocumentForm);
     setDocumentFile(null);
+    if (documentFileInputRef.current) documentFileInputRef.current.value = "";
   }
 
   function updateDocumentFormField(event) {
@@ -409,9 +411,22 @@ export default function AdminLayout() {
       return;
     }
 
+    const formValues = Object.fromEntries(new FormData(event.currentTarget));
+    if (!String(formValues.title || "").trim()) {
+      setDocumentMessage("문서 제목을 입력해 주세요.");
+      return;
+    }
+    if (!String(formValues.category || "").trim()) {
+      setDocumentMessage("문서 카테고리를 선택해 주세요.");
+      return;
+    }
+    if (!documentFile) {
+      setDocumentMessage("업로드할 파일을 선택해 주세요.");
+      return;
+    }
+
     setStatus("saving");
     setDocumentMessage("");
-    const formValues = Object.fromEntries(new FormData(event.currentTarget));
     try {
       const result = await uploadDocument({
         ...formValues,
@@ -426,9 +441,9 @@ export default function AdminLayout() {
         return;
       }
 
-      event.currentTarget.reset();
       setDocumentForm(emptyDocumentForm);
       setDocumentFile(null);
+      if (documentFileInputRef.current) documentFileInputRef.current.value = "";
       const refreshed = await reloadDocumentsForContractor(selectedDocumentContractor.id);
       setStatus("ready");
       if (refreshed) setDocumentMessage("문서가 업로드되었습니다.");
@@ -555,6 +570,7 @@ export default function AdminLayout() {
     selectedDocumentContractor,
     selectDocumentContractor,
     setDocumentFile,
+    documentFileInputRef,
     showDocumentSelectionError,
     submitDocumentMetadata,
     submitDocumentUpload,
@@ -916,6 +932,7 @@ function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProg
 function DocumentsPage({
   contractors,
   documentFile,
+  documentFileInputRef,
   documentForm,
   documentMessage,
   openDocument,
@@ -982,7 +999,7 @@ function DocumentsPage({
               <p>{selectedDocumentContractor.email || "이메일 없음"} / {selectedDocumentContractor.unit?.unit_code || "호수 미연결"}</p>
             </div>
             <form className="admin-form compact-admin-form" key={selectedDocumentContractor.id} onSubmit={submitDocumentUpload}>
-              <TextField label="title" name="title" onChange={updateDocumentFormField} required value={documentForm.title} />
+              <TextField label="title" name="title" onChange={updateDocumentFormField} value={documentForm.title} />
               <label className="field">
                 <span>category</span>
                 <select name="category" onChange={updateDocumentFormField} value={documentForm.category}>
@@ -996,11 +1013,12 @@ function DocumentsPage({
                 <input
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                   onChange={(event) => setDocumentFile(event.target.files?.[0] || null)}
+                  ref={documentFileInputRef}
                   type="file"
                 />
               </label>
               {documentFile ? <p className="file-hint">{documentFile.name} / {formatFileSize(documentFile.size)}</p> : null}
-              <TextAreaField label="note" name="note" defaultValue={documentForm.note} />
+              <TextAreaField label="note" name="note" onChange={updateDocumentFormField} value={documentForm.note} />
               <button className="primary-button" disabled={isUploading} type="submit">
                 {isUploading ? "업로드 중..." : "문서 업로드"}
               </button>
@@ -1210,11 +1228,12 @@ function JourneyStepForm({ item, onSubmit, saving }) {
   );
 }
 
-function TextAreaField({ defaultValue, label, name }) {
+function TextAreaField({ defaultValue, label, name, onChange, value }) {
+  const textareaProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <textarea defaultValue={defaultValue ?? ""} name={name} rows="3" />
+      <textarea name={name} onChange={onChange} rows="3" {...textareaProps} />
     </label>
   );
 }

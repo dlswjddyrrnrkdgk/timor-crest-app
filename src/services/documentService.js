@@ -70,9 +70,9 @@ export async function getDocumentsByContractor(contractorId) {
 export async function uploadDocument({ category, contractorId, file, note, title, unitId }) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
+  if (!contractorId) return fail("문서를 연결할 계약자를 선택해 주세요.");
   const validationError = validateDocumentFile(file);
   if (validationError) return fail(validationError);
-  if (!contractorId) return fail("문서를 연결할 계약자를 선택해 주세요.");
 
   const documentId = crypto.randomUUID();
   const filePath = buildDocumentPath(contractorId, documentId, file.name);
@@ -87,29 +87,41 @@ export async function uploadDocument({ category, contractorId, file, note, title
 
   if (uploadResult.error) return fail(uploadResult.error.message);
 
+  console.debug("Document storage upload success", { contractorId, filePath });
+
+  const payload = {
+    id: documentId,
+    contractor_id: contractorId,
+    unit_id: optionalText(unitId),
+    title: normalizedTitle,
+    category: optionalText(category) || "other",
+    file_name: file.name,
+    file_path: filePath,
+    mime_type: file.type || null,
+    file_size: file.size || null,
+    status: "active",
+    note: optionalText(note),
+    uploaded_by: userData?.user?.id || null,
+  };
+
   const { data, error } = await supabase
     .from("document_files")
-    .insert({
-      id: documentId,
-      contractor_id: contractorId,
-      unit_id: optionalText(unitId),
-      title: normalizedTitle,
-      category: optionalText(category) || "other",
-      file_name: file.name,
-      file_path: filePath,
-      mime_type: file.type || null,
-      file_size: file.size || null,
-      status: "active",
-      note: optionalText(note),
-      uploaded_by: userData?.user?.id || null,
-    })
+    .insert(payload)
     .select(DOCUMENT_SELECT)
     .single();
 
   if (error) {
-    await supabase.storage.from(DOCUMENT_BUCKET).remove([filePath]);
-    return fail(error.message);
+    const cleanupResult = await supabase.storage.from(DOCUMENT_BUCKET).remove([filePath]);
+    if (cleanupResult.error) {
+      console.warn("Document storage cleanup failed after metadata insert error", {
+        filePath,
+        error: cleanupResult.error.message,
+      });
+    }
+    throw new Error(`파일은 업로드되었지만 문서 정보 저장에 실패했습니다: ${error.message}`);
   }
+
+  console.debug("Document metadata insert success", { contractorId, filePath });
 
   return respond(data, null);
 }

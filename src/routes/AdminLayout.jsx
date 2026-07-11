@@ -29,6 +29,7 @@ import {
   createDocumentSignedUrl,
   deleteDocument,
   getAdminDocuments,
+  getDocumentsByContractor,
   updateDocumentMetadata,
   uploadDocument,
 } from "../services/documentService.js";
@@ -397,6 +398,10 @@ export default function AdminLayout() {
     setDocumentForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
+  function showDocumentSelectionError() {
+    setDocumentMessage("문서를 업로드할 계약자를 선택해 주세요.");
+  }
+
   async function submitDocumentUpload(event) {
     event.preventDefault();
     if (!selectedDocumentContractor) {
@@ -407,25 +412,30 @@ export default function AdminLayout() {
     setStatus("saving");
     setDocumentMessage("");
     const formValues = Object.fromEntries(new FormData(event.currentTarget));
-    const result = await uploadDocument({
-      ...formValues,
-      contractorId: selectedDocumentContractor.id,
-      unitId: selectedDocumentContractor.unit_id,
-      file: documentFile,
-    });
+    try {
+      const result = await uploadDocument({
+        ...formValues,
+        contractorId: selectedDocumentContractor.id,
+        unitId: selectedDocumentContractor.unit_id,
+        file: documentFile,
+      });
 
-    if (result.error) {
+      if (result.error) {
+        setStatus("ready");
+        setDocumentMessage(result.error);
+        return;
+      }
+
+      event.currentTarget.reset();
+      setDocumentForm(emptyDocumentForm);
+      setDocumentFile(null);
+      const refreshed = await reloadDocumentsForContractor(selectedDocumentContractor.id);
       setStatus("ready");
-      setDocumentMessage(result.error);
-      return;
+      if (refreshed) setDocumentMessage("문서가 업로드되었습니다.");
+    } catch (error) {
+      setStatus("ready");
+      setDocumentMessage(error.message || "문서 업로드에 실패했습니다.");
     }
-
-    event.currentTarget.reset();
-    setDocumentForm(emptyDocumentForm);
-    setDocumentFile(null);
-    await reloadDocuments();
-    setStatus("ready");
-    setDocumentMessage("문서가 업로드되었습니다.");
   }
 
   async function reloadDocuments() {
@@ -437,6 +447,19 @@ export default function AdminLayout() {
     setDocuments(result.data || []);
   }
 
+  async function reloadDocumentsForContractor(contractorId) {
+    const result = await getDocumentsByContractor(contractorId);
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return false;
+    }
+    setDocuments((current) => [
+      ...(result.data || []),
+      ...current.filter((document) => document.contractor_id !== contractorId),
+    ]);
+    return true;
+  }
+
   async function submitDocumentMetadata(documentId, values) {
     setStatus("saving");
     setDocumentMessage("");
@@ -446,9 +469,9 @@ export default function AdminLayout() {
       setDocumentMessage(result.error);
       return;
     }
-    await reloadDocuments();
+    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
     setStatus("ready");
-    setDocumentMessage("문서 정보가 수정되었습니다.");
+    if (refreshed) setDocumentMessage("문서 정보가 수정되었습니다.");
   }
 
   async function openDocument(filePath) {
@@ -472,9 +495,9 @@ export default function AdminLayout() {
       setDocumentMessage(result.error);
       return;
     }
-    await reloadDocuments();
+    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
     setStatus("ready");
-    setDocumentMessage("문서가 삭제되었습니다.");
+    if (refreshed) setDocumentMessage("문서가 삭제되었습니다.");
   }
 
   function selectPaymentContractor(contractor) {
@@ -532,6 +555,7 @@ export default function AdminLayout() {
     selectedDocumentContractor,
     selectDocumentContractor,
     setDocumentFile,
+    showDocumentSelectionError,
     submitDocumentMetadata,
     submitDocumentUpload,
     unitForm,
@@ -900,11 +924,14 @@ function DocumentsPage({
   selectedDocumentContractor,
   selectDocumentContractor,
   setDocumentFile,
+  showDocumentSelectionError,
   status,
   submitDocumentMetadata,
   submitDocumentUpload,
   updateDocumentFormField,
 }) {
+  const isUploading = status === "saving";
+
   return (
     <>
       <section className="admin-panel">
@@ -941,7 +968,12 @@ function DocumentsPage({
       <section className="admin-panel">
         <h2>문서 업로드</h2>
         {!selectedDocumentContractor ? (
-          <p>계약자를 선택하면 해당 계약자에게 문서를 업로드할 수 있습니다.</p>
+          <>
+            <p>계약자를 선택하면 해당 계약자에게 문서를 업로드할 수 있습니다.</p>
+            <button className="primary-button document-open-button" onClick={showDocumentSelectionError} type="button">
+              문서 업로드
+            </button>
+          </>
         ) : (
           <>
             <div className="payment-context-card">
@@ -964,14 +996,13 @@ function DocumentsPage({
                 <input
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                   onChange={(event) => setDocumentFile(event.target.files?.[0] || null)}
-                  required
                   type="file"
                 />
               </label>
               {documentFile ? <p className="file-hint">{documentFile.name} / {formatFileSize(documentFile.size)}</p> : null}
               <TextAreaField label="note" name="note" defaultValue={documentForm.note} />
-              <button className="primary-button" disabled={status === "saving"} type="submit">
-                문서 업로드
+              <button className="primary-button" disabled={isUploading} type="submit">
+                {isUploading ? "업로드 중..." : "문서 업로드"}
               </button>
             </form>
           </>

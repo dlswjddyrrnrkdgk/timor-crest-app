@@ -11,6 +11,7 @@ const CONTRACTOR_SELECT = `
   passport_no,
   address,
   status,
+  created_at,
   unit:units (
     id,
     unit_code,
@@ -18,11 +19,12 @@ const CONTRACTOR_SELECT = `
     property_type,
     total_price,
     currency,
-    status
+    status,
+    created_at
   )
 `;
 
-const UNIT_SELECT = "id, unit_code, unit_name, property_type, total_price, currency, status";
+const UNIT_SELECT = "id, unit_code, unit_name, property_type, total_price, currency, status, created_at";
 
 export async function getAdminContractors() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
@@ -88,10 +90,23 @@ export async function updateContractor(id, input) {
   return respond(data, error);
 }
 
+export async function archiveContractor(id) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const { data, error } = await supabase
+    .from("contractors")
+    .update({ status: "archived" })
+    .eq("id", id)
+    .select(CONTRACTOR_SELECT)
+    .single();
+
+  return respond(data, error);
+}
+
 export async function getUnits() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
-  const { data, error } = await supabase.from("units").select(UNIT_SELECT).order("unit_code", { ascending: true });
+  const { data, error } = await supabase.from("units").select(UNIT_SELECT).order("created_at", { ascending: false });
   return respond(data, error);
 }
 

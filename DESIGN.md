@@ -131,6 +131,14 @@ All spacing derives from 4px.
 - **Accessibility**: pagination buttons announce selected page.
 - **Motion**: page buttons use common button press.
 
+### Expandable Select List
+- **Structure**: section title, item count, circular chevron toggle, one visible record while collapsed, scrollable card list while expanded.
+- **Variants**: contractor selector, unit selector, payment contractor selector, document contractor selector.
+- **Spacing**: --space-2 through --space-3, with record cards reusing the Admin Record Card rhythm.
+- **States**: collapsed, expanded, selected, archived action disabled.
+- **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; records are real buttons when selectable.
+- **Motion**: toggle press uses common button press; list expansion uses bounded height without layout animation loops.
+
 ### MY Panel
 - **Structure**: four large buttons, collapsed detail region.
 - **Variants**: 내 정보, 계약 / 서류, 상담, 개인 알림.

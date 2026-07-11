@@ -6,10 +6,6 @@ export function sortUnits(items) {
   return [...items].sort((a, b) => compareCreatedDesc(a, b) || String(a.unit_code || "").localeCompare(String(b.unit_code || ""), "ko-KR"));
 }
 
-export function isArchivedContractor(contractor) {
-  return contractor?.status === "archived" || contractor?.status === "deleted";
-}
-
 function compareCreatedDesc(a, b) {
   const left = Date.parse(a.created_at || "");
   const right = Date.parse(b.created_at || "");

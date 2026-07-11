@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { isArchivedContractor, sortContractors, sortUnits } from "../src/services/adminListModel.js";
+import { sortContractors, sortUnits } from "../src/services/adminListModel.js";
 import { getVisibleExpandableItems } from "../src/services/expandableSelectModel.js";
 
 const adminLayoutSource = readFileSync(new URL("../src/routes/AdminLayout.jsx", import.meta.url), "utf8");
@@ -20,10 +20,19 @@ describe("Admin expandable list selectors", () => {
     assert.ok(usages.length >= 5);
   });
 
-  it("keeps contractor deletion as status archive instead of hard delete", () => {
-    assert.match(contractorServiceSource, /export async function archiveContractor/);
-    assert.match(contractorServiceSource, /\.update\(\{\s*status: "archived"\s*\}\)/);
-    assert.doesNotMatch(contractorServiceSource, /\.from\("contractors"\)\.delete\(\)/);
+  it("hard deletes contractor rows without deleting auth users", () => {
+    assert.match(contractorServiceSource, /export async function deleteContractor/);
+    assert.match(contractorServiceSource, /\.from\("contractors"\)\.delete\(\)\.eq\("id", id\)/);
+    assert.doesNotMatch(contractorServiceSource, /auth\.admin\.deleteUser/);
+    assert.doesNotMatch(contractorServiceSource, /status: "archived"/);
+  });
+
+  it("uses compact previews only on the admin dashboard lists", () => {
+    assert.match(expandableSelectSource, /renderPreviewItem/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{renderContractorPreview\}/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{renderUnitPreview\}/);
+    assert.match(adminLayoutSource, /function renderContractorPreview/);
+    assert.match(adminLayoutSource, /function renderUnitPreview/);
   });
 
   it("exposes accessible collapsed and expanded list controls", () => {
@@ -91,9 +100,9 @@ describe("Admin expandable list selectors", () => {
     assert.deepEqual(sorted.map((item) => item.id), ["new", "old", "fallback-a", "fallback-b"]);
   });
 
-  it("treats archived and deleted contractors as inactive archive actions", () => {
-    assert.equal(isArchivedContractor({ status: "archived" }), true);
-    assert.equal(isArchivedContractor({ status: "deleted" }), true);
-    assert.equal(isArchivedContractor({ status: "active" }), false);
+  it("does not keep archive action helpers in the admin UI", () => {
+    assert.doesNotMatch(adminLayoutSource, /ArchiveContractorButton/);
+    assert.doesNotMatch(adminLayoutSource, /isArchivedContractor/);
+    assert.match(adminLayoutSource, /DeleteContractorButton/);
   });
 });

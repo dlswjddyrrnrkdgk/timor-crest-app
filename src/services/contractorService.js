@@ -10,6 +10,10 @@ const CONTRACTOR_SELECT = `
   phone,
   passport_no,
   address,
+  payment_method,
+  bank_name,
+  bank_account_number,
+  bank_account_holder,
   status,
   created_at,
   unit:units (
@@ -90,6 +94,19 @@ export async function updateContractor(id, input) {
   return respond(data, error);
 }
 
+export async function updateContractorPaymentMethod(id, input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const { data, error } = await supabase
+    .from("contractors")
+    .update(normalizePaymentMethod(input))
+    .eq("id", id)
+    .select(CONTRACTOR_SELECT)
+    .single();
+
+  return respond(data, error);
+}
+
 export async function deleteContractor(id) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
@@ -146,7 +163,7 @@ function normalizeUnit(input) {
 }
 
 function normalizeContractor(input) {
-  return {
+  const payload = {
     profile_id: optionalString(input.profile_id),
     unit_id: optionalString(input.unit_id),
     full_name: requiredString(input.full_name),
@@ -155,6 +172,29 @@ function normalizeContractor(input) {
     passport_no: optionalString(input.passport_no),
     address: optionalString(input.address),
     status: optionalString(input.status) || "active",
+  };
+
+  if ("payment_method" in input || "bank_name" in input || "bank_account_number" in input || "bank_account_holder" in input) {
+    const paymentMethod = optionalString(input.payment_method);
+    const usesBankTransfer = paymentMethod === "bank_transfer";
+    payload.payment_method = paymentMethod;
+    payload.bank_name = usesBankTransfer ? optionalString(input.bank_name) : null;
+    payload.bank_account_number = usesBankTransfer ? optionalString(input.bank_account_number) : null;
+    payload.bank_account_holder = usesBankTransfer ? optionalString(input.bank_account_holder) : null;
+  }
+
+  return payload;
+}
+
+function normalizePaymentMethod(input) {
+  const paymentMethod = optionalString(input.payment_method);
+  const usesBankTransfer = paymentMethod === "bank_transfer";
+
+  return {
+    payment_method: paymentMethod,
+    bank_name: usesBankTransfer ? optionalString(input.bank_name) : null,
+    bank_account_number: usesBankTransfer ? optionalString(input.bank_account_number) : null,
+    bank_account_holder: usesBankTransfer ? optionalString(input.bank_account_holder) : null,
   };
 }
 

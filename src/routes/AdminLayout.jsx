@@ -10,6 +10,7 @@ import {
   getAdminContractors,
   getUnits,
   updateContractor,
+  updateContractorPaymentMethod,
   updateUnit,
 } from "../services/contractorService.js";
 import {
@@ -37,6 +38,7 @@ import {
   uploadDocument,
 } from "../services/documentService.js";
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
+import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { sortContractors, sortUnits } from "../services/adminListModel.js";
 import { signOut } from "../services/authService.js";
 
@@ -76,6 +78,13 @@ const emptyPaymentPlanForm = {
   status: "active",
 };
 
+const emptyPaymentMethodForm = {
+  payment_method: "",
+  bank_name: "",
+  bank_account_number: "",
+  bank_account_holder: "",
+};
+
 const emptyDocumentForm = {
   title: "",
   category: "other",
@@ -97,15 +106,16 @@ export default function AdminLayout() {
   const [paymentItems, setPaymentItems] = useState([]);
   const [paymentSummaries, setPaymentSummaries] = useState({});
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
+  const [paymentMethodForm, setPaymentMethodForm] = useState(emptyPaymentMethodForm);
   const [journeySteps, setJourneySteps] = useState([]);
-  const [journeyMessage, setJourneyMessage] = useState("");
+  const [journeyMessage, setJourneyMessage] = useAutoDismissMessage("", 10000);
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentContractorId, setSelectedDocumentContractorId] = useState("");
   const [documentForm, setDocumentForm] = useState(emptyDocumentForm);
   const [documentFile, setDocumentFile] = useState(null);
-  const [documentMessage, setDocumentMessage] = useState("");
+  const [documentMessage, setDocumentMessage] = useAutoDismissMessage("", 10000);
   const [status, setStatus] = useState("loading");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useAutoDismissMessage("", 10000);
 
   const selectedUnit = useMemo(() => units.find((unit) => unit.id === selectedUnitId) || null, [selectedUnitId, units]);
   const selectedContractor = useMemo(
@@ -185,6 +195,7 @@ export default function AdminLayout() {
     setPaymentPlan(null);
     setPaymentItems([]);
     setPaymentPlanForm(emptyPaymentPlanForm);
+    setPaymentMethodForm(buildPaymentMethodForm(contractor));
     if (!contractor?.id) return;
 
     const planResult = await getPaymentPlanByContractor(contractor.id);
@@ -258,6 +269,10 @@ export default function AdminLayout() {
 
   function updatePaymentPlanField(event) {
     setPaymentPlanForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
+  function updatePaymentMethodField(event) {
+    setPaymentMethodForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   }
 
   async function submitUnit(event) {
@@ -358,6 +373,34 @@ export default function AdminLayout() {
     setPaymentPlan(result.data);
     await refreshPaymentState(selectedContractor);
     setMessage("납부 계획이 수정되었습니다.");
+  }
+
+  async function submitPaymentMethod(event) {
+    event.preventDefault();
+    if (!selectedContractor) return;
+    if (paymentMethodForm.payment_method === "bank_transfer") {
+      const missingBankField = !paymentMethodForm.bank_name.trim()
+        || !paymentMethodForm.bank_account_number.trim()
+        || !paymentMethodForm.bank_account_holder.trim();
+      if (missingBankField) {
+        setMessage("계좌이체 선택 시 은행명, 계좌번호, 계좌명을 모두 입력해 주세요.");
+        return;
+      }
+    }
+
+    setStatus("saving");
+    setMessage("");
+    const result = await updateContractorPaymentMethod(selectedContractor.id, paymentMethodForm);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+
+    setContractors((current) => current.map((contractor) => (contractor.id === selectedContractor.id ? result.data : contractor)));
+    setPaymentMethodForm(buildPaymentMethodForm(result.data));
+    setStatus("ready");
+    setMessage("납부방법이 저장되었습니다.");
   }
 
   async function createPlanForSelectedContractor() {
@@ -600,6 +643,7 @@ export default function AdminLayout() {
     paymentItems,
     paymentPlan,
     paymentPlanForm,
+    paymentMethodForm,
     paymentSummaries,
     paymentTotals,
     journeyOverallProgress,
@@ -617,6 +661,7 @@ export default function AdminLayout() {
     status,
     submitContractor,
     submitPaymentItem,
+    submitPaymentMethod,
     submitPaymentPlan,
     submitJourneyStep,
     submitUnit,
@@ -626,6 +671,7 @@ export default function AdminLayout() {
     updateContractorField,
     setManualContractorMode,
     updatePaymentPlanField,
+    updatePaymentMethodField,
     updateUnitField,
     createDefaultItemsForPlan,
     createPlanForSelectedContractor,
@@ -872,6 +918,7 @@ function PaymentsPage({
   createPlanForSelectedContractor,
   paymentDetailRef,
   paymentItems,
+  paymentMethodForm,
   paymentPlan,
   paymentPlanForm,
   paymentSummaries,
@@ -882,7 +929,9 @@ function PaymentsPage({
   sortedContractors,
   status,
   submitPaymentItem,
+  submitPaymentMethod,
   submitPaymentPlan,
+  updatePaymentMethodField,
   updatePaymentPlanField,
 }) {
   return (
@@ -908,6 +957,12 @@ function PaymentsPage({
               <strong>{selectedContractor.full_name}</strong>
               <p>{selectedContractor.email || "이메일 없음"} / {selectedContractor.unit?.unit_code || "호수 미연결"}</p>
             </div>
+            <PaymentMethodForm
+              form={paymentMethodForm}
+              onChange={updatePaymentMethodField}
+              onSubmit={submitPaymentMethod}
+              saving={status === "saving"}
+            />
             {!paymentPlan ? (
               <button className="primary-button" disabled={status === "saving"} onClick={createPlanForSelectedContractor} type="button">
                 Create payment plan
@@ -1157,6 +1212,15 @@ function renderUnitPreview(unit) {
   );
 }
 
+function buildPaymentMethodForm(contractor) {
+  return {
+    payment_method: contractor?.payment_method || "",
+    bank_name: contractor?.bank_name || "",
+    bank_account_number: contractor?.bank_account_number || "",
+    bank_account_holder: contractor?.bank_account_holder || "",
+  };
+}
+
 function DeleteContractorButton({ contractor, onDelete }) {
   return (
     <button className="danger-button delete-button" onClick={() => onDelete(contractor)} type="button">
@@ -1246,6 +1310,34 @@ function Metric({ label, value }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
+  );
+}
+
+function PaymentMethodForm({ form, onChange, onSubmit, saving }) {
+  const usesBankTransfer = form.payment_method === "bank_transfer";
+
+  return (
+    <form className="admin-form compact-admin-form payment-method-form" onSubmit={onSubmit}>
+      <h3>납부방법 설정</h3>
+      <label className="field">
+        <span>납부방법</span>
+        <select name="payment_method" onChange={onChange} value={form.payment_method}>
+          <option value="">미설정</option>
+          <option value="cash">현금</option>
+          <option value="bank_transfer">계좌이체</option>
+        </select>
+      </label>
+      {usesBankTransfer ? (
+        <>
+          <TextField label="은행명" name="bank_name" onChange={onChange} required value={form.bank_name} />
+          <TextField label="계좌번호" name="bank_account_number" onChange={onChange} required value={form.bank_account_number} />
+          <TextField label="계좌명" name="bank_account_holder" onChange={onChange} required value={form.bank_account_holder} />
+        </>
+      ) : null}
+      <button className="primary-button" disabled={saving} type="submit">
+        {saving ? "저장 중..." : "납부방법 저장"}
+      </button>
+    </form>
   );
 }
 

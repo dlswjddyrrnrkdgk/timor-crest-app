@@ -15,6 +15,7 @@ const CONTRACTOR_SELECT = `
   passport_no,
   address,
   status,
+  created_at,
   unit:units (
     id,
     unit_code,
@@ -22,7 +23,8 @@ const CONTRACTOR_SELECT = `
     property_type,
     total_price,
     currency,
-    status
+    status,
+    created_at
   )
 `;
 

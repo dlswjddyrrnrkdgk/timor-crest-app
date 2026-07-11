@@ -252,11 +252,93 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  min-width: 0;
+}
+.admin-record-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .admin-record-card small {
+  flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
+}
+.expandable-select {
+  display: grid;
+  gap: var(--space-3);
+}
+.expandable-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.expandable-select-header h2 {
+  margin: 0;
+}
+.expandable-select-header small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+.expand-toggle-button {
+  display: grid;
+  flex: 0 0 42px;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--accent-primary);
+  background: var(--surface-blue-soft);
+  transition: transform 140ms var(--ease-standard), color 220ms var(--ease-standard), background-color 220ms var(--ease-standard);
+}
+.expand-toggle-button:active {
+  transform: scale(0.97);
+  color: var(--surface-elevated);
+  background: var(--accent-hover);
+}
+.expandable-select-list {
+  display: grid;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+.expandable-select.is-expanded .expandable-select-list {
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+.expandable-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.expandable-select-row .admin-record-card {
+  min-width: 0;
+}
+.expandable-select-actions {
+  display: flex;
+  justify-content: end;
+}
+.archive-button {
+  width: auto;
+  min-width: 68px;
+  min-height: 42px;
+  padding: 0 var(--space-3);
+  font-size: 12px;
+}
+.archive-button:disabled {
+  color: var(--text-tertiary);
+  background: var(--surface-secondary);
+  box-shadow: none;
+}
+@media (min-width: 400px) {
+  .expandable-select-row:has(.expandable-select-actions) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+  .expandable-select-actions {
+    align-items: end;
+  }
 }
 .compact-admin-form {
   box-shadow: none;

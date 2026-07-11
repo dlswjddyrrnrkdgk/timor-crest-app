@@ -1,7 +1,9 @@
-import { Link, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
+import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import {
+  archiveContractor,
   createContractor,
   createContractorWithAuth,
   createUnit,
@@ -35,6 +37,7 @@ import {
   uploadDocument,
 } from "../services/documentService.js";
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
+import { isArchivedContractor, sortContractors, sortUnits } from "../services/adminListModel.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = [
@@ -117,6 +120,8 @@ export default function AdminLayout() {
     () => documents.filter((document) => document.contractor_id === selectedDocumentContractorId),
     [documents, selectedDocumentContractorId],
   );
+  const sortedContractors = useMemo(() => sortContractors(contractors), [contractors]);
+  const sortedUnits = useMemo(() => sortUnits(units), [units]);
 
   useEffect(() => {
     loadDashboard();
@@ -295,6 +300,31 @@ export default function AdminLayout() {
     } else {
       setMessage(`계약자 계정이 생성되었습니다. 로그인 이메일: ${createdEmail} / 임시 비밀번호: ${createdPassword}`);
     }
+  }
+
+  async function archiveContractorRecord(contractor) {
+    if (!contractor?.id) return;
+    if (!window.confirm("이 계약자를 삭제하시겠습니까? 연결된 계약 정보, 납부 정보, 문서 정보에 영향을 줄 수 있습니다.")) return;
+
+    setStatus("saving");
+    setMessage("");
+    const result = await archiveContractor(contractor.id);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+
+    if (selectedContractorId === contractor.id) resetContractorForm();
+    if (selectedDocumentContractorId === contractor.id) {
+      setSelectedDocumentContractorId("");
+      setDocumentForm(emptyDocumentForm);
+      setDocumentFile(null);
+      if (documentFileInputRef.current) documentFileInputRef.current.value = "";
+    }
+
+    await loadDashboard();
+    setMessage("계약자가 archived 상태로 변경되었습니다. Auth user와 profile은 삭제되지 않았습니다.");
   }
 
   async function submitPaymentPlan(event) {
@@ -561,9 +591,12 @@ export default function AdminLayout() {
     ensureJourneyDefaults,
     resetContractorForm,
     resetUnitForm,
+    archiveContractorRecord,
     selectPaymentContractor,
     selectedContractor,
+    selectedContractorId,
     selectedUnit,
+    selectedUnitId,
     status,
     submitContractor,
     submitPaymentItem,
@@ -571,6 +604,8 @@ export default function AdminLayout() {
     submitJourneyStep,
     submitUnit,
     units,
+    sortedContractors,
+    sortedUnits,
     updateContractorField,
     setManualContractorMode,
     updatePaymentPlanField,
@@ -586,6 +621,7 @@ export default function AdminLayout() {
     removeDocument,
     selectedContractorDocuments,
     selectedDocumentContractor,
+    selectedDocumentContractorId,
     selectDocumentContractor,
     setDocumentFile,
     documentFileInputRef,
@@ -638,47 +674,47 @@ export default function AdminLayout() {
   );
 }
 
-function AdminHome({ activeContractors, activeUnits, contractors, units }) {
+function AdminHome({
+  activeContractors,
+  activeUnits,
+  archiveContractorRecord,
+  editContractor,
+  editUnit,
+  selectedContractorId,
+  selectedUnitId,
+  sortedContractors,
+  sortedUnits,
+}) {
   return (
     <>
       <section className="admin-panel">
         <div className="metric-grid">
-          <Metric label="전체 계약자" value={contractors.length} />
-          <Metric label="전체 호수" value={units.length} />
+          <Metric label="전체 계약자" value={sortedContractors.length} />
+          <Metric label="전체 호수" value={sortedUnits.length} />
           <Metric label="active 계약자" value={activeContractors} />
           <Metric label="active 호수" value={activeUnits} />
         </div>
       </section>
       <section className="admin-panel">
-        <h2>호수 목록</h2>
-        <div className="admin-list">
-          {units.length ? (
-            units.map((unit) => (
-              <article className="admin-record-card" key={unit.id}>
-                <span>
-                  <strong>{unit.unit_code}</strong>
-                  <small>{unit.status || "active"}</small>
-                </span>
-                <span>
-                  <strong>{unit.unit_name || "이름 미등록"}</strong>
-                  <small>{formatMoney(unit.total_price, unit.currency)}</small>
-                </span>
-              </article>
-            ))
-          ) : (
-            <p>등록된 호수가 없습니다.</p>
-          )}
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 호수가 없습니다."
+          items={sortedUnits}
+          onSelect={editUnit}
+          renderItem={renderUnitRecord}
+          selectedId={selectedUnitId}
+          title="호수 목록"
+        />
       </section>
       <section className="admin-panel">
-        <h2>관리 바로가기</h2>
-        <div className="management-action-grid">
-          <Link className="primary-button" to="contractors">계약자 관리</Link>
-          <Link className="secondary-button" to="units">호수 관리</Link>
-          <Link className="secondary-button" to="payments">납부일정 관리</Link>
-          <Link className="secondary-button" to="journey">Journey 관리</Link>
-          <Link className="secondary-button" to="documents">문서 관리</Link>
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 계약자가 없습니다."
+          items={sortedContractors}
+          onSelect={editContractor}
+          renderActions={(contractor) => <ArchiveContractorButton contractor={contractor} onArchive={archiveContractorRecord} />}
+          renderItem={renderContractorRecord}
+          selectedId={selectedContractorId}
+          title="계약자 목록"
+        />
       </section>
     </>
   );
@@ -686,15 +722,17 @@ function AdminHome({ activeContractors, activeUnits, contractors, units }) {
 
 function ContractorsPage({
   contractorForm,
-  contractors,
+  archiveContractorRecord,
   editContractor,
   manualContractorMode,
   resetContractorForm,
   selectedContractor,
+  selectedContractorId,
   setManualContractorMode,
+  sortedContractors,
+  sortedUnits,
   status,
   submitContractor,
-  units,
   updateContractorField,
 }) {
   const createButtonLabel = manualContractorMode ? "수동 계약자 생성" : "계약자 계정 생성";
@@ -706,33 +744,15 @@ function ContractorsPage({
         <p className="security-note">
           기본 생성은 Supabase Auth 사용자, profile, contractor row를 함께 만듭니다. 이미 만든 Auth user를 연결해야 할 때만 수동 연결 모드를 사용하세요.
         </p>
-        <div className="admin-list">
-          {contractors.length ? (
-            contractors.map((contractor) => (
-              <button
-                className={`admin-record-card ${selectedContractor?.id === contractor.id ? "is-selected" : ""}`}
-                key={contractor.id}
-                onClick={() => editContractor(contractor)}
-                type="button"
-              >
-                <span>
-                  <strong>{contractor.full_name}</strong>
-                  <small>{contractor.status || "active"}</small>
-                </span>
-                <span>
-                  <strong>{contractor.email || "이메일 없음"}</strong>
-                  <small>{contractor.phone || "연락처 없음"}</small>
-                </span>
-                <span>
-                  <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
-                  <small>unit</small>
-                </span>
-              </button>
-            ))
-          ) : (
-            <p>등록된 계약자가 없습니다.</p>
-          )}
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 계약자가 없습니다."
+          items={sortedContractors}
+          onSelect={editContractor}
+          renderActions={(contractor) => <ArchiveContractorButton contractor={contractor} onArchive={archiveContractorRecord} />}
+          renderItem={renderContractorRecord}
+          selectedId={selectedContractorId}
+          title="계약자 목록"
+        />
       </section>
       <section className="admin-panel">
         <h2>{selectedContractor ? "계약자 수정" : createButtonLabel}</h2>
@@ -758,7 +778,7 @@ function ContractorsPage({
             <span>unit_id</span>
             <select name="unit_id" onChange={updateContractorField} value={contractorForm.unit_id}>
               <option value="">호수 선택</option>
-              {units.map((unit) => (
+              {sortedUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.unit_code} {unit.unit_name ? `/ ${unit.unit_name}` : ""}
                 </option>
@@ -794,33 +814,18 @@ function ContractorsPage({
   );
 }
 
-function UnitsPage({ editUnit, resetUnitForm, selectedUnit, status, submitUnit, unitForm, units, updateUnitField }) {
+function UnitsPage({ editUnit, resetUnitForm, selectedUnit, selectedUnitId, sortedUnits, status, submitUnit, unitForm, updateUnitField }) {
   return (
     <>
       <section className="admin-panel">
-        <h2>호수 목록</h2>
-        <div className="admin-list">
-          {units.length ? (
-            units.map((unit) => (
-              <button className="admin-record-card" key={unit.id} onClick={() => editUnit(unit)} type="button">
-                <span>
-                  <strong>{unit.unit_code}</strong>
-                  <small>{unit.status || "active"}</small>
-                </span>
-                <span>
-                  <strong>{unit.unit_name || "이름 미등록"}</strong>
-                  <small>{unit.property_type || "타입 미등록"}</small>
-                </span>
-                <span>
-                  <strong>{formatMoney(unit.total_price, unit.currency)}</strong>
-                  <small>{unit.currency || "USD"}</small>
-                </span>
-              </button>
-            ))
-          ) : (
-            <p>등록된 호수가 없습니다.</p>
-          )}
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 호수가 없습니다."
+          items={sortedUnits}
+          onSelect={editUnit}
+          renderItem={renderUnitRecord}
+          selectedId={selectedUnitId}
+          title="호수 목록"
+        />
       </section>
       <section className="admin-panel">
         <h2>{selectedUnit ? "호수 수정" : "호수 생성"}</h2>
@@ -846,7 +851,6 @@ function UnitsPage({ editUnit, resetUnitForm, selectedUnit, status, submitUnit, 
 }
 
 function PaymentsPage({
-  contractors,
   createDefaultItemsForPlan,
   createPlanForSelectedContractor,
   paymentDetailRef,
@@ -857,6 +861,8 @@ function PaymentsPage({
   paymentTotals,
   selectPaymentContractor,
   selectedContractor,
+  selectedContractorId,
+  sortedContractors,
   status,
   submitPaymentItem,
   submitPaymentPlan,
@@ -865,37 +871,14 @@ function PaymentsPage({
   return (
     <>
       <section className="admin-panel">
-        <h2>납부일정 관리</h2>
-        <div className="admin-list">
-          {contractors.length ? (
-            contractors.map((contractor) => {
-              const summary = paymentSummaries[contractor.id];
-              return (
-                <button
-                  className={`admin-record-card payment-contractor-card ${selectedContractor?.id === contractor.id ? "is-selected" : ""}`}
-                  key={contractor.id}
-                  onClick={() => selectPaymentContractor(contractor)}
-                  type="button"
-                >
-                  <span>
-                    <strong>{contractor.full_name}</strong>
-                    <small>{contractor.email || "이메일 없음"}</small>
-                  </span>
-                  <span>
-                    <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
-                    <small>{formatMoney(contractor.unit?.total_price, contractor.unit?.currency)}</small>
-                  </span>
-                  <span>
-                    <strong>{summary ? `${summary.totals.progressPercent}%` : "미생성"}</strong>
-                    <small>{summary ? `${summary.items.length}/8 단계` : "payment plan 없음"}</small>
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <p>등록된 계약자가 없습니다.</p>
-          )}
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 계약자가 없습니다."
+          items={sortedContractors}
+          onSelect={selectPaymentContractor}
+          renderItem={(contractor) => renderPaymentContractorRecord(contractor, paymentSummaries[contractor.id])}
+          selectedId={selectedContractorId}
+          title="납부일정 관리"
+        />
       </section>
       <section className="admin-panel" ref={paymentDetailRef}>
         <h2>Payment Management</h2>
@@ -979,7 +962,6 @@ function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProg
 }
 
 function DocumentsPage({
-  contractors,
   documentFile,
   documentFileInputRef,
   documentForm,
@@ -989,8 +971,10 @@ function DocumentsPage({
   selectedContractorDocuments,
   selectedDocumentContractor,
   selectDocumentContractor,
+  selectedDocumentContractorId,
   setDocumentFile,
   showDocumentSelectionError,
+  sortedContractors,
   status,
   submitDocumentMetadata,
   submitDocumentUpload,
@@ -1006,29 +990,14 @@ function DocumentsPage({
         <p className="security-note">
           문서는 private Storage bucket에 저장되며, 계약자는 자기 contractor_id 폴더의 문서만 signed URL로 열 수 있습니다.
         </p>
-        <div className="admin-list">
-          {contractors.length ? (
-            contractors.map((contractor) => (
-              <button
-                className={`admin-record-card ${selectedDocumentContractor?.id === contractor.id ? "is-selected" : ""}`}
-                key={contractor.id}
-                onClick={() => selectDocumentContractor(contractor)}
-                type="button"
-              >
-                <span>
-                  <strong>{contractor.full_name}</strong>
-                  <small>{contractor.status || "active"}</small>
-                </span>
-                <span>
-                  <strong>{contractor.email || "이메일 없음"}</strong>
-                  <small>{contractor.unit?.unit_code || "호수 미연결"}</small>
-                </span>
-              </button>
-            ))
-          ) : (
-            <p>등록된 계약자가 없습니다.</p>
-          )}
-        </div>
+        <ExpandableSelectList
+          emptyMessage="등록된 계약자가 없습니다."
+          items={sortedContractors}
+          onSelect={selectDocumentContractor}
+          renderItem={renderContractorRecord}
+          selectedId={selectedDocumentContractorId}
+          title="계약자 선택"
+        />
       </section>
       {documentMessage ? <p className="form-error">{documentMessage}</p> : null}
       <section className="admin-panel">
@@ -1099,6 +1068,73 @@ function DocumentsPage({
         )}
       </section>
     </>
+  );
+}
+
+function renderContractorRecord(contractor) {
+  return (
+    <>
+      <span>
+        <strong>{contractor.full_name}</strong>
+        <small>{contractor.status || "active"}</small>
+      </span>
+      <span>
+        <strong>{contractor.email || "이메일 없음"}</strong>
+        <small>{contractor.phone || "연락처 없음"}</small>
+      </span>
+      <span>
+        <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
+        <small>{formatDate(contractor.created_at)}</small>
+      </span>
+    </>
+  );
+}
+
+function renderPaymentContractorRecord(contractor, summary) {
+  return (
+    <>
+      <span>
+        <strong>{contractor.full_name}</strong>
+        <small>{contractor.email || "이메일 없음"}</small>
+      </span>
+      <span>
+        <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
+        <small>{contractor.status || "active"}</small>
+      </span>
+      <span>
+        <strong>{summary ? `${summary.totals.progressPercent}%` : "미생성"}</strong>
+        <small>{summary ? `${summary.items.length}/8 단계` : "payment plan 없음"}</small>
+      </span>
+    </>
+  );
+}
+
+function renderUnitRecord(unit) {
+  return (
+    <>
+      <span>
+        <strong>{unit.unit_code}</strong>
+        <small>{unit.status || "active"}</small>
+      </span>
+      <span>
+        <strong>{unit.unit_name || "이름 미등록"}</strong>
+        <small>{unit.property_type || "타입 미등록"}</small>
+      </span>
+      <span>
+        <strong>{formatMoney(unit.total_price, unit.currency)}</strong>
+        <small>{formatDate(unit.created_at)}</small>
+      </span>
+    </>
+  );
+}
+
+function ArchiveContractorButton({ contractor, onArchive }) {
+  const archived = isArchivedContractor(contractor);
+
+  return (
+    <button className="danger-button archive-button" disabled={archived} onClick={() => onArchive(contractor)} type="button">
+      {archived ? "archived" : "삭제"}
+    </button>
   );
 }
 

@@ -47,6 +47,34 @@ export async function createContractor(input) {
   return respond(data, error);
 }
 
+export async function createContractorWithAuth(input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) return fail(sessionError.message);
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return fail("관리자 로그인이 필요합니다.");
+
+  try {
+    const response = await fetch("/.netlify/functions/create-contractor", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(normalizeContractorAccount(input)),
+    });
+
+    const payload = await readJsonResponse(response);
+    if (!response.ok) return fail(payload.error || "계약자 계정 생성에 실패했습니다.");
+
+    return respond(payload.data || null, null);
+  } catch (error) {
+    return fail(error.message || "계약자 계정 생성에 실패했습니다.");
+  }
+}
+
 export async function updateContractor(id, input) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
@@ -121,6 +149,13 @@ function normalizeContractor(input) {
   };
 }
 
+function normalizeContractorAccount(input) {
+  return {
+    ...normalizeContractor(input),
+    temporary_password: requiredString(input.temporary_password),
+  };
+}
+
 function requiredString(value) {
   return String(value || "").trim();
 }
@@ -142,4 +177,12 @@ function respond(data, error) {
 
 function fail(error) {
   return { data: null, error };
+}
+
+async function readJsonResponse(response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
 }

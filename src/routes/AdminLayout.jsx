@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import {
   createContractor,
+  createContractorWithAuth,
   createUnit,
   getAdminContractors,
   getUnits,
@@ -63,6 +64,7 @@ const emptyContractorForm = {
   status: "active",
   unit_id: "",
   profile_id: "",
+  temporary_password: "",
 };
 
 const emptyPaymentPlanForm = {
@@ -87,6 +89,7 @@ export default function AdminLayout() {
   const [selectedContractorId, setSelectedContractorId] = useState("");
   const [unitForm, setUnitForm] = useState(emptyUnitForm);
   const [contractorForm, setContractorForm] = useState(emptyContractorForm);
+  const [manualContractorMode, setManualContractorMode] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState(null);
   const [paymentItems, setPaymentItems] = useState([]);
   const [paymentSummaries, setPaymentSummaries] = useState({});
@@ -229,12 +232,15 @@ export default function AdminLayout() {
       status: contractor.status || "active",
       unit_id: contractor.unit_id || "",
       profile_id: contractor.profile_id || "",
+      temporary_password: "",
     });
+    setManualContractorMode(false);
   }
 
   function resetContractorForm() {
     setSelectedContractorId("");
     setContractorForm(emptyContractorForm);
+    setManualContractorMode(false);
   }
 
   function updateUnitField(event) {
@@ -270,15 +276,25 @@ export default function AdminLayout() {
     setMessage("");
     const result = selectedContractorId
       ? await updateContractor(selectedContractorId, contractorForm)
-      : await createContractor(contractorForm);
+      : manualContractorMode
+        ? await createContractor(contractorForm)
+        : await createContractorWithAuth(contractorForm);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
       return;
     }
+    const createdEmail = result.data?.user?.email || contractorForm.email;
+    const createdPassword = result.data?.temporary_password || contractorForm.temporary_password;
     resetContractorForm();
     await loadDashboard();
-    setMessage(selectedContractorId ? "계약자 정보가 수정되었습니다." : "계약자 정보가 생성되었습니다.");
+    if (selectedContractorId) {
+      setMessage("계약자 정보가 수정되었습니다.");
+    } else if (manualContractorMode) {
+      setMessage("계약자 정보가 수동 연결 방식으로 생성되었습니다.");
+    } else {
+      setMessage(`계약자 계정이 생성되었습니다. 로그인 이메일: ${createdEmail} / 임시 비밀번호: ${createdPassword}`);
+    }
   }
 
   async function submitPaymentPlan(event) {
@@ -531,6 +547,7 @@ export default function AdminLayout() {
     contractors,
     editContractor,
     editUnit,
+    manualContractorMode,
     message,
     paymentDetailRef,
     paymentItems,
@@ -555,6 +572,7 @@ export default function AdminLayout() {
     submitUnit,
     units,
     updateContractorField,
+    setManualContractorMode,
     updatePaymentPlanField,
     updateUnitField,
     createDefaultItemsForPlan,
@@ -670,18 +688,24 @@ function ContractorsPage({
   contractorForm,
   contractors,
   editContractor,
+  manualContractorMode,
   resetContractorForm,
   selectedContractor,
+  setManualContractorMode,
   status,
   submitContractor,
   units,
   updateContractorField,
 }) {
+  const createButtonLabel = manualContractorMode ? "수동 계약자 생성" : "계약자 계정 생성";
+
   return (
     <>
       <section className="admin-panel">
         <h2>계약자 목록</h2>
-        <p className="security-note">계약자 로그인을 사용하려면 Supabase Auth에서 사용자를 먼저 생성한 뒤, 해당 User UID를 profile_id에 연결하세요.</p>
+        <p className="security-note">
+          기본 생성은 Supabase Auth 사용자, profile, contractor row를 함께 만듭니다. 이미 만든 Auth user를 연결해야 할 때만 수동 연결 모드를 사용하세요.
+        </p>
         <div className="admin-list">
           {contractors.length ? (
             contractors.map((contractor) => (
@@ -711,10 +735,21 @@ function ContractorsPage({
         </div>
       </section>
       <section className="admin-panel">
-        <h2>{selectedContractor ? "계약자 수정" : "계약자 생성"}</h2>
+        <h2>{selectedContractor ? "계약자 수정" : createButtonLabel}</h2>
         <form className="admin-form compact-admin-form" onSubmit={submitContractor}>
           <TextField label="full_name" name="full_name" onChange={updateContractorField} required value={contractorForm.full_name} />
-          <TextField label="email" name="email" onChange={updateContractorField} type="email" value={contractorForm.email} />
+          <TextField label="email" name="email" onChange={updateContractorField} required={!selectedContractor && !manualContractorMode} type="email" value={contractorForm.email} />
+          {!selectedContractor && !manualContractorMode ? (
+            <TextField
+              label="temporary_password"
+              minLength="8"
+              name="temporary_password"
+              onChange={updateContractorField}
+              required
+              type="password"
+              value={contractorForm.temporary_password}
+            />
+          ) : null}
           <TextField label="phone" name="phone" onChange={updateContractorField} value={contractorForm.phone} />
           <TextField label="passport_no" name="passport_no" onChange={updateContractorField} value={contractorForm.passport_no} />
           <TextField label="address" name="address" onChange={updateContractorField} value={contractorForm.address} />
@@ -730,10 +765,24 @@ function ContractorsPage({
               ))}
             </select>
           </label>
-          <TextField label="profile_id" name="profile_id" onChange={updateContractorField} value={contractorForm.profile_id} />
+          {selectedContractor || manualContractorMode ? (
+            <>
+              <p className="security-note">기존 Supabase Auth user와 수동 연결할 때만 User UID를 profile_id에 입력하세요.</p>
+              <TextField label="profile_id" name="profile_id" onChange={updateContractorField} value={contractorForm.profile_id} />
+            </>
+          ) : null}
+          {!selectedContractor ? (
+            <button
+              className="secondary-button"
+              onClick={() => setManualContractorMode((current) => !current)}
+              type="button"
+            >
+              {manualContractorMode ? "자동 계정 생성으로 전환" : "기존 Supabase Auth user와 수동 연결"}
+            </button>
+          ) : null}
           <div className="button-row">
             <button className="primary-button" disabled={status === "saving"} type="submit">
-              {selectedContractor ? "계약자 수정" : "계약자 생성"}
+              {status === "saving" ? "저장 중..." : selectedContractor ? "계약자 수정" : createButtonLabel}
             </button>
             <button className="secondary-button" onClick={resetContractorForm} type="button">
               신규 입력
@@ -1053,12 +1102,12 @@ function DocumentsPage({
   );
 }
 
-function TextField({ defaultValue, label, max, min, name, onChange, required = false, step, type = "text", value }) {
+function TextField({ defaultValue, label, max, min, minLength, name, onChange, required = false, step, type = "text", value }) {
   const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <input max={max} min={min} name={name} onChange={onChange} required={required} step={step} type={type} {...inputProps} />
+      <input max={max} min={min} minLength={minLength} name={name} onChange={onChange} required={required} step={step} type={type} {...inputProps} />
     </label>
   );
 }

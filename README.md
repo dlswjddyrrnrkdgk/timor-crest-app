@@ -41,12 +41,18 @@ Required Netlify environment variables:
 
 Server-only variables for later phases must not use a `VITE_` prefix:
 
+- `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ADMIN_INVITE_SECRET`
 - `CCTV_PROVIDER_API_KEY`
 - `CCTV_PROVIDER_API_SECRET`
 - `CCTV_SIGNING_SECRET`
 - `CCTV_RELAY_BASE_URL`
+
+For the Admin contractor account creation Function, configure these in Netlify Environment Variables with Functions scope. Mark them secret, and never expose them through browser builds:
+
+- `SUPABASE_URL` - Supabase Project URL.
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key. This key bypasses RLS, so it must not be imported by frontend code and must never use a `VITE_` prefix.
 
 ## Supabase Phase 1 Setup
 
@@ -129,6 +135,29 @@ Phase 2 Contractor workflow:
 4. If no contractor row is linked, the page shows an Admin contact message.
 
 Never place `SUPABASE_SERVICE_ROLE_KEY`, database passwords, or other server secrets in frontend code or any `VITE_` environment variable. Phase 2 uses only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the browser.
+
+## Admin Contractor Account Creation
+
+The `/admin/contractors` create form now supports the normal production flow:
+
+1. Sign in as Admin.
+2. Open `/admin/contractors`.
+3. Enter `full_name`, `email`, `temporary_password`, optional contact/profile fields, `status`, and `unit_id`.
+4. Click `계약자 계정 생성`.
+5. The browser sends the current Supabase session access token to `/.netlify/functions/create-contractor`.
+6. The Netlify Function verifies the requester again against `public.profiles.role = 'admin'`.
+7. The Function creates the Supabase Auth user, inserts the `public.profiles` row with role `contractor`, and inserts the linked `public.contractors` row.
+
+The legacy manual link path is still available from `/admin/contractors` through `기존 Supabase Auth user와 수동 연결`. Use it only when a Supabase Auth user already exists and the Admin needs to paste its UID into `profile_id`.
+
+Server Function environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Set both in Netlify with Functions scope. `SUPABASE_SERVICE_ROLE_KEY` is server-only and must not be added to `.env.local` for frontend use, any `VITE_` variable, or any file under `src/`.
+
+If the Function creates an Auth user but a later database insert fails, it attempts cleanup with `auth.admin.deleteUser()` and row deletes. If cleanup also fails, check the Function logs and remove any orphaned Auth/profile rows manually before retrying.
 
 ## Supabase Phase 3 Setup
 

@@ -193,12 +193,14 @@ Admin routes:
 - `/admin/units` - unit list plus create/edit forms.
 - `/admin/payments` - contractor payment management, payment plan creation, default 8-step item creation, and payment item editing.
 - `/admin/journey` - shared Journey template management.
+- `/admin/documents` - contractor-linked private document upload and metadata management.
 
 Contractor routes:
 
 - `/contractor` - compact dashboard with Payment Summary, Journey Summary, and the `내 집 미리보기` button.
 - `/contractor/payments` - read-only Payment Summary plus the full 8-step payment item list.
 - `/contractor/journey` - read-only shared Journey schedule.
+- `/contractor/documents` - read-only private documents linked to the signed-in contractor.
 - `/contractor/preview` - placeholder for the future home preview experience.
 
 Payment progress is shown with `AnimatedProgress`, which count-ups the number and fills the progress bar. It respects `prefers-reduced-motion` by showing the final value immediately.
@@ -230,13 +232,67 @@ RLS is intentionally narrow:
 
 Admins manage shared steps at `/admin/journey`. If fewer than 8 steps exist, the Admin page can create or supplement the default Journey rows through the browser using the logged-in admin session and RLS-protected insert permissions. Contractors see a short Journey Summary on `/contractor` and read the full schedule at `/contractor/journey`; there are no contractor-specific Journey rows or write controls. Continue to use only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in browser code. Never expose `SUPABASE_SERVICE_ROLE_KEY`, database passwords, or other secrets through a `VITE_` variable.
 
+## Supabase Phase 5 Setup
+
+Run `supabase/migrations/0005_documents.sql` after the Phase 4 migration.
+
+This migration creates:
+
+- `public.document_files` for document metadata.
+- Private Supabase Storage bucket `timorcrest-documents`.
+- RLS policies for Admin full metadata access.
+- RLS policies for Contractor self-only metadata reads.
+- Storage policies for Admin full object access and Contractor self-only object reads.
+
+The Storage bucket must stay private:
+
+- `timorcrest-documents.public = false`
+- Do not use public URLs.
+- Document open/download actions create short-lived signed URLs that expire after 180 seconds.
+- Do not add `SUPABASE_SERVICE_ROLE_KEY` to frontend code or any `VITE_` environment variable.
+
+Storage path rule:
+
+```text
+contractor_id/document_id/safe_file_name
+```
+
+Example:
+
+```text
+aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/11111111-2222-3333-4444-555555555555/contract.pdf
+```
+
+The first path segment is always `contractor_id`, which lets Storage RLS restrict contractors to their own folder:
+
+- Admin can select, insert, update, and delete all objects in `timorcrest-documents`.
+- Contractor can select only objects where `split_part(storage.objects.name, '/', 1)` matches their own `public.contractors.id`.
+- Anonymous users have no document metadata or Storage access.
+
+Admin document workflow:
+
+1. Sign in as Admin.
+2. Open `/admin/documents`.
+3. Select a contractor.
+4. Upload a PDF, DOC, DOCX, JPG, JPEG, PNG, or WEBP file up to 10MB.
+5. Edit title, category, status, or note as needed.
+6. Open/download through a signed URL.
+7. Delete removes the Storage object and its `document_files` row.
+
+Contractor document workflow:
+
+1. Sign in as the contractor.
+2. The `/contractor` dashboard shows a compact Documents summary card.
+3. Open `/contractor/documents` from the Documents card or bottom navigation.
+4. The page shows only documents linked to the contractor row where `contractors.profile_id = auth.uid()`.
+5. Contractors can open/download documents but cannot upload, edit, or delete them.
+
 ## Phase Boundaries
 
-Phase 1 includes only Auth, role redirects, route guards, and protected shells. Phase 2 includes contractor/unit tables, RLS, Admin unit/contractor forms, Admin lists, and Contractor My Contract Summary. Phase 3 includes contractor-specific payment plans, 8 payment items, Admin payment editing, and Contractor read-only payment summary. The dashboard refactor separates these features into focused routes without changing RLS or table shape.
+Phase 1 includes only Auth, role redirects, route guards, and protected shells. Phase 2 includes contractor/unit tables, RLS, Admin unit/contractor forms, Admin lists, and Contractor My Contract Summary. Phase 3 includes contractor-specific payment plans, 8 payment items, Admin payment editing, and Contractor read-only payment summary. Phase 4 includes shared Journey management. Phase 5 includes private contractor document upload and read-only contractor document access. The dashboard refactor separates these features into focused routes without changing RLS or table shape.
 
-Phase 1 through Phase 3 do not include:
+Phase 1 through Phase 5 do not include:
 
-- File upload
 - CCTV streaming integration
 - Public sign up
 - Service role key usage in frontend code
@@ -261,6 +317,8 @@ Legacy demo files are retained for future migration reference:
 - `src/services/contractorService.js` - Supabase unit/contractor data helpers.
 - `src/services/paymentService.js` - Supabase payment plan/item helpers.
 - `src/services/journeyService.js` - shared Journey template helpers.
+- `src/services/documentService.js` - private document metadata, upload, delete, and signed URL helpers.
+- `src/services/documentModel.js` - document path, filename, file-size, and validation helpers.
 - `src/components/AnimatedProgress.jsx` - reusable progress count-up and progress bar.
 - `src/routes/` - Login, Admin dashboard/routes, Contractor dashboard/routes, route guard.
 - `src/app.js` - legacy demo renderer retained for later migration reference.

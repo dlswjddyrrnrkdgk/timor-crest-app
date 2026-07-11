@@ -25,6 +25,15 @@ import {
   getJourneySteps,
   updateJourneyStep,
 } from "../services/journeyService.js";
+import {
+  createDocumentSignedUrl,
+  deleteDocument,
+  getAdminDocuments,
+  getDocumentsByContractor,
+  updateDocumentMetadata,
+  uploadDocument,
+} from "../services/documentService.js";
+import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
 import { signOut } from "../services/authService.js";
 
 const adminTabs = [
@@ -33,6 +42,7 @@ const adminTabs = [
   ["units", "호수 관리"],
   ["payments", "납부일정 관리"],
   ["journey", "Journey 관리"],
+  ["documents", "문서 관리"],
 ];
 
 const emptyUnitForm = {
@@ -61,9 +71,16 @@ const emptyPaymentPlanForm = {
   status: "active",
 };
 
+const emptyDocumentForm = {
+  title: "",
+  category: "other",
+  note: "",
+};
+
 export default function AdminLayout() {
   const navigate = useNavigate();
   const paymentDetailRef = useRef(null);
+  const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [selectedUnitId, setSelectedUnitId] = useState("");
@@ -76,6 +93,11 @@ export default function AdminLayout() {
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
   const [journeySteps, setJourneySteps] = useState([]);
   const [journeyMessage, setJourneyMessage] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [selectedDocumentContractorId, setSelectedDocumentContractorId] = useState("");
+  const [documentForm, setDocumentForm] = useState(emptyDocumentForm);
+  const [documentFile, setDocumentFile] = useState(null);
+  const [documentMessage, setDocumentMessage] = useState("");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -83,6 +105,14 @@ export default function AdminLayout() {
   const selectedContractor = useMemo(
     () => contractors.find((contractor) => contractor.id === selectedContractorId) || null,
     [contractors, selectedContractorId],
+  );
+  const selectedDocumentContractor = useMemo(
+    () => contractors.find((contractor) => contractor.id === selectedDocumentContractorId) || null,
+    [contractors, selectedDocumentContractorId],
+  );
+  const selectedContractorDocuments = useMemo(
+    () => documents.filter((document) => document.contractor_id === selectedDocumentContractorId),
+    [documents, selectedDocumentContractorId],
   );
 
   useEffect(() => {
@@ -97,11 +127,13 @@ export default function AdminLayout() {
     setStatus("loading");
     setMessage("");
     setJourneyMessage("");
-    const [unitResult, contractorResult, planResult, journeyResult] = await Promise.all([
+    setDocumentMessage("");
+    const [unitResult, contractorResult, planResult, journeyResult, documentResult] = await Promise.all([
       getUnits(),
       getAdminContractors(),
       getAdminPaymentPlans(),
       getJourneySteps(),
+      getAdminDocuments(),
     ]);
     if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
@@ -119,6 +151,8 @@ export default function AdminLayout() {
     setContractors(contractorResult.data || []);
     setJourneySteps(nextJourneySteps);
     setJourneyMessage(nextJourneyMessage);
+    setDocuments(documentResult.data || []);
+    setDocumentMessage(documentResult.error || "");
     await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
   }
@@ -354,6 +388,133 @@ export default function AdminLayout() {
     setMessage("기본 8단계 Journey가 생성 또는 보완되었습니다.");
   }
 
+  function selectDocumentContractor(contractor) {
+    setSelectedDocumentContractorId(contractor.id);
+    setDocumentMessage("");
+    setDocumentForm(emptyDocumentForm);
+    setDocumentFile(null);
+    if (documentFileInputRef.current) documentFileInputRef.current.value = "";
+  }
+
+  function updateDocumentFormField(event) {
+    setDocumentForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
+  function showDocumentSelectionError() {
+    setDocumentMessage("문서를 업로드할 계약자를 선택해 주세요.");
+  }
+
+  async function submitDocumentUpload(event) {
+    event.preventDefault();
+    if (!selectedDocumentContractor) {
+      setDocumentMessage("문서를 업로드할 계약자를 선택해 주세요.");
+      return;
+    }
+
+    const formValues = Object.fromEntries(new FormData(event.currentTarget));
+    if (!String(formValues.title || "").trim()) {
+      setDocumentMessage("문서 제목을 입력해 주세요.");
+      return;
+    }
+    if (!String(formValues.category || "").trim()) {
+      setDocumentMessage("문서 카테고리를 선택해 주세요.");
+      return;
+    }
+    if (!documentFile) {
+      setDocumentMessage("업로드할 파일을 선택해 주세요.");
+      return;
+    }
+
+    setStatus("saving");
+    setDocumentMessage("");
+    try {
+      const result = await uploadDocument({
+        ...formValues,
+        contractorId: selectedDocumentContractor.id,
+        unitId: selectedDocumentContractor.unit_id,
+        file: documentFile,
+      });
+
+      if (result.error) {
+        setStatus("ready");
+        setDocumentMessage(result.error);
+        return;
+      }
+
+      setDocumentForm(emptyDocumentForm);
+      setDocumentFile(null);
+      if (documentFileInputRef.current) documentFileInputRef.current.value = "";
+      const refreshed = await reloadDocumentsForContractor(selectedDocumentContractor.id);
+      setStatus("ready");
+      if (refreshed) setDocumentMessage("문서가 업로드되었습니다.");
+    } catch (error) {
+      setStatus("ready");
+      setDocumentMessage(error.message || "문서 업로드에 실패했습니다.");
+    }
+  }
+
+  async function reloadDocuments() {
+    const result = await getAdminDocuments();
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return;
+    }
+    setDocuments(result.data || []);
+  }
+
+  async function reloadDocumentsForContractor(contractorId) {
+    const result = await getDocumentsByContractor(contractorId);
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return false;
+    }
+    setDocuments((current) => [
+      ...(result.data || []),
+      ...current.filter((document) => document.contractor_id !== contractorId),
+    ]);
+    return true;
+  }
+
+  async function submitDocumentMetadata(documentId, values) {
+    setStatus("saving");
+    setDocumentMessage("");
+    const result = await updateDocumentMetadata(documentId, values);
+    if (result.error) {
+      setStatus("ready");
+      setDocumentMessage(result.error);
+      return;
+    }
+    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
+    setStatus("ready");
+    if (refreshed) setDocumentMessage("문서 정보가 수정되었습니다.");
+  }
+
+  async function openDocument(filePath) {
+    setDocumentMessage("");
+    const result = await createDocumentSignedUrl(filePath);
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return;
+    }
+    window.open(result.data, "_blank", "noopener,noreferrer");
+  }
+
+  async function removeDocument(document) {
+    if (!window.confirm(`${document.title} 문서를 삭제할까요?`)) return;
+
+    setStatus("saving");
+    setDocumentMessage("");
+    const result = await deleteDocument(document.id);
+    if (result.error) {
+      setStatus("ready");
+      setDocumentMessage(result.error);
+      return;
+    }
+    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
+    setStatus("ready");
+    if (refreshed) setDocumentMessage("문서가 삭제되었습니다.");
+  }
+
   function selectPaymentContractor(contractor) {
     editContractor(contractor);
     window.setTimeout(() => paymentDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
@@ -399,7 +560,22 @@ export default function AdminLayout() {
     createDefaultItemsForPlan,
     createPlanForSelectedContractor,
     contractorForm,
+    documents,
+    documentFile,
+    documentForm,
+    documentMessage,
+    openDocument,
+    removeDocument,
+    selectedContractorDocuments,
+    selectedDocumentContractor,
+    selectDocumentContractor,
+    setDocumentFile,
+    documentFileInputRef,
+    showDocumentSelectionError,
+    submitDocumentMetadata,
+    submitDocumentUpload,
     unitForm,
+    updateDocumentFormField,
   };
 
   return (
@@ -435,6 +611,7 @@ export default function AdminLayout() {
               <Route path="units" element={<UnitsPage {...shell} />} />
               <Route path="payments" element={<PaymentsPage {...shell} />} />
               <Route path="journey" element={<JourneyPage {...shell} />} />
+              <Route path="documents" element={<DocumentsPage {...shell} />} />
             </Routes>
           </section>
         </div>
@@ -482,6 +659,7 @@ function AdminHome({ activeContractors, activeUnits, contractors, units }) {
           <Link className="secondary-button" to="units">호수 관리</Link>
           <Link className="secondary-button" to="payments">납부일정 관리</Link>
           <Link className="secondary-button" to="journey">Journey 관리</Link>
+          <Link className="secondary-button" to="documents">문서 관리</Link>
         </div>
       </section>
     </>
@@ -751,6 +929,130 @@ function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProg
   );
 }
 
+function DocumentsPage({
+  contractors,
+  documentFile,
+  documentFileInputRef,
+  documentForm,
+  documentMessage,
+  openDocument,
+  removeDocument,
+  selectedContractorDocuments,
+  selectedDocumentContractor,
+  selectDocumentContractor,
+  setDocumentFile,
+  showDocumentSelectionError,
+  status,
+  submitDocumentMetadata,
+  submitDocumentUpload,
+  updateDocumentFormField,
+}) {
+  const isUploading = status === "saving";
+
+  return (
+    <>
+      <section className="admin-panel">
+        <span className="eyebrow">DOCUMENTS</span>
+        <h2>문서 관리</h2>
+        <p className="security-note">
+          문서는 private Storage bucket에 저장되며, 계약자는 자기 contractor_id 폴더의 문서만 signed URL로 열 수 있습니다.
+        </p>
+        <div className="admin-list">
+          {contractors.length ? (
+            contractors.map((contractor) => (
+              <button
+                className={`admin-record-card ${selectedDocumentContractor?.id === contractor.id ? "is-selected" : ""}`}
+                key={contractor.id}
+                onClick={() => selectDocumentContractor(contractor)}
+                type="button"
+              >
+                <span>
+                  <strong>{contractor.full_name}</strong>
+                  <small>{contractor.status || "active"}</small>
+                </span>
+                <span>
+                  <strong>{contractor.email || "이메일 없음"}</strong>
+                  <small>{contractor.unit?.unit_code || "호수 미연결"}</small>
+                </span>
+              </button>
+            ))
+          ) : (
+            <p>등록된 계약자가 없습니다.</p>
+          )}
+        </div>
+      </section>
+      {documentMessage ? <p className="form-error">{documentMessage}</p> : null}
+      <section className="admin-panel">
+        <h2>문서 업로드</h2>
+        {!selectedDocumentContractor ? (
+          <>
+            <p>계약자를 선택하면 해당 계약자에게 문서를 업로드할 수 있습니다.</p>
+            <button className="primary-button document-open-button" onClick={showDocumentSelectionError} type="button">
+              문서 업로드
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="payment-context-card">
+              <span className="eyebrow">SELECTED CONTRACTOR</span>
+              <strong>{selectedDocumentContractor.full_name}</strong>
+              <p>{selectedDocumentContractor.email || "이메일 없음"} / {selectedDocumentContractor.unit?.unit_code || "호수 미연결"}</p>
+            </div>
+            <form className="admin-form compact-admin-form" key={selectedDocumentContractor.id} onSubmit={submitDocumentUpload}>
+              <TextField label="title" name="title" onChange={updateDocumentFormField} value={documentForm.title} />
+              <label className="field">
+                <span>category</span>
+                <select name="category" onChange={updateDocumentFormField} value={documentForm.category}>
+                  {DOCUMENT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>file</span>
+                <input
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                  onChange={(event) => setDocumentFile(event.target.files?.[0] || null)}
+                  ref={documentFileInputRef}
+                  type="file"
+                />
+              </label>
+              {documentFile ? <p className="file-hint">{documentFile.name} / {formatFileSize(documentFile.size)}</p> : null}
+              <TextAreaField label="note" name="note" onChange={updateDocumentFormField} value={documentForm.note} />
+              <button className="primary-button" disabled={isUploading} type="submit">
+                {isUploading ? "업로드 중..." : "문서 업로드"}
+              </button>
+            </form>
+          </>
+        )}
+      </section>
+      <section className="admin-panel">
+        <h2>선택 계약자 문서</h2>
+        {!selectedDocumentContractor ? (
+          <p>문서 목록을 보려면 계약자를 선택해 주세요.</p>
+        ) : (
+          <div className="document-list">
+            {selectedContractorDocuments.length ? (
+              selectedContractorDocuments.map((document) => (
+                <AdminDocumentCard
+                  document={document}
+                  key={document.id}
+                  onDelete={removeDocument}
+                  onOpen={openDocument}
+                  onSubmit={submitDocumentMetadata}
+                  saving={status === "saving"}
+                />
+              ))
+            ) : (
+              <p>선택한 계약자에게 등록된 문서가 없습니다.</p>
+            )}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
 function TextField({ defaultValue, label, max, min, name, onChange, required = false, step, type = "text", value }) {
   const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
@@ -758,6 +1060,71 @@ function TextField({ defaultValue, label, max, min, name, onChange, required = f
       <span>{label}</span>
       <input max={max} min={min} name={name} onChange={onChange} required={required} step={step} type={type} {...inputProps} />
     </label>
+  );
+}
+
+function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving }) {
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSubmit(document.id, Object.fromEntries(new FormData(event.currentTarget)));
+  }
+
+  return (
+    <article className="document-card admin-document-card">
+      <header>
+        <div>
+          <span className="document-kind">{document.category}</span>
+          <h3>{document.title}</h3>
+          <p className="file-name">{document.file_name}</p>
+        </div>
+        <span className="status-chip">{document.status}</span>
+      </header>
+      <div className="stage-meta">
+        <MiniStat label="파일 크기" value={formatFileSize(document.file_size)} />
+        <MiniStat label="등록일" value={formatDate(document.created_at)} />
+      </div>
+      {document.note ? <p>{document.note}</p> : null}
+      <div className="button-row document-actions">
+        <button className="secondary-button" onClick={() => onOpen(document.file_path)} type="button">
+          열기 / 다운로드
+        </button>
+        <button className="danger-button" disabled={saving} onClick={() => onDelete(document)} type="button">
+          문서 삭제
+        </button>
+      </div>
+      <form className="admin-form compact-admin-form document-metadata-form" onSubmit={handleSubmit}>
+        <TextField label="title" name="title" defaultValue={document.title} required />
+        <label className="field">
+          <span>category</span>
+          <select defaultValue={document.category || "other"} name="category">
+            {DOCUMENT_CATEGORIES.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>status</span>
+          <select defaultValue={document.status || "active"} name="status">
+            {DOCUMENT_STATUSES.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </label>
+        <TextAreaField label="note" name="note" defaultValue={document.note || ""} />
+        <button className="primary-button" disabled={saving} type="submit">
+          문서 정보 저장
+        </button>
+      </form>
+    </article>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="mini-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -861,11 +1228,12 @@ function JourneyStepForm({ item, onSubmit, saving }) {
   );
 }
 
-function TextAreaField({ defaultValue, label, name }) {
+function TextAreaField({ defaultValue, label, name, onChange, value }) {
+  const textareaProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
       <span>{label}</span>
-      <textarea defaultValue={defaultValue ?? ""} name={name} rows="3" />
+      <textarea name={name} onChange={onChange} rows="3" {...textareaProps} />
     </label>
   );
 }
@@ -891,4 +1259,9 @@ function formatJourneyStatus(status) {
 
 function formatMoney(value, currency = "USD") {
   return `${Number(value || 0).toLocaleString("ko-KR")} ${currency || "USD"}`;
+}
+
+function formatDate(value) {
+  if (!value) return "미등록";
+  return new Date(value).toLocaleDateString("ko-KR");
 }

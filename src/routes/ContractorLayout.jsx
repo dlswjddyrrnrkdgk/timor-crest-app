@@ -4,6 +4,8 @@ import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
 import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
+import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/documentService.js";
+import { formatFileSize } from "../services/documentModel.js";
 import { signOut } from "../services/authService.js";
 
 const contractorNav = [
@@ -20,6 +22,8 @@ export default function ContractorLayout() {
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [journeySteps, setJourneySteps] = useState([]);
   const [journeyMessage, setJourneyMessage] = useState("");
+  const [documentSummary, setDocumentSummary] = useState(null);
+  const [documentMessage, setDocumentMessage] = useState("");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -31,10 +35,12 @@ export default function ContractorLayout() {
     setStatus("loading");
     setMessage("");
     setJourneyMessage("");
-    const [contractResult, paymentResult, journeyResult] = await Promise.all([
+    setDocumentMessage("");
+    const [contractResult, paymentResult, journeyResult, documentResult] = await Promise.all([
       getMyContractorSummary(),
       getMyPaymentSummary(),
       getJourneySteps(),
+      getMyDocumentSummary(),
     ]);
     if (contractResult.error || paymentResult.error) {
       setMessage(contractResult.error || paymentResult.error);
@@ -45,6 +51,8 @@ export default function ContractorLayout() {
     setPaymentSummary(paymentResult.data);
     setJourneySteps(journeyResult.data || []);
     setJourneyMessage(journeyResult.error || "");
+    setDocumentSummary(documentResult.data);
+    setDocumentMessage(documentResult.error || "");
     setStatus("ready");
   }
 
@@ -53,7 +61,17 @@ export default function ContractorLayout() {
     navigate("/login", { replace: true });
   }
 
-  const shell = { journeyMessage, journeySteps, message, paymentSummary, status, summary };
+  async function openMyDocument(filePath) {
+    setDocumentMessage("");
+    const result = await createMyDocumentSignedUrl(filePath);
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return;
+    }
+    window.open(result.data, "_blank", "noopener,noreferrer");
+  }
+
+  const shell = { documentMessage, documentSummary, journeyMessage, journeySteps, message, openMyDocument, paymentSummary, status, summary };
 
   return (
     <main className="demo-stage" aria-label="Timor Crest contractor portal">
@@ -68,7 +86,7 @@ export default function ContractorLayout() {
               <Route index element={<ContractorHome {...shell} />} />
               <Route path="journey" element={<ContractorJourney {...shell} />} />
               <Route path="payments" element={<ContractorPayments {...shell} />} />
-              <Route path="documents" element={<PlaceholderPage kicker="DOCUMENTS" title="문서" message="문서 기능은 다음 단계에서 연결됩니다." />} />
+              <Route path="documents" element={<ContractorDocuments {...shell} />} />
               <Route path="preview" element={<ContractorPreview />} />
             </Routes>
             <button className="secondary-button logout-button" onClick={handleLogout} type="button">
@@ -93,7 +111,7 @@ export default function ContractorLayout() {
   );
 }
 
-function ContractorHome({ journeyMessage, journeySteps, message, paymentSummary, status, summary }) {
+function ContractorHome({ documentMessage, documentSummary, journeyMessage, journeySteps, message, paymentSummary, status, summary }) {
   return (
     <>
       <section className="home-hero">
@@ -118,8 +136,10 @@ function ContractorHome({ journeyMessage, journeySteps, message, paymentSummary,
       {summary ? <ContractSummary summary={summary} compact /> : null}
       {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} /> : null}
       {summary ? <JourneySummaryCard journeyMessage={journeyMessage} journeySteps={journeySteps} /> : null}
+      {summary ? <DocumentSummaryCard documentMessage={documentMessage} documentSummary={documentSummary} /> : null}
       <section className="management-action-grid">
         <Link className="primary-button" to="payments">납부 현황 보기</Link>
+        <Link className="secondary-button" to="documents">문서 보기</Link>
         <Link className="secondary-button" to="preview">내 집 미리보기</Link>
       </section>
     </>
@@ -283,6 +303,79 @@ function JourneySummaryCard({ journeyMessage, journeySteps }) {
   );
 }
 
+function DocumentSummaryCard({ documentMessage, documentSummary }) {
+  if (documentMessage) {
+    return (
+      <section className="info-card document-summary-card">
+        <h3>Documents</h3>
+        <p>{documentMessage}</p>
+      </section>
+    );
+  }
+
+  const count = documentSummary?.count || 0;
+  const latest = documentSummary?.latest || null;
+
+  return (
+    <section className="info-card document-summary-card">
+      <h3>Documents</h3>
+      <dl className="compact-info">
+        <InfoRow label="등록 문서" value={`${count}개`} />
+        <InfoRow label="최근 문서" value={latest?.title || "등록된 문서 없음"} />
+      </dl>
+      <Link className="secondary-button document-summary-button" to="documents">문서 보기</Link>
+    </section>
+  );
+}
+
+function ContractorDocuments({ documentMessage, documentSummary, message, openMyDocument, status }) {
+  const documents = documentSummary?.documents || [];
+
+  return (
+    <>
+      <PageHeading kicker="DOCUMENTS" title="문서" />
+      {status === "loading" ? <section className="info-card"><p>문서 정보를 불러오고 있습니다.</p></section> : null}
+      {message ? <p className="form-error">{message}</p> : null}
+      {documentMessage ? <p className="form-error">{documentMessage}</p> : null}
+      <section className="section-block">
+        <div className="document-list">
+          {documents.length ? (
+            documents.map((document) => <ContractorDocumentCard document={document} key={document.id} onOpen={openMyDocument} />)
+          ) : (
+            <section className="info-card">
+              <h3>등록 대기</h3>
+              <p>등록된 문서가 아직 없습니다. 관리자에게 문의하세요.</p>
+            </section>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ContractorDocumentCard({ document, onOpen }) {
+  return (
+    <article className="document-card contractor-document-card">
+      <header>
+        <div>
+          <span className="document-kind">{document.category}</span>
+          <h3>{document.title}</h3>
+          <p className="file-name">{document.file_name}</p>
+        </div>
+        <span className="status-chip">{document.status}</span>
+      </header>
+      <div className="stage-meta">
+        <MiniStat label="파일 크기" value={formatFileSize(document.file_size)} />
+        <MiniStat label="등록일" value={formatDate(document.created_at)} />
+      </div>
+      {document.note ? <p>{document.note}</p> : null}
+      <button className="primary-button document-open-button" onClick={() => onOpen(document.file_path)} type="button">
+        열기 / 다운로드
+      </button>
+    </article>
+  );
+}
+
 function PaymentItemsList({ paymentSummary }) {
   if (!paymentSummary?.plan) return null;
   const { items, plan } = paymentSummary;
@@ -397,4 +490,9 @@ function formatJourneyStatus(status) {
 function formatMoney(value, currency) {
   if (value === null || value === undefined || value === "") return "미등록";
   return `${Number(value).toLocaleString("ko-KR")} ${currency || "USD"}`;
+}
+
+function formatDate(value) {
+  if (!value) return "미등록";
+  return new Date(value).toLocaleDateString("ko-KR");
 }

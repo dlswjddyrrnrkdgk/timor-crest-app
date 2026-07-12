@@ -419,6 +419,7 @@ button:disabled {
 }
 .payment-method-panel-admin,
 .payment-plan-panel-admin,
+.payment-schedule-panel-admin,
 .journey-step-panel {
   margin-top: var(--space-3);
 }

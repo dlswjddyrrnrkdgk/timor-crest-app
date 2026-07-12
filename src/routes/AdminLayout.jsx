@@ -999,17 +999,23 @@ function PaymentsPage({
                     </button>
                   </form>
                 </CollapsiblePanel>
-                {!paymentItems.length ? (
-                  <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
-                    기본 8단계 payment_items 생성
-                  </button>
-                ) : (
-                  <div className="admin-list">
-                    {paymentItems.map((item) => (
-                      <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
-                    ))}
-                  </div>
-                )}
+                <CollapsiblePanel
+                  className="payment-schedule-panel-admin"
+                  summary={formatPaymentScheduleSummary(paymentItems, paymentTotals, paymentPlan.currency)}
+                  title="단계별 납부일정"
+                >
+                  {!paymentItems.length ? (
+                    <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
+                      기본 8단계 payment_items 생성
+                    </button>
+                  ) : (
+                    <div className="admin-list">
+                      {paymentItems.map((item) => (
+                        <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
+                      ))}
+                    </div>
+                  )}
+                </CollapsiblePanel>
               </>
             )}
           </>
@@ -1253,6 +1259,12 @@ function formatDocumentPanelSummary(contractor, documents) {
   const latestDocument = documents[0];
   const latestText = latestDocument ? ` · 최근 문서: ${latestDocument.title || latestDocument.file_name}` : "";
   return `${contractor.full_name} · 문서 ${documents.length}개${latestText}`;
+}
+
+function formatPaymentScheduleSummary(items, totals, currency) {
+  if (!items.length) return "8단계 납부일정을 생성하고 수정합니다.";
+  const paidStepCount = items.filter((item) => item.status === "paid").length;
+  return `총 단계 수: ${items.length}단계 · 납부 완료: ${paidStepCount}단계 · 미납 금액: ${formatMoney(totals.unpaidAmount, currency)} · 진행률: ${totals.progressPercent}%`;
 }
 
 function DeleteContractorButton({ contractor, onDelete }) {

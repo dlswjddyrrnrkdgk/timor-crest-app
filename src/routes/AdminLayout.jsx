@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
+import CollapsiblePanel from "../components/CollapsiblePanel.jsx";
 import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import {
   createContractor,
@@ -817,8 +818,12 @@ function ContractorsPage({
           title="계약자 목록"
         />
       </section>
-      <section className="admin-panel">
-        <h2>{selectedContractor ? "계약자 수정" : createButtonLabel}</h2>
+      <CollapsiblePanel
+        className="admin-panel"
+        defaultExpanded={!sortedContractors.length || Boolean(selectedContractor)}
+        summary={selectedContractor ? `${selectedContractor.full_name} 정보를 수정합니다.` : "새 계약자 계정과 계약 정보를 등록합니다."}
+        title={selectedContractor ? "계약자 수정" : createButtonLabel}
+      >
         <form className="admin-form compact-admin-form" onSubmit={submitContractor}>
           <TextField label="full_name" name="full_name" onChange={updateContractorField} required value={contractorForm.full_name} />
           <TextField label="email" name="email" onChange={updateContractorField} required={!selectedContractor && !manualContractorMode} type="email" value={contractorForm.email} />
@@ -872,7 +877,7 @@ function ContractorsPage({
             </button>
           </div>
         </form>
-      </section>
+      </CollapsiblePanel>
     </>
   );
 }
@@ -890,8 +895,12 @@ function UnitsPage({ editUnit, resetUnitForm, selectedUnit, selectedUnitId, sort
           title="호수 목록"
         />
       </section>
-      <section className="admin-panel">
-        <h2>{selectedUnit ? "호수 수정" : "호수 생성"}</h2>
+      <CollapsiblePanel
+        className="admin-panel"
+        defaultExpanded={!sortedUnits.length || Boolean(selectedUnit)}
+        summary={selectedUnit ? `${selectedUnit.unit_code || selectedUnit.unit_name || "선택 호수"} 정보를 수정합니다.` : "새 호수 정보를 등록합니다."}
+        title={selectedUnit ? "호수 수정" : "호수 생성"}
+      >
         <form className="admin-form compact-admin-form" onSubmit={submitUnit}>
           <TextField label="unit_code" name="unit_code" onChange={updateUnitField} required value={unitForm.unit_code} />
           <TextField label="unit_name" name="unit_name" onChange={updateUnitField} value={unitForm.unit_name} />
@@ -908,7 +917,7 @@ function UnitsPage({ editUnit, resetUnitForm, selectedUnit, selectedUnitId, sort
             </button>
           </div>
         </form>
-      </section>
+      </CollapsiblePanel>
     </>
   );
 }
@@ -976,14 +985,20 @@ function PaymentsPage({
                   <Metric label="필요 금액 합계" value={formatMoney(paymentTotals.totalRequiredAmount, paymentPlan.currency)} />
                 </div>
                 <AnimatedProgress label="납부 진행률" value={paymentTotals.progressPercent} />
-                <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
-                  <TextField label="total_price" name="total_price" onChange={updatePaymentPlanField} type="number" value={paymentPlanForm.total_price} />
-                  <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
-                  <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
-                  <button className="primary-button" disabled={status === "saving"} type="submit">
-                    납부 계획 수정
-                  </button>
-                </form>
+                <CollapsiblePanel
+                  className="payment-plan-panel-admin"
+                  summary={`총 계약금액 ${formatMoney(paymentPlanForm.total_price, paymentPlanForm.currency)} · ${paymentPlanForm.status || "active"}`}
+                  title="납부관리방법 수정"
+                >
+                  <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
+                    <TextField label="total_price" name="total_price" onChange={updatePaymentPlanField} type="number" value={paymentPlanForm.total_price} />
+                    <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
+                    <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
+                    <button className="primary-button" disabled={status === "saving"} type="submit">
+                      납부 계획 수정
+                    </button>
+                  </form>
+                </CollapsiblePanel>
                 {!paymentItems.length ? (
                   <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
                     기본 8단계 payment_items 생성
@@ -1116,8 +1131,12 @@ function DocumentsPage({
           </>
         )}
       </section>
-      <section className="admin-panel">
-        <h2>선택 계약자 문서</h2>
+      <CollapsiblePanel
+        className="admin-panel"
+        defaultExpanded={Boolean(selectedDocumentContractor && !selectedContractorDocuments.length)}
+        summary={formatDocumentPanelSummary(selectedDocumentContractor, selectedContractorDocuments)}
+        title="선택 계약자 문서"
+      >
         {!selectedDocumentContractor ? (
           <p>문서 목록을 보려면 계약자를 선택해 주세요.</p>
         ) : (
@@ -1138,7 +1157,7 @@ function DocumentsPage({
             )}
           </div>
         )}
-      </section>
+      </CollapsiblePanel>
     </>
   );
 }
@@ -1219,6 +1238,21 @@ function buildPaymentMethodForm(contractor) {
     bank_account_number: contractor?.bank_account_number || "",
     bank_account_holder: contractor?.bank_account_holder || "",
   };
+}
+
+function formatPaymentMethodSummary(form) {
+  if (form.payment_method === "cash") return "현재 납부방법: 현금";
+  if (form.payment_method === "bank_transfer") {
+    return `현재 납부방법: 계좌이체${form.bank_name ? ` / ${form.bank_name}` : ""}`;
+  }
+  return "납부방법 미설정";
+}
+
+function formatDocumentPanelSummary(contractor, documents) {
+  if (!contractor) return "계약자를 선택하면 문서 목록을 확인할 수 있습니다.";
+  const latestDocument = documents[0];
+  const latestText = latestDocument ? ` · 최근 문서: ${latestDocument.title || latestDocument.file_name}` : "";
+  return `${contractor.full_name} · 문서 ${documents.length}개${latestText}`;
 }
 
 function DeleteContractorButton({ contractor, onDelete }) {
@@ -1317,27 +1351,33 @@ function PaymentMethodForm({ form, onChange, onSubmit, saving }) {
   const usesBankTransfer = form.payment_method === "bank_transfer";
 
   return (
-    <form className="admin-form compact-admin-form payment-method-form" onSubmit={onSubmit}>
-      <h3>납부방법 설정</h3>
-      <label className="field">
-        <span>납부방법</span>
-        <select name="payment_method" onChange={onChange} value={form.payment_method}>
-          <option value="">미설정</option>
-          <option value="cash">현금</option>
-          <option value="bank_transfer">계좌이체</option>
-        </select>
-      </label>
-      {usesBankTransfer ? (
-        <>
-          <TextField label="은행명" name="bank_name" onChange={onChange} required value={form.bank_name} />
-          <TextField label="계좌번호" name="bank_account_number" onChange={onChange} required value={form.bank_account_number} />
-          <TextField label="계좌명" name="bank_account_holder" onChange={onChange} required value={form.bank_account_holder} />
-        </>
-      ) : null}
-      <button className="primary-button" disabled={saving} type="submit">
-        {saving ? "저장 중..." : "납부방법 저장"}
-      </button>
-    </form>
+    <CollapsiblePanel
+      className="payment-method-panel-admin"
+      defaultExpanded={!form.payment_method}
+      summary={formatPaymentMethodSummary(form)}
+      title="납부방법 설정"
+    >
+      <form className="admin-form compact-admin-form payment-method-form" onSubmit={onSubmit}>
+        <label className="field">
+          <span>납부방법</span>
+          <select name="payment_method" onChange={onChange} value={form.payment_method}>
+            <option value="">미설정</option>
+            <option value="cash">현금</option>
+            <option value="bank_transfer">계좌이체</option>
+          </select>
+        </label>
+        {usesBankTransfer ? (
+          <>
+            <TextField label="은행명" name="bank_name" onChange={onChange} required value={form.bank_name} />
+            <TextField label="계좌번호" name="bank_account_number" onChange={onChange} required value={form.bank_account_number} />
+            <TextField label="계좌명" name="bank_account_holder" onChange={onChange} required value={form.bank_account_holder} />
+          </>
+        ) : null}
+        <button className="primary-button" disabled={saving} type="submit">
+          {saving ? "저장 중..." : "납부방법 저장"}
+        </button>
+      </form>
+    </CollapsiblePanel>
   );
 }
 
@@ -1397,38 +1437,44 @@ function JourneyStepForm({ item, onSubmit, saving }) {
   }
 
   return (
-    <form className="admin-card journey-step-form" onSubmit={handleSubmit}>
-      <header>
-        <div>
-          <span className="eyebrow">STEP {item.step_no}</span>
-          <h3>{item.title}</h3>
-        </div>
-        <JourneyStatusChip status={item.status} />
-      </header>
-      <TextField label="title" name="title" defaultValue={item.title} required />
-      <TextField label="subtitle" name="subtitle" defaultValue={item.subtitle || ""} />
-      <TextAreaField label="description" name="description" defaultValue={item.description || ""} />
-      <label className="field">
-        <span>status</span>
-        <select defaultValue={item.status || "pending"} name="status">
-          <option value="pending">pending</option>
-          <option value="in_progress">in_progress</option>
-          <option value="completed">completed</option>
-          <option value="delayed">delayed</option>
-        </select>
-      </label>
-      <label className="field progress-edit-field">
-        <span>progress_percent</span>
-        <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={updateProgress} type="range" value={progress} />
-      </label>
-      <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={updateProgress} step="1" type="number" value={progress} />
-      <TextField label="target_date" name="target_date" defaultValue={item.target_date || ""} type="date" />
-      <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
-      <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
-      <button className="primary-button" disabled={saving} type="submit">
-        Journey 저장
-      </button>
-    </form>
+    <CollapsiblePanel
+      className="journey-step-panel"
+      summary={`${formatJourneyStatus(item.status)} · ${progress}%`}
+      title={`${item.step_no}. ${item.title}`}
+    >
+      <form className="admin-form compact-admin-form journey-step-form" onSubmit={handleSubmit}>
+        <header>
+          <div>
+            <span className="eyebrow">STEP {item.step_no}</span>
+            <h3>{item.title}</h3>
+          </div>
+          <JourneyStatusChip status={item.status} />
+        </header>
+        <TextField label="title" name="title" defaultValue={item.title} required />
+        <TextField label="subtitle" name="subtitle" defaultValue={item.subtitle || ""} />
+        <TextAreaField label="description" name="description" defaultValue={item.description || ""} />
+        <label className="field">
+          <span>status</span>
+          <select defaultValue={item.status || "pending"} name="status">
+            <option value="pending">pending</option>
+            <option value="in_progress">in_progress</option>
+            <option value="completed">completed</option>
+            <option value="delayed">delayed</option>
+          </select>
+        </label>
+        <label className="field progress-edit-field">
+          <span>progress_percent</span>
+          <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={updateProgress} type="range" value={progress} />
+        </label>
+        <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={updateProgress} step="1" type="number" value={progress} />
+        <TextField label="target_date" name="target_date" defaultValue={item.target_date || ""} type="date" />
+        <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
+        <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
+        <button className="primary-button" disabled={saving} type="submit">
+          Journey 저장
+        </button>
+      </form>
+    </CollapsiblePanel>
   );
 }
 

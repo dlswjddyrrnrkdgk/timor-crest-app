@@ -340,6 +340,89 @@ button:disabled {
   padding: 0 var(--space-3);
   font-size: 12px;
 }
+.collapsible-panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-subtle);
+}
+.collapsible-panel.is-collapsed {
+  gap: 0;
+}
+.collapsible-panel__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.collapsible-panel__heading {
+  min-width: 0;
+}
+.collapsible-panel__heading h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.35;
+}
+.collapsible-panel__heading p {
+  margin-top: var(--space-1);
+}
+.collapsible-panel__summary {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.collapsible-panel__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: start;
+  gap: var(--space-2);
+}
+.collapsible-panel__toggle {
+  display: grid;
+  flex: 0 0 32px;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--accent-primary);
+  background: var(--surface-blue-soft);
+  transition: transform 140ms var(--ease-standard), color 220ms var(--ease-standard), background-color 220ms var(--ease-standard);
+}
+.collapsible-panel__toggle svg {
+  width: 17px;
+  height: 17px;
+}
+.collapsible-panel__toggle:active {
+  transform: scale(0.97);
+  color: var(--surface-elevated);
+  background: var(--accent-hover);
+}
+.collapsible-panel__body {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.collapsible-panel__body[hidden] {
+  display: none;
+}
+.collapsible-panel .admin-form {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.payment-method-panel-admin,
+.payment-plan-panel-admin,
+.payment-schedule-panel-admin,
+.journey-step-panel {
+  margin-top: var(--space-3);
+}
 @media (min-width: 400px) {
   .expandable-select-row:has(.expandable-select-actions) {
     grid-template-columns: minmax(0, 1fr) auto;

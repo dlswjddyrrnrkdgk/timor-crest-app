@@ -147,6 +147,14 @@ All spacing derives from 4px.
 - **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; records are real buttons when selectable.
 - **Motion**: toggle press uses common button press; list expansion uses bounded height without layout animation loops.
 
+### Collapsible Admin Panel
+- **Structure**: compact card header, optional summary text, and a small circular chevron toggle inside the card top-right.
+- **Variants**: contractor account creation, unit creation, payment method/settings, Journey step editing, selected contractor document management.
+- **Spacing**: same admin card padding, with the internal form rendered transparent to avoid nested-card bulk.
+- **States**: collapsed by default for management forms, expanded when the user needs to edit.
+- **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; the button remains smaller than the dashboard expandable-list toggle.
+- **Motion**: simple chevron direction change and common active press feedback.
+
 ### MY Panel
 - **Structure**: four large buttons, collapsed detail region.
 - **Variants**: 내 정보, 계약 / 서류, 상담, 개인 알림.

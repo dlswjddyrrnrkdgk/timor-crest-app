@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useLanguage } from "../i18n/LanguageProvider.jsx";
+import { formatItemCount } from "../i18n/translations.js";
 import { getVisibleExpandableItems } from "../services/expandableSelectModel.js";
 
 export default function ExpandableSelectList({
@@ -14,6 +16,7 @@ export default function ExpandableSelectList({
   selectedId = "",
   title,
 }) {
+  const { language, t } = useLanguage();
   const [expanded, setExpanded] = useState(!defaultCollapsed);
   const visibleItems = getVisibleExpandableItems({ expanded, getItemId, items, selectedId });
   const listId = `expandable-list-${title.replace(/\s+/g, "-").toLowerCase()}`;
@@ -23,12 +26,12 @@ export default function ExpandableSelectList({
       <header className="expandable-select-header">
         <div>
           <h2>{title}</h2>
-          <small>{items.length.toLocaleString("ko-KR")}개 항목</small>
+          <small>{formatItemCount(items.length, language)}</small>
         </div>
         <button
           aria-controls={listId}
           aria-expanded={expanded}
-          aria-label={`${title} ${expanded ? "접기" : "펼치기"}`}
+          aria-label={`${title} ${expanded ? t("접기") : t("펼치기")}`}
           className="expand-toggle-button"
           onClick={() => setExpanded((current) => !current)}
           type="button"

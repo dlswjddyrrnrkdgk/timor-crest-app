@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { LANGUAGE_STORAGE_KEY, normalizeLanguage, translations } from "../src/i18n/translations.js";
+import { formatItemCount, LANGUAGE_STORAGE_KEY, normalizeLanguage, translations } from "../src/i18n/translations.js";
 
 const appSource = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
 const languageProviderSource = readFileSync(new URL("../src/i18n/LanguageProvider.jsx", import.meta.url), "utf8");
@@ -37,8 +37,8 @@ describe("Bilingual UI", () => {
     }
     assert.match(loginPageSource, /const \{ t \} = useLanguage\(\)/);
     assert.match(protectedRouteSource, /const \{ t \} = useLanguage\(\)/);
-    assert.match(adminLayoutSource, /const \{ t \} = useLanguage\(\)/);
-    assert.match(contractorLayoutSource, /const \{ t \} = useLanguage\(\)/);
+    assert.match(adminLayoutSource, /const \{ language, t \} = useLanguage\(\)/);
+    assert.match(contractorLayoutSource, /const \{ language, t \} = useLanguage\(\)/);
   });
 
   it("contains English and Korean mappings for core portal labels", () => {
@@ -50,6 +50,16 @@ describe("Bilingual UI", () => {
     assert.equal(translations.kr.Dashboard, "관리자 대시보드");
     assert.equal(translations.kr["Payment Summary"], "납부 요약");
     assert.equal(translations.kr.Documents, "문서");
+  });
+
+  it("formats item counts by language and allows pagination controls to wrap", () => {
+    assert.equal(formatItemCount(0, "en"), "0 items");
+    assert.equal(formatItemCount(1, "en"), "1 item");
+    assert.equal(formatItemCount(10, "en"), "10 items");
+    assert.equal(formatItemCount(10, "kr"), "10개 항목");
+    assert.match(stylesSource, /\.pagination\s*\{[^}]*flex-wrap: wrap;/);
+    assert.match(stylesSource, /\.pagination button\s*\{[^}]*min-width: 40px;[^}]*white-space: nowrap;/);
+    assert.match(stylesSource, /\.pagination span\s*\{[^}]*white-space: nowrap;/);
   });
 
   it("keeps security-sensitive frontend behavior unchanged", () => {

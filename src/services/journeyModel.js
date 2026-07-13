@@ -81,6 +81,25 @@ export const DEFAULT_JOURNEY_STEPS = [
   },
 ];
 
+const ENGLISH_JOURNEY_STEP_TITLES = {
+  1: "Contract & Booking Confirmation",
+  2: "Design & Permit Preparation",
+  3: "Foundation Work",
+  4: "Structural Frame Work",
+  5: "Wall & Exterior Work",
+  6: "Roof, Ceiling & Electrical Work",
+  7: "Interior Finishing & Inspection",
+  8: "Move-in Preparation Complete",
+};
+
+export function getJourneyStepTitle(step, language = "kr") {
+  if (language === "en") {
+    return ENGLISH_JOURNEY_STEP_TITLES[Number(step?.step_no)] || step?.title || "";
+  }
+
+  return step?.title || "";
+}
+
 export function calculateJourneyOverallProgress(steps) {
   const rows = Array.isArray(steps) ? steps : [];
   if (!rows.length) return 0;

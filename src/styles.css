@@ -158,8 +158,8 @@ p { margin: var(--space-2) 0 0; color: var(--text-secondary); font-size: 13px; }
 .status-chip.status-delayed { color: var(--status-error); background: color-mix(in srgb, var(--status-error) 12%, var(--surface-elevated)); }
 .file-name { color: var(--accent-deep); font-family: "Cascadia Mono", "SFMono-Regular", monospace; font-size: 12px; }
 .document-kind { color: var(--accent-primary); font-size: 11px; font-weight: 800; }
-.pagination { display: flex; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); }
-.pagination button { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--accent-primary); background: var(--surface-blue-soft); font-weight: 800; }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-2); margin-top: var(--space-4); }
+.pagination button { display: grid; place-items: center; width: auto; min-width: 40px; min-height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-pill); color: var(--accent-primary); background: var(--surface-blue-soft); font-weight: 800; white-space: nowrap; }
 .pagination button.is-active, .bottom-nav button.is-active, .bottom-nav a.is-active, .admin-tabs button.is-active, .admin-tabs a.is-active, .my-button.is-selected { color: var(--surface-elevated); background: var(--accent-primary); }
 
 .my-button-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
@@ -628,6 +628,7 @@ button:disabled {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 .pagination button:disabled {
   cursor: not-allowed;

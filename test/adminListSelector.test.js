@@ -39,6 +39,8 @@ describe("Admin expandable list selectors", () => {
     assert.match(expandableSelectSource, /aria-expanded=\{expanded\}/);
     assert.match(expandableSelectSource, /aria-controls=\{listId\}/);
     assert.match(expandableSelectSource, /getVisibleExpandableItems/);
+    assert.match(expandableSelectSource, /formatItemCount\(items\.length, language\)/);
+    assert.doesNotMatch(expandableSelectSource, /개 항목/);
   });
 
   it("computes one visible item by default while collapsed", () => {

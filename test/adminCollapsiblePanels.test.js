@@ -25,7 +25,7 @@ describe("Admin collapsible management panels", () => {
     assert.match(adminLayoutSource, /title=\{t\("납부방법 설정"\)\}/);
     assert.match(adminLayoutSource, /title=\{t\("납부관리방법 수정"\)\}/);
     assert.match(adminLayoutSource, /title=\{t\("단계별 납부일정"\)\}/);
-    assert.match(adminLayoutSource, /title=\{`\$\{item\.step_no\}\. \$\{item\.title\}`\}/);
+    assert.match(adminLayoutSource, /title=\{`\$\{item\.step_no\}\. \$\{displayTitle\}`\}/);
     assert.match(adminLayoutSource, /title=\{t\("선택 계약자 문서"\)\}/);
   });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_JOURNEY_STEPS, calculateJourneyOverallProgress, getCurrentJourneyStep } from "../src/services/journeyModel.js";
+import { DEFAULT_JOURNEY_STEPS, calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneyStepTitle } from "../src/services/journeyModel.js";
 
 test("default Journey contains the required 8 shared construction steps", () => {
   assert.equal(DEFAULT_JOURNEY_STEPS.length, 8);
@@ -45,4 +45,13 @@ test("current Journey step prefers in_progress, then first incomplete, then fina
     getCurrentJourneyStep(DEFAULT_JOURNEY_STEPS.map((step) => ({ ...step, status: "completed", progress_percent: 100 }))).step_no,
     8,
   );
+});
+
+test("Journey step titles are translated for English display without changing DB titles", () => {
+  const customKoreanTitle = { step_no: 3, title: "사용자 수정 제목" };
+
+  assert.equal(getJourneyStepTitle(DEFAULT_JOURNEY_STEPS[0], "en"), "Contract & Booking Confirmation");
+  assert.equal(getJourneyStepTitle(DEFAULT_JOURNEY_STEPS[5], "en"), "Roof, Ceiling & Electrical Work");
+  assert.equal(getJourneyStepTitle(customKoreanTitle, "en"), "Foundation Work");
+  assert.equal(getJourneyStepTitle(customKoreanTitle, "kr"), "사용자 수정 제목");
 });

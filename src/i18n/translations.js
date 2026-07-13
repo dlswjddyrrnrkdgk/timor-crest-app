@@ -54,6 +54,8 @@ export const translations = {
     "호수 정보가 생성되었습니다.": "Unit information was created.",
     이전: "Previous",
     다음: "Next",
+    접기: "Collapse",
+    펼치기: "Expand",
     분양자: "Assigned Contractor",
     "Payment Management": "Payment Management",
     "계약자를 선택하면 납부 상세를 관리할 수 있습니다.": "Select a contractor to manage payment details.",
@@ -275,4 +277,10 @@ export const translations = {
 
 export function normalizeLanguage(value) {
   return SUPPORTED_LANGUAGES.includes(value) ? value : "en";
+}
+
+export function formatItemCount(count, language) {
+  const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+  if (language === "kr") return `${safeCount.toLocaleString("ko-KR")}개 항목`;
+  return `${safeCount.toLocaleString("en-US")} ${safeCount === 1 ? "item" : "items"}`;
 }

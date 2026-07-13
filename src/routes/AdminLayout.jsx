@@ -32,6 +32,7 @@ import {
   getJourneySteps,
   updateJourneyStep,
 } from "../services/journeyService.js";
+import { getJourneyStepTitle } from "../services/journeyModel.js";
 import {
   createDocumentSignedUrl,
   deleteDocument,
@@ -97,7 +98,7 @@ const emptyDocumentForm = {
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const paymentDetailRef = useRef(null);
   const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
@@ -689,6 +690,7 @@ export default function AdminLayout() {
     journeyOverallProgress,
     journeyMessage,
     journeySteps,
+    language,
     ensureJourneyDefaults,
     resetContractorForm,
     resetUnitForm,
@@ -1101,7 +1103,7 @@ function PaymentsPage({
   );
 }
 
-function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep, t }) {
+function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, language, status, submitJourneyStep, t }) {
   return (
     <>
       <section className="admin-panel">
@@ -1120,7 +1122,7 @@ function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProg
         <h2>{t("8단계 공정")}</h2>
         <div className="admin-list">
           {journeySteps.length ? (
-            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} onSubmit={submitJourneyStep} saving={status === "saving"} t={t} />)
+            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} language={language} onSubmit={submitJourneyStep} saving={status === "saving"} t={t} />)
           ) : (
             <p>{t("Journey 단계가 아직 등록되지 않았습니다. migration seed를 확인해 주세요.")}</p>
           )}
@@ -1511,8 +1513,9 @@ function PaymentItemForm({ item, onSubmit, saving, t }) {
   );
 }
 
-function JourneyStepForm({ item, onSubmit, saving, t }) {
+function JourneyStepForm({ item, language, onSubmit, saving, t }) {
   const [progress, setProgress] = useState(clampProgress(item.progress_percent));
+  const displayTitle = getJourneyStepTitle(item, language);
 
   useEffect(() => {
     setProgress(clampProgress(item.progress_percent));
@@ -1531,13 +1534,13 @@ function JourneyStepForm({ item, onSubmit, saving, t }) {
     <CollapsiblePanel
       className="journey-step-panel"
       summary={`${formatJourneyStatus(item.status, t)} · ${progress}%`}
-      title={`${item.step_no}. ${item.title}`}
+      title={`${item.step_no}. ${displayTitle}`}
     >
       <form className="admin-form compact-admin-form journey-step-form" onSubmit={handleSubmit}>
         <header>
           <div>
             <span className="eyebrow">STEP {item.step_no}</span>
-            <h3>{item.title}</h3>
+            <h3>{displayTitle}</h3>
           </div>
           <JourneyStatusChip status={item.status} t={t} />
         </header>

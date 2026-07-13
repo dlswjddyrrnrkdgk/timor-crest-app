@@ -6,6 +6,7 @@ import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
 import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
+import { getJourneyStepTitle } from "../services/journeyModel.js";
 import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/documentService.js";
 import { formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
@@ -21,7 +22,7 @@ const contractorNav = [
 
 export default function ContractorLayout() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [summary, setSummary] = useState(null);
   const [paymentSummary, setPaymentSummary] = useState(null);
   const [journeySteps, setJourneySteps] = useState([]);
@@ -75,7 +76,7 @@ export default function ContractorLayout() {
     window.open(result.data, "_blank", "noopener,noreferrer");
   }
 
-  const shell = { documentMessage, documentSummary, journeyMessage, journeySteps, message, openMyDocument, paymentSummary, status, summary, t };
+  const shell = { documentMessage, documentSummary, journeyMessage, journeySteps, language, message, openMyDocument, paymentSummary, status, summary, t };
 
   return (
     <main className="demo-stage" aria-label="Timor Crest contractor portal">
@@ -118,7 +119,7 @@ export default function ContractorLayout() {
   );
 }
 
-function ContractorHome({ documentMessage, documentSummary, journeyMessage, journeySteps, message, paymentSummary, status, summary, t }) {
+function ContractorHome({ documentMessage, documentSummary, journeyMessage, journeySteps, language, message, paymentSummary, status, summary, t }) {
   return (
     <>
       <section className="home-hero">
@@ -142,7 +143,7 @@ function ContractorHome({ documentMessage, documentSummary, journeyMessage, jour
       ) : null}
       {summary ? <ContractSummary hint={t("Journey 상세 보기")} summary={summary} to="journey" compact t={t} /> : null}
       {summary ? <PaymentSummaryCard hint={t("납부 상세 보기")} paymentSummary={paymentSummary} summary={summary} to="payments" t={t} /> : null}
-      {summary ? <JourneySummaryCard hint={t("Journey 상세 보기")} journeyMessage={journeyMessage} journeySteps={journeySteps} to="journey" t={t} /> : null}
+      {summary ? <JourneySummaryCard hint={t("Journey 상세 보기")} journeyMessage={journeyMessage} journeySteps={journeySteps} language={language} to="journey" t={t} /> : null}
       {summary ? <DocumentSummaryCard documentMessage={documentMessage} documentSummary={documentSummary} hint={t("문서함 열기")} to="documents" t={t} /> : null}
       {summary ? <PreviewSummaryCard t={t} /> : null}
     </>
@@ -161,7 +162,7 @@ function ContractorPayments({ message, paymentSummary, status, summary, t }) {
   );
 }
 
-function ContractorJourney({ journeyMessage, journeySteps, message, status, t }) {
+function ContractorJourney({ journeyMessage, journeySteps, language, message, status, t }) {
   const overallProgress = calculateJourneyOverallProgress(journeySteps);
 
   return (
@@ -186,7 +187,7 @@ function ContractorJourney({ journeyMessage, journeySteps, message, status, t })
           <section className="section-block">
             <h3>{t("8단계 Journey")}</h3>
             <div className="stage-list">
-              {journeySteps.map((step) => <JourneyStageCard item={step} key={step.id} t={t} />)}
+              {journeySteps.map((step) => <JourneyStageCard item={step} key={step.id} language={language} t={t} />)}
             </div>
           </section>
         </>
@@ -273,7 +274,7 @@ function PaymentSummaryCard({ hint, paymentSummary, summary, t, to }) {
   );
 }
 
-function JourneySummaryCard({ hint, journeyMessage, journeySteps, t, to }) {
+function JourneySummaryCard({ hint, journeyMessage, journeySteps, language, t, to }) {
   if (journeyMessage) {
     return (
       <SummaryCardShell className="info-card journey-summary-card" hint={hint} to={to}>
@@ -294,6 +295,7 @@ function JourneySummaryCard({ hint, journeyMessage, journeySteps, t, to }) {
 
   const currentStep = getCurrentJourneyStep(journeySteps);
   const overallProgress = calculateJourneyOverallProgress(journeySteps);
+  const currentStepTitle = getJourneyStepTitle(currentStep, language);
 
   return (
     <SummaryCardShell className="meter-card journey-summary-card" hint={hint} to={to}>
@@ -301,7 +303,7 @@ function JourneySummaryCard({ hint, journeyMessage, journeySteps, t, to }) {
       <div className="journey-current-step">
         <span>{t("현재 구간")}</span>
         <strong>
-          {currentStep.step_no}. {currentStep.title}
+          {currentStep.step_no}. {currentStepTitle}
         </strong>
         <small>{formatJourneyStatus(currentStep.status, t)} / {t("전체 평균")} {overallProgress}%</small>
       </div>
@@ -442,13 +444,15 @@ function PaymentItemCard({ currency, item, t }) {
   );
 }
 
-function JourneyStageCard({ item, t }) {
+function JourneyStageCard({ item, language, t }) {
+  const displayTitle = getJourneyStepTitle(item, language);
+
   return (
     <article className="stage-card journey-stage-card">
       <header>
         <div>
           <span className="eyebrow">STEP {item.step_no}</span>
-          <h3>{item.title}</h3>
+          <h3>{displayTitle}</h3>
           {item.subtitle ? <p className="journey-subtitle">{item.subtitle}</p> : null}
         </div>
         <JourneyStatusChip status={item.status} t={t} />

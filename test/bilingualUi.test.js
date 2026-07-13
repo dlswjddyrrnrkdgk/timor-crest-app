@@ -67,4 +67,14 @@ describe("Bilingual UI", () => {
       assert.doesNotMatch(source, /service_role|SUPABASE_SERVICE_ROLE|VITE_SUPABASE_SERVICE|signUp|createUser/);
     }
   });
+
+  it("uses display-only translated Journey descriptions and Payment step titles", () => {
+    assert.match(contractorLayoutSource, /getJourneyStepDescription\(item, language\)/);
+    assert.match(contractorLayoutSource, /displayDescription \? <p>\{displayDescription\}<\/p> : null/);
+    assert.match(contractorLayoutSource, /getPaymentStepTitle\(item, language\)/);
+    assert.match(contractorLayoutSource, /<PaymentItemsList language=\{language\}/);
+    assert.match(adminLayoutSource, /getPaymentStepTitle\(item, language\)/);
+    assert.match(adminLayoutSource, /defaultValue=\{item\.title\}/);
+    assert.match(adminLayoutSource, /defaultValue=\{item\.description \|\| ""\}/);
+  });
 });

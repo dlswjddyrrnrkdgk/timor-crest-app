@@ -1,16 +1,6 @@
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { SUPABASE_CONFIG_MESSAGE } from "./authService.js";
-
-export const DEFAULT_PAYMENT_STEPS = [
-  "BOOKING FEE",
-  "8주 이내 계약금",
-  "기초공사 완료",
-  "골조 완료",
-  "벽체 완료",
-  "지붕 천장 완료",
-  "문 / 창호 / 전기 완료",
-  "입주 전",
-];
+import { DEFAULT_PAYMENT_STEPS } from "./paymentModel.js";
 
 const PAYMENT_PLAN_SELECT = `
   id,

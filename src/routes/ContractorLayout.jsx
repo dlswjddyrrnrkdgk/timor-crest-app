@@ -5,8 +5,9 @@ import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
+import { getPaymentStepTitle } from "../services/paymentModel.js";
 import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
-import { getJourneyStepTitle } from "../services/journeyModel.js";
+import { getJourneyStepDescription, getJourneyStepTitle } from "../services/journeyModel.js";
 import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/documentService.js";
 import { formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
@@ -150,14 +151,14 @@ function ContractorHome({ documentMessage, documentSummary, journeyMessage, jour
   );
 }
 
-function ContractorPayments({ message, paymentSummary, status, summary, t }) {
+function ContractorPayments({ language, message, paymentSummary, status, summary, t }) {
   return (
     <>
       <PageHeading kicker="PAYMENT" title={t("납부 현황")} />
       {status === "loading" ? <section className="info-card"><p>{t("납부 정보를 불러오고 있습니다.")}</p></section> : null}
       {message ? <p className="form-error">{t(message)}</p> : null}
       {summary ? <PaymentSummaryCard paymentSummary={paymentSummary} summary={summary} t={t} /> : null}
-      {summary ? <PaymentItemsList paymentSummary={paymentSummary} t={t} /> : null}
+      {summary ? <PaymentItemsList language={language} paymentSummary={paymentSummary} t={t} /> : null}
     </>
   );
 }
@@ -406,7 +407,7 @@ function ContractorDocumentCard({ document, onOpen, t }) {
   );
 }
 
-function PaymentItemsList({ paymentSummary, t }) {
+function PaymentItemsList({ language, paymentSummary, t }) {
   if (!paymentSummary?.plan) return null;
   const { items, plan } = paymentSummary;
 
@@ -415,7 +416,7 @@ function PaymentItemsList({ paymentSummary, t }) {
       <h3>{t("8단계 납부 현황")}</h3>
       <div className="payment-stage-list">
         {items.length ? (
-          items.map((item) => <PaymentItemCard currency={plan.currency} item={item} key={item.id} t={t} />)
+          items.map((item) => <PaymentItemCard currency={plan.currency} item={item} key={item.id} language={language} t={t} />)
         ) : (
           <p>{t("납부 단계가 아직 생성되지 않았습니다. 관리자에게 문의하세요.")}</p>
         )}
@@ -424,12 +425,14 @@ function PaymentItemsList({ paymentSummary, t }) {
   );
 }
 
-function PaymentItemCard({ currency, item, t }) {
+function PaymentItemCard({ currency, item, language, t }) {
+  const displayTitle = getPaymentStepTitle(item, language);
+
   return (
     <article className="stage-card">
       <header>
         <h3>
-          {item.step_no}. {item.title}
+          {item.step_no}. {displayTitle}
         </h3>
         <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
       </header>
@@ -446,6 +449,7 @@ function PaymentItemCard({ currency, item, t }) {
 
 function JourneyStageCard({ item, language, t }) {
   const displayTitle = getJourneyStepTitle(item, language);
+  const displayDescription = getJourneyStepDescription(item, language);
 
   return (
     <article className="stage-card journey-stage-card">
@@ -457,7 +461,7 @@ function JourneyStageCard({ item, language, t }) {
         </div>
         <JourneyStatusChip status={item.status} t={t} />
       </header>
-      {item.description ? <p>{item.description}</p> : null}
+      {displayDescription ? <p>{displayDescription}</p> : null}
       <AnimatedProgress label={t("단계 진행률")} value={item.progress_percent} />
       <div className="stage-meta">
         <MiniStat label={t("목표일")} value={item.target_date || t("미등록")} />

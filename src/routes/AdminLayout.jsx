@@ -26,6 +26,7 @@ import {
   updatePaymentItem,
   updatePaymentPlan,
 } from "../services/paymentService.js";
+import { getPaymentStepTitle } from "../services/paymentModel.js";
 import {
   calculateJourneyOverallProgress,
   ensureDefaultJourneySteps,
@@ -1008,6 +1009,7 @@ function PaymentsPage({
   paymentPlanForm,
   paymentSummaries,
   paymentTotals,
+  language,
   selectPaymentContractor,
   selectedContractor,
   selectedContractorId,
@@ -1089,7 +1091,7 @@ function PaymentsPage({
                   ) : (
                     <div className="admin-list">
                       {paymentItems.map((item) => (
-                        <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} t={t} />
+                        <PaymentItemForm item={item} key={item.id} language={language} onSubmit={submitPaymentItem} saving={status === "saving"} t={t} />
                       ))}
                     </div>
                   )}
@@ -1474,7 +1476,9 @@ function PaymentMethodForm({ form, onChange, onSubmit, saving, t }) {
   );
 }
 
-function PaymentItemForm({ item, onSubmit, saving, t }) {
+function PaymentItemForm({ item, language, onSubmit, saving, t }) {
+  const displayTitle = getPaymentStepTitle(item, language);
+
   function handleSubmit(event) {
     event.preventDefault();
     onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
@@ -1484,7 +1488,7 @@ function PaymentItemForm({ item, onSubmit, saving, t }) {
     <form className="admin-card payment-item-form" onSubmit={handleSubmit}>
       <header>
         <h3>
-          {item.step_no}. {item.title}
+          {item.step_no}. {displayTitle}
         </h3>
         <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
       </header>

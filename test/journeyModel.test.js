@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_JOURNEY_STEPS, calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneyStepTitle } from "../src/services/journeyModel.js";
+import {
+  DEFAULT_JOURNEY_STEPS,
+  calculateJourneyOverallProgress,
+  getCurrentJourneyStep,
+  getJourneyStepDescription,
+  getJourneyStepTitle,
+} from "../src/services/journeyModel.js";
 
 test("default Journey contains the required 8 shared construction steps", () => {
   assert.equal(DEFAULT_JOURNEY_STEPS.length, 8);
@@ -54,4 +60,13 @@ test("Journey step titles are translated for English display without changing DB
   assert.equal(getJourneyStepTitle(DEFAULT_JOURNEY_STEPS[5], "en"), "Roof, Ceiling & Electrical Work");
   assert.equal(getJourneyStepTitle(customKoreanTitle, "en"), "Foundation Work");
   assert.equal(getJourneyStepTitle(customKoreanTitle, "kr"), "사용자 수정 제목");
+});
+
+test("Journey step descriptions are translated for English display without changing DB descriptions", () => {
+  const customKoreanDescription = { step_no: 7, description: "사용자 수정 설명" };
+
+  assert.equal(getJourneyStepDescription(DEFAULT_JOURNEY_STEPS[0], "en"), "Contract and booking information has been confirmed.");
+  assert.equal(getJourneyStepDescription(DEFAULT_JOURNEY_STEPS[5], "en"), "Roof, ceiling, and electrical work has been completed.");
+  assert.equal(getJourneyStepDescription(customKoreanDescription, "en"), "Interior finishing and inspection have been completed.");
+  assert.equal(getJourneyStepDescription(customKoreanDescription, "kr"), "사용자 수정 설명");
 });

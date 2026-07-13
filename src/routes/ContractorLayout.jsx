@@ -182,7 +182,6 @@ function ContractorJourney({ journeyMessage, journeySteps, language, message, st
         <>
           <section className="meter-card">
             <h3>{t("전체 공정 진행률")}</h3>
-            <p>{t("모든 계약자에게 동일하게 적용되는 프로젝트 공정 현황입니다.")}</p>
             <AnimatedProgress label={t("전체 공정 진행률")} value={overallProgress} />
           </section>
           <section className="section-block">

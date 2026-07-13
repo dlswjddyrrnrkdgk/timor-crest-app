@@ -92,6 +92,7 @@ export const translations = {
     "납부 단계가 수정되었습니다.": "Payment step was updated.",
     "납부 정보를 불러오고 있습니다.": "Loading payment information.",
     "납부 정보가 아직 등록되지 않았습니다. 관리자에게 문의하세요.": "Payment information has not been registered yet. Please contact the administrator.",
+    "납부 현황": "Payment Status",
     "8단계 납부 현황": "8-Step Payment Status",
     "납부 단계가 아직 생성되지 않았습니다. 관리자에게 문의하세요.": "Payment steps have not been created yet. Please contact the administrator.",
     "납입해야 하는 금액": "Required Amount",

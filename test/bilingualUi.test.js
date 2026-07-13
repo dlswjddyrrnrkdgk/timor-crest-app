@@ -45,6 +45,7 @@ describe("Bilingual UI", () => {
     assert.equal(translations.en["로그인"], "Sign in");
     assert.equal(translations.en["계약자 관리"], "Contractors");
     assert.equal(translations.en["납부방법"], "Payment Method");
+    assert.equal(translations.en["납부 현황"], "Payment Status");
     assert.equal(translations.en["문서 업로드"], "Upload Document");
     assert.equal(translations.en["내 계약 정보"], "My Contract Summary");
     assert.equal(translations.kr.Dashboard, "관리자 대시보드");
@@ -76,5 +77,9 @@ describe("Bilingual UI", () => {
     assert.match(adminLayoutSource, /getPaymentStepTitle\(item, language\)/);
     assert.match(adminLayoutSource, /defaultValue=\{item\.title\}/);
     assert.match(adminLayoutSource, /defaultValue=\{item\.description \|\| ""\}/);
+  });
+
+  it("removes the Contractor Journey shared-project helper sentence", () => {
+    assert.doesNotMatch(contractorLayoutSource, /모든 계약자에게 동일하게 적용되는 프로젝트 공정 현황입니다/);
   });
 });

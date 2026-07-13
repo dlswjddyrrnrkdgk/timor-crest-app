@@ -52,9 +52,10 @@ const adminTabs = [
   ["documents", "문서 관리"],
 ];
 
+const UNIT_PAGE_SIZE = 10;
+
 const emptyUnitForm = {
   unit_code: "",
-  unit_name: "",
   property_type: "",
   total_price: "",
   currency: "USD",
@@ -98,6 +99,7 @@ export default function AdminLayout() {
   const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
   const [contractors, setContractors] = useState([]);
+  const [unitPage, setUnitPage] = useState(1);
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [selectedContractorId, setSelectedContractorId] = useState("");
   const [unitForm, setUnitForm] = useState(emptyUnitForm);
@@ -132,11 +134,34 @@ export default function AdminLayout() {
     [documents, selectedDocumentContractorId],
   );
   const sortedContractors = useMemo(() => sortContractors(contractors), [contractors]);
-  const sortedUnits = useMemo(() => sortUnits(units), [units]);
+  const contractorByUnitId = useMemo(() => {
+    const nextContractorByUnitId = new Map();
+    for (const contractor of sortedContractors) {
+      if (!contractor.unit_id || ["archived", "deleted"].includes(contractor.status)) continue;
+      if (!nextContractorByUnitId.has(contractor.unit_id)) {
+        nextContractorByUnitId.set(contractor.unit_id, contractor.full_name || "empty");
+      }
+    }
+
+    return nextContractorByUnitId;
+  }, [sortedContractors]);
+  const sortedUnits = useMemo(
+    () => sortUnits(units).map((unit) => ({ ...unit, assignedContractorName: contractorByUnitId.get(unit.id) || "empty" })),
+    [contractorByUnitId, units],
+  );
+  const unitPageCount = Math.max(1, Math.ceil(sortedUnits.length / UNIT_PAGE_SIZE));
+  const paginatedUnits = useMemo(() => {
+    const startIndex = (unitPage - 1) * UNIT_PAGE_SIZE;
+    return sortedUnits.slice(startIndex, startIndex + UNIT_PAGE_SIZE);
+  }, [sortedUnits, unitPage]);
 
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    setUnitPage((current) => Math.min(current, Math.max(1, Math.ceil(sortedUnits.length / UNIT_PAGE_SIZE))));
+  }, [sortedUnits.length]);
 
   useEffect(() => {
     loadPaymentForContractor(selectedContractor);
@@ -225,7 +250,6 @@ export default function AdminLayout() {
     setSelectedUnitId(unit.id);
     setUnitForm({
       unit_code: unit.unit_code || "",
-      unit_name: unit.unit_name || "",
       property_type: unit.property_type || "",
       total_price: unit.total_price ?? "",
       currency: unit.currency || "USD",
@@ -236,6 +260,17 @@ export default function AdminLayout() {
   function resetUnitForm() {
     setSelectedUnitId("");
     setUnitForm(emptyUnitForm);
+  }
+
+  function changeUnitPage(nextPage) {
+    const nextUnitPage = Math.min(Math.max(nextPage, 1), unitPageCount);
+    const startIndex = (nextUnitPage - 1) * UNIT_PAGE_SIZE;
+    const nextPageUnitIds = new Set(sortedUnits.slice(startIndex, startIndex + UNIT_PAGE_SIZE).map((unit) => unit.id));
+
+    if (selectedUnitId && !nextPageUnitIds.has(selectedUnitId)) {
+      resetUnitForm();
+    }
+    setUnitPage(nextUnitPage);
   }
 
   function editContractor(contractor) {
@@ -287,6 +322,7 @@ export default function AdminLayout() {
       return;
     }
     resetUnitForm();
+    setUnitPage(1);
     await loadDashboard();
     setMessage(selectedUnitId ? "호수 정보가 수정되었습니다." : "호수 정보가 생성되었습니다.");
   }
@@ -669,6 +705,10 @@ export default function AdminLayout() {
     units,
     sortedContractors,
     sortedUnits,
+    paginatedUnits,
+    unitPage,
+    unitPageCount,
+    changeUnitPage,
     updateContractorField,
     setManualContractorMode,
     updatePaymentPlanField,
@@ -848,7 +888,7 @@ function ContractorsPage({
               <option value="">호수 선택</option>
               {sortedUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.unit_code} {unit.unit_name ? `/ ${unit.unit_name}` : ""}
+                  {unit.unit_code}
                 </option>
               ))}
             </select>
@@ -882,18 +922,43 @@ function ContractorsPage({
   );
 }
 
-function UnitsPage({ editUnit, resetUnitForm, selectedUnit, selectedUnitId, sortedUnits, status, submitUnit, unitForm, updateUnitField }) {
+function UnitsPage({
+  changeUnitPage,
+  editUnit,
+  paginatedUnits,
+  resetUnitForm,
+  selectedUnit,
+  selectedUnitId,
+  sortedUnits,
+  status,
+  submitUnit,
+  unitForm,
+  unitPage,
+  unitPageCount,
+  updateUnitField,
+}) {
   return (
     <>
       <section className="admin-panel">
         <ExpandableSelectList
           emptyMessage="등록된 호수가 없습니다."
-          items={sortedUnits}
+          items={paginatedUnits}
           onSelect={editUnit}
           renderItem={renderUnitRecord}
           selectedId={selectedUnitId}
           title="호수 목록"
         />
+        {unitPageCount > 1 ? (
+          <div className="pagination unit-pagination" aria-label="호수 목록 페이지">
+            <button disabled={unitPage === 1} onClick={() => changeUnitPage(unitPage - 1)} type="button">
+              이전
+            </button>
+            <span>{unitPage} / {unitPageCount}</span>
+            <button disabled={unitPage === unitPageCount} onClick={() => changeUnitPage(unitPage + 1)} type="button">
+              다음
+            </button>
+          </div>
+        ) : null}
       </section>
       <CollapsiblePanel
         className="admin-panel"
@@ -903,7 +968,6 @@ function UnitsPage({ editUnit, resetUnitForm, selectedUnit, selectedUnitId, sort
       >
         <form className="admin-form compact-admin-form" onSubmit={submitUnit}>
           <TextField label="unit_code" name="unit_code" onChange={updateUnitField} required value={unitForm.unit_code} />
-          <TextField label="unit_name" name="unit_name" onChange={updateUnitField} value={unitForm.unit_name} />
           <TextField label="property_type" name="property_type" onChange={updateUnitField} value={unitForm.property_type} />
           <TextField label="total_price" name="total_price" onChange={updateUnitField} type="number" value={unitForm.total_price} />
           <TextField label="currency" name="currency" onChange={updateUnitField} value={unitForm.currency} />
@@ -1214,8 +1278,8 @@ function renderUnitRecord(unit) {
         <small>{unit.status || "active"}</small>
       </span>
       <span>
-        <strong>{unit.unit_name || "이름 미등록"}</strong>
-        <small>{unit.property_type || "타입 미등록"}</small>
+        <strong>{unit.assignedContractorName || "empty"}</strong>
+        <small>분양자</small>
       </span>
       <span>
         <strong>{formatMoney(unit.total_price, unit.currency)}</strong>

@@ -152,9 +152,11 @@ export async function getMyContractorSummary() {
 }
 
 function normalizeUnit(input) {
+  const unitCode = requiredString(input.unit_code);
+
   return {
-    unit_code: requiredString(input.unit_code),
-    unit_name: optionalString(input.unit_name),
+    unit_code: unitCode,
+    unit_name: optionalString(input.unit_name) || unitCode,
     property_type: optionalString(input.property_type),
     total_price: optionalNumber(input.total_price),
     currency: optionalString(input.currency) || "USD",

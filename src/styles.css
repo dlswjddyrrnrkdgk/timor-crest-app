@@ -599,3 +599,18 @@ button:disabled {
 .contractor-document-card .primary-button {
   margin-top: var(--space-3);
 }
+.pagination span {
+  display: grid;
+  min-width: 52px;
+  height: 40px;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+.pagination button:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+  background: var(--surface-secondary);
+  transform: none;
+}

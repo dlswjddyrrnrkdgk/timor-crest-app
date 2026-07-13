@@ -109,7 +109,6 @@ function LoginFrame({ children, statusLabel, title }) {
             <div className="login-brand">
               <span className="eyebrow">SECURE PORTAL</span>
               <h1>{title}</h1>
-              <p>Admin과 계약자는 같은 로그인 화면을 사용합니다.</p>
             </div>
             {children}
           </section>

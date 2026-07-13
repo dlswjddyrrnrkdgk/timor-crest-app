@@ -35,7 +35,7 @@ describe("Frontend refactor 3", () => {
   it("shows assigned contractor names instead of unit_name in unit records", () => {
     assert.match(adminLayoutSource, /assignedContractorName: contractorByUnitId\.get\(unit\.id\) \|\| "empty"/);
     assert.match(adminLayoutSource, /<strong>\{unit\.assignedContractorName \|\| "empty"\}<\/strong>/);
-    assert.match(adminLayoutSource, /<small>분양자<\/small>/);
+    assert.match(adminLayoutSource, /<small>\{t\("분양자"\)\}<\/small>/);
     assert.doesNotMatch(adminLayoutSource, /unit\.unit_name \|\| "이름 미등록"/);
   });
 

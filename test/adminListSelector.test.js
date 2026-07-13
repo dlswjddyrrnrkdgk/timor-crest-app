@@ -29,8 +29,8 @@ describe("Admin expandable list selectors", () => {
 
   it("uses compact previews only on the admin dashboard lists", () => {
     assert.match(expandableSelectSource, /renderPreviewItem/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{renderContractorPreview\}/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{renderUnitPreview\}/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{\(contractor\) => renderContractorPreview\(contractor, t\)\}/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{\(unit\) => renderUnitPreview\(unit, t\)\}/);
     assert.match(adminLayoutSource, /function renderContractorPreview/);
     assert.match(adminLayoutSource, /function renderUnitPreview/);
   });
@@ -39,6 +39,8 @@ describe("Admin expandable list selectors", () => {
     assert.match(expandableSelectSource, /aria-expanded=\{expanded\}/);
     assert.match(expandableSelectSource, /aria-controls=\{listId\}/);
     assert.match(expandableSelectSource, /getVisibleExpandableItems/);
+    assert.match(expandableSelectSource, /formatItemCount\(items\.length, language\)/);
+    assert.doesNotMatch(expandableSelectSource, /개 항목/);
   });
 
   it("computes one visible item by default while collapsed", () => {

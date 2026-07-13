@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getRoleRedirect, resolveSessionProfile, UNREGISTERED_ACCOUNT_MESSAGE } from "../services/authService.js";
 
 export default function ProtectedRoute({ allowedRole, children }) {
   const location = useLocation();
+  const { t } = useLanguage();
   const [state, setState] = useState({ status: "loading", profile: null, error: "" });
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export default function ProtectedRoute({ allowedRole, children }) {
     };
   }, [location.pathname]);
 
-  if (state.status === "loading") return <AuthFrame label="Auth" message="접근 권한을 확인하고 있습니다." />;
+  if (state.status === "loading") return <AuthFrame label={t("Auth")} message={t("접근 권한을 확인하고 있습니다.")} />;
   if (state.status === "anonymous") return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (state.status === "blocked") return <Navigate to="/login" replace state={{ error: state.error }} />;
   if (state.profile.role !== allowedRole) return <Navigate to={getRoleRedirect(state.profile.role)} replace />;
@@ -43,7 +46,10 @@ function AuthFrame({ label, message }) {
       <section className="phone-frame" aria-label="20:9 smartphone screen">
         <header className="phone-status" aria-label="App status">
           <span>Timor Crest</span>
-          <span>{label}</span>
+          <span className="status-actions">
+            <span>{label}</span>
+            <LanguageToggle />
+          </span>
         </header>
         <div className="screen-viewport">
           <section className="view-screen is-active">

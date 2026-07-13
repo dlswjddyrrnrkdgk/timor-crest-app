@@ -155,6 +155,14 @@ All spacing derives from 4px.
 - **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; the button remains smaller than the dashboard expandable-list toggle.
 - **Motion**: simple chevron direction change and common active press feedback.
 
+### Language Toggle
+- **Structure**: small pill button in the phone status row, paired with the current role label.
+- **Variants**: `KR` while English UI is active, `EN` while Korean UI is active.
+- **Spacing**: compact --space-2 gap inside `.status-actions`.
+- **States**: default, hover, active, focus.
+- **Accessibility**: real button with a language-switch aria label.
+- **Motion**: same subtle press feedback as other compact controls.
+
 ### MY Panel
 - **Structure**: four large buttons, collapsed detail region.
 - **Variants**: 내 정보, 계약 / 서류, 상담, 개인 알림.

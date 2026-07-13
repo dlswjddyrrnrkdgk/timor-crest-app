@@ -20,13 +20,13 @@ describe("Admin collapsible management panels", () => {
     const usages = adminLayoutSource.match(/<CollapsiblePanel/g) || [];
 
     assert.ok(usages.length >= 7);
-    assert.match(adminLayoutSource, /title=\{selectedContractor \? "계약자 수정" : createButtonLabel\}/);
-    assert.match(adminLayoutSource, /title=\{selectedUnit \? "호수 수정" : "호수 생성"\}/);
-    assert.match(adminLayoutSource, /title="납부방법 설정"/);
-    assert.match(adminLayoutSource, /title="납부관리방법 수정"/);
-    assert.match(adminLayoutSource, /title="단계별 납부일정"/);
-    assert.match(adminLayoutSource, /title=\{`\$\{item\.step_no\}\. \$\{item\.title\}`\}/);
-    assert.match(adminLayoutSource, /title="선택 계약자 문서"/);
+    assert.match(adminLayoutSource, /title=\{selectedContractor \? t\("계약자 수정"\) : createButtonLabel\}/);
+    assert.match(adminLayoutSource, /title=\{selectedUnit \? t\("호수 수정"\) : t\("호수 생성"\)\}/);
+    assert.match(adminLayoutSource, /title=\{t\("납부방법 설정"\)\}/);
+    assert.match(adminLayoutSource, /title=\{t\("납부관리방법 수정"\)\}/);
+    assert.match(adminLayoutSource, /title=\{t\("단계별 납부일정"\)\}/);
+    assert.match(adminLayoutSource, /title=\{`\$\{item\.step_no\}\. \$\{displayTitle\}`\}/);
+    assert.match(adminLayoutSource, /title=\{t\("선택 계약자 문서"\)\}/);
   });
 
   it("keeps management panels collapsed by default while allowing empty-state expansion", () => {
@@ -34,7 +34,7 @@ describe("Admin collapsible management panels", () => {
     assert.match(adminLayoutSource, /defaultExpanded=\{!sortedUnits\.length \|\| Boolean\(selectedUnit\)\}/);
     assert.match(adminLayoutSource, /defaultExpanded=\{!form\.payment_method\}/);
     assert.match(adminLayoutSource, /defaultExpanded=\{Boolean\(selectedDocumentContractor && !selectedContractorDocuments\.length\)\}/);
-    assert.match(adminLayoutSource, /summary=\{formatPaymentScheduleSummary\(paymentItems, paymentTotals, paymentPlan\.currency\)\}/);
+    assert.match(adminLayoutSource, /summary=\{formatPaymentScheduleSummary\(paymentItems, paymentTotals, paymentPlan\.currency, t\)\}/);
     assert.match(adminLayoutSource, /function formatPaymentScheduleSummary/);
   });
 

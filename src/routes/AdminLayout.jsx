@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import CollapsiblePanel from "../components/CollapsiblePanel.jsx";
 import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
   createContractorWithAuth,
@@ -95,6 +97,7 @@ const emptyDocumentForm = {
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const paymentDetailRef = useRef(null);
   const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
@@ -350,13 +353,13 @@ export default function AdminLayout() {
     } else if (manualContractorMode) {
       setMessage("계약자 정보가 수동 연결 방식으로 생성되었습니다.");
     } else {
-      setMessage(`계약자 계정이 생성되었습니다. 로그인 이메일: ${createdEmail} / 임시 비밀번호: ${createdPassword}`);
+      setMessage(`${t("계약자 계정이 생성되었습니다.")} ${t("로그인 이메일")}: ${createdEmail} / ${t("임시 비밀번호")}: ${createdPassword}`);
     }
   }
 
   async function deleteContractorRecord(contractor) {
     if (!contractor?.id) return;
-    if (!window.confirm("이 계약자를 완전히 삭제하시겠습니까? 이 작업은 목록에서 계약자를 제거하며, 연결된 납부/문서 메타데이터에도 영향을 줄 수 있습니다. Auth 계정은 삭제되지 않습니다.")) return;
+    if (!window.confirm(t("이 계약자를 완전히 삭제하시겠습니까? 이 작업은 목록에서 계약자를 제거하며, 연결된 납부/문서 메타데이터에 영향을 줄 수 있습니다. Auth 계정은 삭제되지 않습니다."))) return;
 
     setStatus("saving");
     setMessage("");
@@ -364,7 +367,7 @@ export default function AdminLayout() {
     const documentResult = await getDocumentsByContractor(contractor.id);
     if (documentResult.error) {
       setStatus("ready");
-      setMessage(`계약자 문서 확인에 실패했습니다: ${documentResult.error}`);
+      setMessage(`${t("계약자 문서 확인에 실패했습니다")}: ${documentResult.error}`);
       return;
     }
 
@@ -372,7 +375,7 @@ export default function AdminLayout() {
       const deletedDocument = await deleteDocument(document.id);
       if (deletedDocument.error) {
         setStatus("ready");
-        setMessage(`계약자 문서 Storage cleanup에 실패했습니다: ${deletedDocument.error}`);
+        setMessage(`${t("계약자 문서 Storage cleanup에 실패했습니다")}: ${deletedDocument.error}`);
         return;
       }
     }
@@ -420,7 +423,7 @@ export default function AdminLayout() {
         || !paymentMethodForm.bank_account_number.trim()
         || !paymentMethodForm.bank_account_holder.trim();
       if (missingBankField) {
-        setMessage("계좌이체 선택 시 은행명, 계좌번호, 계좌명을 모두 입력해 주세요.");
+        setMessage(t("계좌이체 선택 시 은행명, 계좌번호, 계좌명을 모두 입력해 주세요."));
         return;
       }
     }
@@ -643,7 +646,7 @@ export default function AdminLayout() {
   }
 
   async function removeDocument(document) {
-    if (!window.confirm(`${document.title} 문서를 삭제할까요?`)) return;
+    if (!window.confirm(t("이 문서를 삭제하시겠습니까?"))) return;
 
     setStatus("saving");
     setDocumentMessage("");
@@ -734,6 +737,7 @@ export default function AdminLayout() {
     submitDocumentUpload,
     unitForm,
     updateDocumentFormField,
+    t,
   };
 
   return (
@@ -741,28 +745,31 @@ export default function AdminLayout() {
       <section className="phone-frame" aria-label="20:9 smartphone screen">
         <header className="phone-status" aria-label="App status">
           <span>Timor Crest</span>
-          <span>Admin</span>
+          <span className="status-actions">
+            <span>{t("Admin")}</span>
+            <LanguageToggle />
+          </span>
         </header>
         <div className="screen-viewport">
           <section className="view-screen is-active admin-screen phase-shell">
             <div className="admin-topbar">
               <div>
                 <span className="eyebrow">ADMIN</span>
-                <h1>Dashboard</h1>
+                <h1>{t("Dashboard")}</h1>
               </div>
               <button className="secondary-button shell-logout" onClick={handleLogout} type="button">
-                로그아웃
+                {t("로그아웃")}
               </button>
             </div>
             <div className="admin-tabs" aria-label="Admin sections">
               {adminTabs.map(([path, label]) => (
                 <NavLink className={({ isActive }) => (isActive ? "is-active" : "")} end={path === ""} key={path || "home"} to={path}>
-                  {label}
+                  {t(label)}
                 </NavLink>
               ))}
             </div>
-            {message ? <p className="form-error">{message}</p> : null}
-            {status === "loading" ? <p>데이터를 불러오고 있습니다.</p> : null}
+            {message ? <p className="form-error">{t(message)}</p> : null}
+            {status === "loading" ? <p>{t("데이터를 불러오고 있습니다.")}</p> : null}
             <Routes>
               <Route index element={<AdminHome {...shell} />} />
               <Route path="contractors" element={<ContractorsPage {...shell} />} />
@@ -787,37 +794,38 @@ function AdminHome({
   selectedUnitId,
   sortedContractors,
   sortedUnits,
+  t,
 }) {
   return (
     <>
       <section className="admin-panel">
         <div className="metric-grid">
-          <Metric label="전체 계약자" value={sortedContractors.length} />
-          <Metric label="전체 호수" value={sortedUnits.length} />
-          <Metric label="active 계약자" value={activeContractors} />
-          <Metric label="active 호수" value={activeUnits} />
+          <Metric label={t("전체 계약자")} value={sortedContractors.length} />
+          <Metric label={t("전체 호수")} value={sortedUnits.length} />
+          <Metric label={t("active 계약자")} value={activeContractors} />
+          <Metric label={t("active 호수")} value={activeUnits} />
         </div>
       </section>
       <section className="admin-panel">
         <ExpandableSelectList
-          emptyMessage="등록된 호수가 없습니다."
+          emptyMessage={t("등록된 호수가 없습니다.")}
           items={sortedUnits}
           onSelect={editUnit}
-          renderPreviewItem={renderUnitPreview}
-          renderItem={renderUnitRecord}
+          renderPreviewItem={(unit) => renderUnitPreview(unit, t)}
+          renderItem={(unit) => renderUnitRecord(unit, t)}
           selectedId={selectedUnitId}
-          title="호수 목록"
+          title={t("호수 목록")}
         />
       </section>
       <section className="admin-panel">
         <ExpandableSelectList
-          emptyMessage="등록된 계약자가 없습니다."
+          emptyMessage={t("등록된 계약자가 없습니다.")}
           items={sortedContractors}
           onSelect={editContractor}
-          renderPreviewItem={renderContractorPreview}
-          renderItem={renderContractorRecord}
+          renderPreviewItem={(contractor) => renderContractorPreview(contractor, t)}
+          renderItem={(contractor) => renderContractorRecord(contractor, t)}
           selectedId={selectedContractorId}
-          title="계약자 목록"
+          title={t("계약자 목록")}
         />
       </section>
     </>
@@ -837,32 +845,33 @@ function ContractorsPage({
   sortedUnits,
   status,
   submitContractor,
+  t,
   updateContractorField,
 }) {
-  const createButtonLabel = manualContractorMode ? "수동 계약자 생성" : "계약자 계정 생성";
+  const createButtonLabel = manualContractorMode ? t("수동 계약자 생성") : t("계약자 계정 생성");
 
   return (
     <>
       <section className="admin-panel">
-        <h2>계약자 목록</h2>
+        <h2>{t("계약자 목록")}</h2>
         <p className="security-note">
-          기본 생성은 Supabase Auth 사용자, profile, contractor row를 함께 만듭니다. 이미 만든 Auth user를 연결해야 할 때만 수동 연결 모드를 사용하세요.
+          {t("기본 생성은 Supabase Auth 사용자, profile, contractor row를 함께 만듭니다. 이미 만든 Auth user를 연결해야 할 때만 수동 연결 모드를 사용하세요.")}
         </p>
         <ExpandableSelectList
-          emptyMessage="등록된 계약자가 없습니다."
+          emptyMessage={t("등록된 계약자가 없습니다.")}
           items={sortedContractors}
           onSelect={editContractor}
-          renderActions={(contractor) => <DeleteContractorButton contractor={contractor} onDelete={deleteContractorRecord} />}
-          renderItem={renderContractorRecord}
+          renderActions={(contractor) => <DeleteContractorButton contractor={contractor} onDelete={deleteContractorRecord} t={t} />}
+          renderItem={(contractor) => renderContractorRecord(contractor, t)}
           selectedId={selectedContractorId}
-          title="계약자 목록"
+          title={t("계약자 목록")}
         />
       </section>
       <CollapsiblePanel
         className="admin-panel"
         defaultExpanded={!sortedContractors.length || Boolean(selectedContractor)}
-        summary={selectedContractor ? `${selectedContractor.full_name} 정보를 수정합니다.` : "새 계약자 계정과 계약 정보를 등록합니다."}
-        title={selectedContractor ? "계약자 수정" : createButtonLabel}
+        summary={selectedContractor ? t("{name} 정보를 수정합니다.", { name: selectedContractor.full_name }) : t("새 계약자 계정과 계약 정보를 등록합니다.")}
+        title={selectedContractor ? t("계약자 수정") : createButtonLabel}
       >
         <form className="admin-form compact-admin-form" onSubmit={submitContractor}>
           <TextField label="full_name" name="full_name" onChange={updateContractorField} required value={contractorForm.full_name} />
@@ -895,7 +904,7 @@ function ContractorsPage({
           </label>
           {selectedContractor || manualContractorMode ? (
             <>
-              <p className="security-note">기존 Supabase Auth user와 수동 연결할 때만 User UID를 profile_id에 입력하세요.</p>
+              <p className="security-note">{t("기존 Supabase Auth user와 수동 연결할 때만 User UID를 profile_id에 입력하세요.")}</p>
               <TextField label="profile_id" name="profile_id" onChange={updateContractorField} value={contractorForm.profile_id} />
             </>
           ) : null}
@@ -905,15 +914,15 @@ function ContractorsPage({
               onClick={() => setManualContractorMode((current) => !current)}
               type="button"
             >
-              {manualContractorMode ? "자동 계정 생성으로 전환" : "기존 Supabase Auth user와 수동 연결"}
+              {manualContractorMode ? t("자동 계정 생성으로 전환") : t("기존 Supabase Auth user와 수동 연결")}
             </button>
           ) : null}
           <div className="button-row">
             <button className="primary-button" disabled={status === "saving"} type="submit">
-              {status === "saving" ? "저장 중..." : selectedContractor ? "계약자 수정" : createButtonLabel}
+              {status === "saving" ? t("저장 중...") : selectedContractor ? t("계약자 수정") : createButtonLabel}
             </button>
             <button className="secondary-button" onClick={resetContractorForm} type="button">
-              신규 입력
+              {t("신규 입력")}
             </button>
           </div>
         </form>
@@ -935,27 +944,28 @@ function UnitsPage({
   unitForm,
   unitPage,
   unitPageCount,
+  t,
   updateUnitField,
 }) {
   return (
     <>
       <section className="admin-panel">
         <ExpandableSelectList
-          emptyMessage="등록된 호수가 없습니다."
+          emptyMessage={t("등록된 호수가 없습니다.")}
           items={paginatedUnits}
           onSelect={editUnit}
-          renderItem={renderUnitRecord}
+          renderItem={(unit) => renderUnitRecord(unit, t)}
           selectedId={selectedUnitId}
-          title="호수 목록"
+          title={t("호수 목록")}
         />
         {unitPageCount > 1 ? (
           <div className="pagination unit-pagination" aria-label="호수 목록 페이지">
             <button disabled={unitPage === 1} onClick={() => changeUnitPage(unitPage - 1)} type="button">
-              이전
+              {t("이전")}
             </button>
             <span>{unitPage} / {unitPageCount}</span>
             <button disabled={unitPage === unitPageCount} onClick={() => changeUnitPage(unitPage + 1)} type="button">
-              다음
+              {t("다음")}
             </button>
           </div>
         ) : null}
@@ -963,8 +973,8 @@ function UnitsPage({
       <CollapsiblePanel
         className="admin-panel"
         defaultExpanded={!sortedUnits.length || Boolean(selectedUnit)}
-        summary={selectedUnit ? `${selectedUnit.unit_code || selectedUnit.unit_name || "선택 호수"} 정보를 수정합니다.` : "새 호수 정보를 등록합니다."}
-        title={selectedUnit ? "호수 수정" : "호수 생성"}
+        summary={selectedUnit ? t("{name} 정보를 수정합니다.", { name: selectedUnit.unit_code || selectedUnit.unit_name || t("선택 호수") }) : t("새 호수 정보를 등록합니다.")}
+        title={selectedUnit ? t("호수 수정") : t("호수 생성")}
       >
         <form className="admin-form compact-admin-form" onSubmit={submitUnit}>
           <TextField label="unit_code" name="unit_code" onChange={updateUnitField} required value={unitForm.unit_code} />
@@ -974,10 +984,10 @@ function UnitsPage({
           <TextField label="status" name="status" onChange={updateUnitField} value={unitForm.status} />
           <div className="button-row">
             <button className="primary-button" disabled={status === "saving"} type="submit">
-              {selectedUnit ? "호수 수정" : "호수 생성"}
+              {selectedUnit ? t("호수 수정") : t("호수 생성")}
             </button>
             <button className="secondary-button" onClick={resetUnitForm} type="button">
-              신규 입력
+              {t("신규 입력")}
             </button>
           </div>
         </form>
@@ -1004,6 +1014,7 @@ function PaymentsPage({
   submitPaymentItem,
   submitPaymentMethod,
   submitPaymentPlan,
+  t,
   updatePaymentMethodField,
   updatePaymentPlanField,
 }) {
@@ -1011,71 +1022,72 @@ function PaymentsPage({
     <>
       <section className="admin-panel">
         <ExpandableSelectList
-          emptyMessage="등록된 계약자가 없습니다."
+          emptyMessage={t("등록된 계약자가 없습니다.")}
           items={sortedContractors}
           onSelect={selectPaymentContractor}
-          renderItem={(contractor) => renderPaymentContractorRecord(contractor, paymentSummaries[contractor.id])}
+          renderItem={(contractor) => renderPaymentContractorRecord(contractor, paymentSummaries[contractor.id], t)}
           selectedId={selectedContractorId}
-          title="납부일정 관리"
+          title={t("납부일정 관리")}
         />
       </section>
       <section className="admin-panel" ref={paymentDetailRef}>
-        <h2>Payment Management</h2>
+        <h2>{t("Payment Management")}</h2>
         {!selectedContractor ? (
-          <p>계약자를 선택하면 납부 상세를 관리할 수 있습니다.</p>
+          <p>{t("계약자를 선택하면 납부 상세를 관리할 수 있습니다.")}</p>
         ) : (
           <>
             <div className="payment-context-card">
               <span className="eyebrow">SELECTED CONTRACTOR</span>
               <strong>{selectedContractor.full_name}</strong>
-              <p>{selectedContractor.email || "이메일 없음"} / {selectedContractor.unit?.unit_code || "호수 미연결"}</p>
+              <p>{selectedContractor.email || t("이메일 없음")} / {selectedContractor.unit?.unit_code || t("호수 미연결")}</p>
             </div>
             <PaymentMethodForm
               form={paymentMethodForm}
               onChange={updatePaymentMethodField}
               onSubmit={submitPaymentMethod}
               saving={status === "saving"}
+              t={t}
             />
             {!paymentPlan ? (
               <button className="primary-button" disabled={status === "saving"} onClick={createPlanForSelectedContractor} type="button">
-                Create payment plan
+                {t("납부 계획 생성")}
               </button>
             ) : (
               <>
                 <div className="metric-grid">
-                  <Metric label="총 계약금액" value={formatMoney(paymentTotals.totalPrice, paymentPlan.currency)} />
-                  <Metric label="납부 완료" value={formatMoney(paymentTotals.totalPaidAmount, paymentPlan.currency)} />
-                  <Metric label="미납 금액" value={formatMoney(paymentTotals.unpaidAmount, paymentPlan.currency)} />
-                  <Metric label="필요 금액 합계" value={formatMoney(paymentTotals.totalRequiredAmount, paymentPlan.currency)} />
+                  <Metric label={t("총 계약금액")} value={formatMoney(paymentTotals.totalPrice, paymentPlan.currency)} />
+                  <Metric label={t("납부 완료")} value={formatMoney(paymentTotals.totalPaidAmount, paymentPlan.currency)} />
+                  <Metric label={t("미납 금액")} value={formatMoney(paymentTotals.unpaidAmount, paymentPlan.currency)} />
+                  <Metric label={t("필요 금액 합계")} value={formatMoney(paymentTotals.totalRequiredAmount, paymentPlan.currency)} />
                 </div>
-                <AnimatedProgress label="납부 진행률" value={paymentTotals.progressPercent} />
+                <AnimatedProgress label={t("납부 진행률")} value={paymentTotals.progressPercent} />
                 <CollapsiblePanel
                   className="payment-plan-panel-admin"
-                  summary={`총 계약금액 ${formatMoney(paymentPlanForm.total_price, paymentPlanForm.currency)} · ${paymentPlanForm.status || "active"}`}
-                  title="납부관리방법 수정"
+                  summary={`${t("총 계약금액")} ${formatMoney(paymentPlanForm.total_price, paymentPlanForm.currency)} · ${formatDisplayStatus(paymentPlanForm.status, t)}`}
+                  title={t("납부관리방법 수정")}
                 >
                   <form className="admin-form compact-admin-form" onSubmit={submitPaymentPlan}>
                     <TextField label="total_price" name="total_price" onChange={updatePaymentPlanField} type="number" value={paymentPlanForm.total_price} />
                     <TextField label="currency" name="currency" onChange={updatePaymentPlanField} value={paymentPlanForm.currency} />
                     <TextField label="status" name="status" onChange={updatePaymentPlanField} value={paymentPlanForm.status} />
                     <button className="primary-button" disabled={status === "saving"} type="submit">
-                      납부 계획 수정
+                      {t("납부 계획 수정")}
                     </button>
                   </form>
                 </CollapsiblePanel>
                 <CollapsiblePanel
                   className="payment-schedule-panel-admin"
-                  summary={formatPaymentScheduleSummary(paymentItems, paymentTotals, paymentPlan.currency)}
-                  title="단계별 납부일정"
+                  summary={formatPaymentScheduleSummary(paymentItems, paymentTotals, paymentPlan.currency, t)}
+                  title={t("단계별 납부일정")}
                 >
                   {!paymentItems.length ? (
                     <button className="secondary-button" disabled={status === "saving"} onClick={createDefaultItemsForPlan} type="button">
-                      기본 8단계 payment_items 생성
+                      {t("기본 8단계 payment_items 생성")}
                     </button>
                   ) : (
                     <div className="admin-list">
                       {paymentItems.map((item) => (
-                        <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} />
+                        <PaymentItemForm item={item} key={item.id} onSubmit={submitPaymentItem} saving={status === "saving"} t={t} />
                       ))}
                     </div>
                   )}
@@ -1089,28 +1101,28 @@ function PaymentsPage({
   );
 }
 
-function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep }) {
+function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, status, submitJourneyStep, t }) {
   return (
     <>
       <section className="admin-panel">
         <span className="eyebrow">PROJECT JOURNEY</span>
-        <h2>Journey 공정 관리</h2>
-        <p>이 공정 정보는 전체 프로젝트 공통이며, 수정 내용은 모든 계약자에게 동일하게 표시됩니다.</p>
-        <AnimatedProgress label="전체 공정 진행률" value={journeyOverallProgress} />
+        <h2>{t("Journey 공정 관리")}</h2>
+        <p>{t("이 공정 정보는 전체 프로젝트 공통이며, 수정 내용은 모든 계약자에게 동일하게 표시됩니다.")}</p>
+        <AnimatedProgress label={t("전체 공정 진행률")} value={journeyOverallProgress} />
         {journeySteps.length < 8 ? (
           <button className="secondary-button journey-default-button" disabled={status === "saving"} onClick={ensureJourneyDefaults} type="button">
-            기본 8단계 Journey 생성/보완
+            {t("기본 8단계 Journey 생성/보완")}
           </button>
         ) : null}
       </section>
-      {journeyMessage ? <p className="form-error">{journeyMessage}</p> : null}
+      {journeyMessage ? <p className="form-error">{t(journeyMessage)}</p> : null}
       <section className="admin-panel">
-        <h2>8단계 공정</h2>
+        <h2>{t("8단계 공정")}</h2>
         <div className="admin-list">
           {journeySteps.length ? (
-            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} onSubmit={submitJourneyStep} saving={status === "saving"} />)
+            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} onSubmit={submitJourneyStep} saving={status === "saving"} t={t} />)
           ) : (
-            <p>Journey 단계가 아직 등록되지 않았습니다. migration seed를 확인해 주세요.</p>
+            <p>{t("Journey 단계가 아직 등록되지 않았습니다. migration seed를 확인해 주세요.")}</p>
           )}
         </div>
       </section>
@@ -1135,6 +1147,7 @@ function DocumentsPage({
   status,
   submitDocumentMetadata,
   submitDocumentUpload,
+  t,
   updateDocumentFormField,
 }) {
   const isUploading = status === "saving";
@@ -1143,27 +1156,27 @@ function DocumentsPage({
     <>
       <section className="admin-panel">
         <span className="eyebrow">DOCUMENTS</span>
-        <h2>문서 관리</h2>
+        <h2>{t("문서 관리")}</h2>
         <p className="security-note">
-          문서는 private Storage bucket에 저장되며, 계약자는 자기 contractor_id 폴더의 문서만 signed URL로 열 수 있습니다.
+          {t("문서는 private Storage bucket에 저장되며, 계약자는 자기 contractor_id 폴더의 문서만 signed URL로 열 수 있습니다.")}
         </p>
         <ExpandableSelectList
-          emptyMessage="등록된 계약자가 없습니다."
+          emptyMessage={t("등록된 계약자가 없습니다.")}
           items={sortedContractors}
           onSelect={selectDocumentContractor}
-          renderItem={renderContractorRecord}
+          renderItem={(contractor) => renderContractorRecord(contractor, t)}
           selectedId={selectedDocumentContractorId}
-          title="계약자 선택"
+          title={t("계약자 선택")}
         />
       </section>
-      {documentMessage ? <p className="form-error">{documentMessage}</p> : null}
+      {documentMessage ? <p className="form-error">{t(documentMessage)}</p> : null}
       <section className="admin-panel">
-        <h2>문서 업로드</h2>
+        <h2>{t("문서 업로드")}</h2>
         {!selectedDocumentContractor ? (
           <>
-            <p>계약자를 선택하면 해당 계약자에게 문서를 업로드할 수 있습니다.</p>
+            <p>{t("계약자를 선택하면 해당 계약자에게 문서를 업로드할 수 있습니다.")}</p>
             <button className="primary-button document-open-button" onClick={showDocumentSelectionError} type="button">
-              문서 업로드
+              {t("문서 업로드")}
             </button>
           </>
         ) : (
@@ -1171,7 +1184,7 @@ function DocumentsPage({
             <div className="payment-context-card">
               <span className="eyebrow">SELECTED CONTRACTOR</span>
               <strong>{selectedDocumentContractor.full_name}</strong>
-              <p>{selectedDocumentContractor.email || "이메일 없음"} / {selectedDocumentContractor.unit?.unit_code || "호수 미연결"}</p>
+              <p>{selectedDocumentContractor.email || t("이메일 없음")} / {selectedDocumentContractor.unit?.unit_code || t("호수 미연결")}</p>
             </div>
             <form className="admin-form compact-admin-form" key={selectedDocumentContractor.id} onSubmit={submitDocumentUpload}>
               <TextField label="title" name="title" onChange={updateDocumentFormField} value={documentForm.title} />
@@ -1195,7 +1208,7 @@ function DocumentsPage({
               {documentFile ? <p className="file-hint">{documentFile.name} / {formatFileSize(documentFile.size)}</p> : null}
               <TextAreaField label="note" name="note" onChange={updateDocumentFormField} value={documentForm.note} />
               <button className="primary-button" disabled={isUploading} type="submit">
-                {isUploading ? "업로드 중..." : "문서 업로드"}
+                {isUploading ? t("업로드 중...") : t("문서 업로드")}
               </button>
             </form>
           </>
@@ -1204,11 +1217,11 @@ function DocumentsPage({
       <CollapsiblePanel
         className="admin-panel"
         defaultExpanded={Boolean(selectedDocumentContractor && !selectedContractorDocuments.length)}
-        summary={formatDocumentPanelSummary(selectedDocumentContractor, selectedContractorDocuments)}
-        title="선택 계약자 문서"
+        summary={formatDocumentPanelSummary(selectedDocumentContractor, selectedContractorDocuments, t)}
+        title={t("선택 계약자 문서")}
       >
         {!selectedDocumentContractor ? (
-          <p>문서 목록을 보려면 계약자를 선택해 주세요.</p>
+          <p>{t("문서 목록을 보려면 계약자를 선택해 주세요.")}</p>
         ) : (
           <div className="document-list">
             {selectedContractorDocuments.length ? (
@@ -1220,10 +1233,11 @@ function DocumentsPage({
                   onOpen={openDocument}
                   onSubmit={submitDocumentMetadata}
                   saving={status === "saving"}
+                  t={t}
                 />
               ))
             ) : (
-              <p>선택한 계약자에게 등록된 문서가 없습니다.</p>
+              <p>{t("선택한 계약자에게 등록된 문서가 없습니다.")}</p>
             )}
           </div>
         )}
@@ -1232,54 +1246,54 @@ function DocumentsPage({
   );
 }
 
-function renderContractorRecord(contractor) {
+function renderContractorRecord(contractor, t) {
   return (
     <>
       <span>
         <strong>{contractor.full_name}</strong>
-        <small>{contractor.status || "active"}</small>
+        <small>{formatDisplayStatus(contractor.status, t)}</small>
       </span>
       <span>
-        <strong>{contractor.email || "이메일 없음"}</strong>
-        <small>{contractor.phone || "연락처 없음"}</small>
+        <strong>{contractor.email || t("이메일 없음")}</strong>
+        <small>{contractor.phone || t("연락처 없음")}</small>
       </span>
       <span>
-        <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
+        <strong>{contractor.unit?.unit_code || t("호수 미연결")}</strong>
         <small>{formatDate(contractor.created_at)}</small>
       </span>
     </>
   );
 }
 
-function renderPaymentContractorRecord(contractor, summary) {
+function renderPaymentContractorRecord(contractor, summary, t) {
   return (
     <>
       <span>
         <strong>{contractor.full_name}</strong>
-        <small>{contractor.email || "이메일 없음"}</small>
+        <small>{contractor.email || t("이메일 없음")}</small>
       </span>
       <span>
-        <strong>{contractor.unit?.unit_code || "호수 미연결"}</strong>
-        <small>{contractor.status || "active"}</small>
+        <strong>{contractor.unit?.unit_code || t("호수 미연결")}</strong>
+        <small>{formatDisplayStatus(contractor.status, t)}</small>
       </span>
       <span>
-        <strong>{summary ? `${summary.totals.progressPercent}%` : "미생성"}</strong>
-        <small>{summary ? `${summary.items.length}/8 단계` : "payment plan 없음"}</small>
+        <strong>{summary ? `${summary.totals.progressPercent}%` : t("미생성")}</strong>
+        <small>{summary ? `${summary.items.length}/8 ${t("단계")}` : t("payment plan 없음")}</small>
       </span>
     </>
   );
 }
 
-function renderUnitRecord(unit) {
+function renderUnitRecord(unit, t) {
   return (
     <>
       <span>
         <strong>{unit.unit_code}</strong>
-        <small>{unit.status || "active"}</small>
+        <small>{formatDisplayStatus(unit.status, t)}</small>
       </span>
       <span>
         <strong>{unit.assignedContractorName || "empty"}</strong>
-        <small>분양자</small>
+        <small>{t("분양자")}</small>
       </span>
       <span>
         <strong>{formatMoney(unit.total_price, unit.currency)}</strong>
@@ -1289,15 +1303,15 @@ function renderUnitRecord(unit) {
   );
 }
 
-function renderContractorPreview(contractor) {
+function renderContractorPreview(contractor, t) {
   return (
-    <span className="compact-preview-name">{contractor.full_name || "이름 미등록"}</span>
+    <span className="compact-preview-name">{contractor.full_name || t("empty")}</span>
   );
 }
 
-function renderUnitPreview(unit) {
+function renderUnitPreview(unit, t) {
   return (
-    <span className="compact-preview-name">{unit.unit_code || unit.unit_name || "호수 미등록"}</span>
+    <span className="compact-preview-name">{unit.unit_code || unit.unit_name || t("호수 미등록")}</span>
   );
 }
 
@@ -1310,46 +1324,47 @@ function buildPaymentMethodForm(contractor) {
   };
 }
 
-function formatPaymentMethodSummary(form) {
-  if (form.payment_method === "cash") return "현재 납부방법: 현금";
+function formatPaymentMethodSummary(form, t) {
+  if (form.payment_method === "cash") return `${t("현재 납부방법")}: ${t("현금")}`;
   if (form.payment_method === "bank_transfer") {
-    return `현재 납부방법: 계좌이체${form.bank_name ? ` / ${form.bank_name}` : ""}`;
+    return `${t("현재 납부방법")}: ${t("계좌이체")}${form.bank_name ? ` / ${form.bank_name}` : ""}`;
   }
-  return "납부방법 미설정";
+  return t("납부방법 미설정");
 }
 
-function formatDocumentPanelSummary(contractor, documents) {
-  if (!contractor) return "계약자를 선택하면 문서 목록을 확인할 수 있습니다.";
+function formatDocumentPanelSummary(contractor, documents, t) {
+  if (!contractor) return t("계약자를 선택하면 문서 목록을 확인할 수 있습니다.");
   const latestDocument = documents[0];
-  const latestText = latestDocument ? ` · 최근 문서: ${latestDocument.title || latestDocument.file_name}` : "";
-  return `${contractor.full_name} · 문서 ${documents.length}개${latestText}`;
+  const latestText = latestDocument ? ` · ${t("최근 문서")}: ${latestDocument.title || latestDocument.file_name}` : "";
+  return `${contractor.full_name} · ${t("등록 문서")} ${documents.length}${latestText}`;
 }
 
-function formatPaymentScheduleSummary(items, totals, currency) {
-  if (!items.length) return "8단계 납부일정을 생성하고 수정합니다.";
+function formatPaymentScheduleSummary(items, totals, currency, t) {
+  if (!items.length) return t("8단계 납부일정을 생성하고 수정합니다.");
   const paidStepCount = items.filter((item) => item.status === "paid").length;
-  return `총 단계 수: ${items.length}단계 · 납부 완료: ${paidStepCount}단계 · 미납 금액: ${formatMoney(totals.unpaidAmount, currency)} · 진행률: ${totals.progressPercent}%`;
+  return `${t("총 단계 수")}: ${items.length} · ${t("납부 완료 단계")}: ${paidStepCount} · ${t("미납 금액")}: ${formatMoney(totals.unpaidAmount, currency)} · ${t("진행률")}: ${totals.progressPercent}%`;
 }
 
-function DeleteContractorButton({ contractor, onDelete }) {
+function DeleteContractorButton({ contractor, onDelete, t }) {
   return (
     <button className="danger-button delete-button" onClick={() => onDelete(contractor)} type="button">
-      삭제
+      {t("삭제")}
     </button>
   );
 }
 
 function TextField({ defaultValue, label, max, min, minLength, name, onChange, required = false, step, type = "text", value }) {
+  const { t } = useLanguage();
   const inputProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{t(label)}</span>
       <input max={max} min={min} minLength={minLength} name={name} onChange={onChange} required={required} step={step} type={type} {...inputProps} />
     </label>
   );
 }
 
-function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving }) {
+function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving, t }) {
   function handleSubmit(event) {
     event.preventDefault();
     onSubmit(document.id, Object.fromEntries(new FormData(event.currentTarget)));
@@ -1363,25 +1378,25 @@ function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving }) {
           <h3>{document.title}</h3>
           <p className="file-name">{document.file_name}</p>
         </div>
-        <span className="status-chip">{document.status}</span>
+        <span className="status-chip">{formatDisplayStatus(document.status, t)}</span>
       </header>
       <div className="stage-meta">
-        <MiniStat label="파일 크기" value={formatFileSize(document.file_size)} />
-        <MiniStat label="등록일" value={formatDate(document.created_at)} />
+        <MiniStat label={t("파일 크기")} value={formatFileSize(document.file_size)} />
+        <MiniStat label={t("등록일")} value={formatDate(document.created_at)} />
       </div>
       {document.note ? <p>{document.note}</p> : null}
       <div className="button-row document-actions">
         <button className="secondary-button" onClick={() => onOpen(document.file_path)} type="button">
-          열기 / 다운로드
+          {t("열기 / 다운로드")}
         </button>
         <button className="danger-button" disabled={saving} onClick={() => onDelete(document)} type="button">
-          문서 삭제
+          {t("문서 삭제")}
         </button>
       </div>
       <form className="admin-form compact-admin-form document-metadata-form" onSubmit={handleSubmit}>
         <TextField label="title" name="title" defaultValue={document.title} required />
         <label className="field">
-          <span>category</span>
+          <span>{t("category")}</span>
           <select defaultValue={document.category || "other"} name="category">
             {DOCUMENT_CATEGORIES.map((category) => (
               <option key={category} value={category}>{category}</option>
@@ -1389,7 +1404,7 @@ function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving }) {
           </select>
         </label>
         <label className="field">
-          <span>status</span>
+          <span>{t("status")}</span>
           <select defaultValue={document.status || "active"} name="status">
             {DOCUMENT_STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
@@ -1398,7 +1413,7 @@ function AdminDocumentCard({ document, onDelete, onOpen, onSubmit, saving }) {
         </label>
         <TextAreaField label="note" name="note" defaultValue={document.note || ""} />
         <button className="primary-button" disabled={saving} type="submit">
-          문서 정보 저장
+          {t("문서 정보 저장")}
         </button>
       </form>
     </article>
@@ -1423,23 +1438,23 @@ function Metric({ label, value }) {
   );
 }
 
-function PaymentMethodForm({ form, onChange, onSubmit, saving }) {
+function PaymentMethodForm({ form, onChange, onSubmit, saving, t }) {
   const usesBankTransfer = form.payment_method === "bank_transfer";
 
   return (
     <CollapsiblePanel
       className="payment-method-panel-admin"
       defaultExpanded={!form.payment_method}
-      summary={formatPaymentMethodSummary(form)}
-      title="납부방법 설정"
+      summary={formatPaymentMethodSummary(form, t)}
+      title={t("납부방법 설정")}
     >
       <form className="admin-form compact-admin-form payment-method-form" onSubmit={onSubmit}>
         <label className="field">
-          <span>납부방법</span>
+          <span>{t("납부방법")}</span>
           <select name="payment_method" onChange={onChange} value={form.payment_method}>
-            <option value="">미설정</option>
-            <option value="cash">현금</option>
-            <option value="bank_transfer">계좌이체</option>
+            <option value="">{t("미설정")}</option>
+            <option value="cash">{t("현금")}</option>
+            <option value="bank_transfer">{t("계좌이체")}</option>
           </select>
         </label>
         {usesBankTransfer ? (
@@ -1450,14 +1465,14 @@ function PaymentMethodForm({ form, onChange, onSubmit, saving }) {
           </>
         ) : null}
         <button className="primary-button" disabled={saving} type="submit">
-          {saving ? "저장 중..." : "납부방법 저장"}
+          {saving ? t("저장 중...") : t("납부방법 저장")}
         </button>
       </form>
     </CollapsiblePanel>
   );
 }
 
-function PaymentItemForm({ item, onSubmit, saving }) {
+function PaymentItemForm({ item, onSubmit, saving, t }) {
   function handleSubmit(event) {
     event.preventDefault();
     onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
@@ -1469,7 +1484,7 @@ function PaymentItemForm({ item, onSubmit, saving }) {
         <h3>
           {item.step_no}. {item.title}
         </h3>
-        <span className="status-chip">{item.status}</span>
+        <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
       </header>
       <TextField label="title" name="title" defaultValue={item.title} />
       <TextField label="required_amount" name="required_amount" defaultValue={item.required_amount} type="number" />
@@ -1477,26 +1492,26 @@ function PaymentItemForm({ item, onSubmit, saving }) {
       <TextField label="due_date" name="due_date" defaultValue={item.due_date || ""} type="date" />
       <TextField label="paid_date" name="paid_date" defaultValue={item.paid_date || ""} type="date" />
       <label className="field">
-        <span>status</span>
+        <span>{t("status")}</span>
         <select defaultValue={item.status || "unpaid"} name="status">
-          <option value="unpaid">unpaid</option>
-          <option value="partial">partial</option>
-          <option value="paid">paid</option>
-          <option value="overdue">overdue</option>
+          <option value="unpaid">{formatDisplayStatus("unpaid", t)}</option>
+          <option value="partial">{formatDisplayStatus("partial", t)}</option>
+          <option value="paid">{formatDisplayStatus("paid", t)}</option>
+          <option value="overdue">{formatDisplayStatus("overdue", t)}</option>
         </select>
       </label>
       <label className="field">
-        <span>note</span>
+        <span>{t("note")}</span>
         <input defaultValue={item.note || ""} name="note" />
       </label>
       <button className="primary-button" disabled={saving} type="submit">
-        단계 저장
+        {t("단계 저장")}
       </button>
     </form>
   );
 }
 
-function JourneyStepForm({ item, onSubmit, saving }) {
+function JourneyStepForm({ item, onSubmit, saving, t }) {
   const [progress, setProgress] = useState(clampProgress(item.progress_percent));
 
   useEffect(() => {
@@ -1515,7 +1530,7 @@ function JourneyStepForm({ item, onSubmit, saving }) {
   return (
     <CollapsiblePanel
       className="journey-step-panel"
-      summary={`${formatJourneyStatus(item.status)} · ${progress}%`}
+      summary={`${formatJourneyStatus(item.status, t)} · ${progress}%`}
       title={`${item.step_no}. ${item.title}`}
     >
       <form className="admin-form compact-admin-form journey-step-form" onSubmit={handleSubmit}>
@@ -1524,22 +1539,22 @@ function JourneyStepForm({ item, onSubmit, saving }) {
             <span className="eyebrow">STEP {item.step_no}</span>
             <h3>{item.title}</h3>
           </div>
-          <JourneyStatusChip status={item.status} />
+          <JourneyStatusChip status={item.status} t={t} />
         </header>
         <TextField label="title" name="title" defaultValue={item.title} required />
         <TextField label="subtitle" name="subtitle" defaultValue={item.subtitle || ""} />
         <TextAreaField label="description" name="description" defaultValue={item.description || ""} />
         <label className="field">
-          <span>status</span>
+          <span>{t("status")}</span>
           <select defaultValue={item.status || "pending"} name="status">
-            <option value="pending">pending</option>
-            <option value="in_progress">in_progress</option>
-            <option value="completed">completed</option>
-            <option value="delayed">delayed</option>
+            <option value="pending">{formatJourneyStatus("pending", t)}</option>
+            <option value="in_progress">{formatJourneyStatus("in_progress", t)}</option>
+            <option value="completed">{formatJourneyStatus("completed", t)}</option>
+            <option value="delayed">{formatJourneyStatus("delayed", t)}</option>
           </select>
         </label>
         <label className="field progress-edit-field">
-          <span>progress_percent</span>
+          <span>{t("progress_percent")}</span>
           <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={updateProgress} type="range" value={progress} />
         </label>
         <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={updateProgress} step="1" type="number" value={progress} />
@@ -1547,7 +1562,7 @@ function JourneyStepForm({ item, onSubmit, saving }) {
         <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
         <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
         <button className="primary-button" disabled={saving} type="submit">
-          Journey 저장
+          {t("Journey 저장")}
         </button>
       </form>
     </CollapsiblePanel>
@@ -1555,17 +1570,18 @@ function JourneyStepForm({ item, onSubmit, saving }) {
 }
 
 function TextAreaField({ defaultValue, label, name, onChange, value }) {
+  const { t } = useLanguage();
   const textareaProps = value === undefined ? { defaultValue: defaultValue ?? "" } : { value: value ?? "" };
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{t(label)}</span>
       <textarea name={name} onChange={onChange} rows="3" {...textareaProps} />
     </label>
   );
 }
 
-function JourneyStatusChip({ status }) {
-  return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status)}</span>;
+function JourneyStatusChip({ status, t }) {
+  return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status, t)}</span>;
 }
 
 function clampProgress(value) {
@@ -1574,13 +1590,31 @@ function clampProgress(value) {
   return Math.max(0, Math.min(Math.round(next), 100));
 }
 
-function formatJourneyStatus(status) {
+function formatJourneyStatus(status, t) {
   return {
-    completed: "완료",
-    delayed: "지연",
-    in_progress: "진행 중",
-    pending: "대기",
-  }[status] || status || "대기";
+    completed: t("완료"),
+    delayed: t("지연"),
+    in_progress: t("진행 중"),
+    pending: t("대기"),
+  }[status] || status || t("대기");
+}
+
+function formatDisplayStatus(status, t) {
+  return {
+    active: t("활성"),
+    archived: t("보관됨"),
+    available: t("분양 가능"),
+    completed: t("완료"),
+    delayed: t("지연"),
+    inactive: t("비활성"),
+    in_progress: t("진행 중"),
+    overdue: t("연체"),
+    paid: t("납부 완료"),
+    partial: t("부분 납부"),
+    pending: t("대기"),
+    sold: t("분양 완료"),
+    unpaid: t("미납"),
+  }[status] || status || t("대기");
 }
 
 function formatMoney(value, currency = "USD") {

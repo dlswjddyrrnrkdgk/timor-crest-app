@@ -29,8 +29,8 @@ describe("Admin expandable list selectors", () => {
 
   it("uses compact previews only on the admin dashboard lists", () => {
     assert.match(expandableSelectSource, /renderPreviewItem/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{renderContractorPreview\}/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{renderUnitPreview\}/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{\(contractor\) => renderContractorPreview\(contractor, t\)\}/);
+    assert.match(adminLayoutSource, /renderPreviewItem=\{\(unit\) => renderUnitPreview\(unit, t\)\}/);
     assert.match(adminLayoutSource, /function renderContractorPreview/);
     assert.match(adminLayoutSource, /function renderUnitPreview/);
   });

@@ -29,16 +29,16 @@ describe("Contractor payment method UI", () => {
   it("renders Admin payment method controls on the payment management page", () => {
     assert.match(adminLayoutSource, /<PaymentMethodForm/);
     assert.match(adminLayoutSource, /납부방법 설정/);
-    assert.match(adminLayoutSource, /<option value="cash">현금<\/option>/);
-    assert.match(adminLayoutSource, /<option value="bank_transfer">계좌이체<\/option>/);
+    assert.match(adminLayoutSource, /<option value="cash">\{t\("현금"\)\}<\/option>/);
+    assert.match(adminLayoutSource, /<option value="bank_transfer">\{t\("계좌이체"\)\}<\/option>/);
     assert.match(adminLayoutSource, /계좌이체 선택 시 은행명, 계좌번호, 계좌명을 모두 입력해 주세요\./);
   });
 
   it("shows payment method read-only on contractor home and payment summary", () => {
-    assert.match(contractorLayoutSource, /<PaymentMethodRows contractor=\{summary\} label="납부방법" \/>/);
-    assert.match(contractorLayoutSource, /<PaymentMethodPanel contractor=\{summary\} label="결제수단" \/>/);
-    assert.match(contractorLayoutSource, /bank_transfer: "계좌이체"/);
-    assert.match(contractorLayoutSource, /cash: "현금"/);
+    assert.match(contractorLayoutSource, /<PaymentMethodRows contractor=\{summary\} label=\{t\("납부방법"\)\} t=\{t\} \/>/);
+    assert.match(contractorLayoutSource, /<PaymentMethodPanel contractor=\{summary\} label=\{t\("결제수단"\)\} t=\{t\} \/>/);
+    assert.match(contractorLayoutSource, /bank_transfer: t\("계좌이체"\)/);
+    assert.match(contractorLayoutSource, /cash: t\("현금"\)/);
     assert.doesNotMatch(contractorLayoutSource, /납부방법 저장/);
   });
 

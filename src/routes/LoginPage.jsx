@@ -7,10 +7,13 @@ import {
   SUPABASE_CONFIG_MESSAGE,
   UNREGISTERED_ACCOUNT_MESSAGE,
 } from "../services/authService.js";
+import LanguageToggle from "../components/LanguageToggle.jsx";
+import { useLanguage } from "../i18n/LanguageProvider.jsx";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
   const [status, setStatus] = useState("checking");
   const [message, setMessage] = useState(location.state?.error || "");
   const [form, setForm] = useState({ email: "", password: "" });
@@ -57,15 +60,15 @@ export default function LoginPage() {
   }
 
   if (status === "checking") {
-    return <LoginFrame statusLabel="Login" title="로그인 상태를 확인하고 있습니다." />;
+    return <LoginFrame statusLabel={t("Login")} title={t("로그인 상태를 확인하고 있습니다.")} />;
   }
 
   return (
-    <LoginFrame statusLabel="Login" title="Timor Crest Portal">
+    <LoginFrame statusLabel={t("Login")} title="Timor Crest Portal">
       <form className="login-card" onSubmit={handleSubmit} aria-label="Portal login">
-        <h2>로그인</h2>
+        <h2>{t("로그인")}</h2>
         <label className="field">
-          <span>이메일</span>
+          <span>{t("이메일")}</span>
           <input
             autoComplete="email"
             name="email"
@@ -76,7 +79,7 @@ export default function LoginPage() {
           />
         </label>
         <label className="field">
-          <span>비밀번호</span>
+          <span>{t("비밀번호")}</span>
           <input
             autoComplete="current-password"
             name="password"
@@ -86,12 +89,12 @@ export default function LoginPage() {
             value={form.password}
           />
         </label>
-        {message ? <p className="form-error">{message}</p> : null}
+        {message ? <p className="form-error">{t(message)}</p> : null}
         <button className="primary-button" disabled={status === "submitting"} type="submit">
-          {status === "submitting" ? "로그인 중" : "로그인"}
+          {status === "submitting" ? t("로그인 중") : t("로그인")}
         </button>
       </form>
-      <p className="security-note">계정은 관리자 초대 또는 수동 등록으로만 발급됩니다.</p>
+      <p className="security-note">{t("계정은 관리자 초대 또는 수동 등록으로만 발급됩니다.")}</p>
     </LoginFrame>
   );
 }
@@ -102,7 +105,10 @@ function LoginFrame({ children, statusLabel, title }) {
       <section className="phone-frame" aria-label="20:9 smartphone screen">
         <header className="phone-status" aria-label="App status">
           <span>Timor Crest</span>
-          <span>{statusLabel}</span>
+          <span className="status-actions">
+            <span>{statusLabel}</span>
+            <LanguageToggle />
+          </span>
         </header>
         <div className="screen-viewport">
           <section className="view-screen is-active login-screen">

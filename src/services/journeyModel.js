@@ -103,6 +103,17 @@ const ENGLISH_JOURNEY_STEP_DESCRIPTIONS = {
   8: "Move-in preparation is complete.",
 };
 
+const JOURNEY_STEP_EDIT_FIELDS = [
+  "title",
+  "subtitle",
+  "description",
+  "status",
+  "progress_percent",
+  "target_date",
+  "completed_date",
+  "note",
+];
+
 export function getJourneyStepTitle(step, language = "kr") {
   if (language === "en") {
     return ENGLISH_JOURNEY_STEP_TITLES[Number(step?.step_no)] || step?.title || "";
@@ -123,7 +134,7 @@ export function calculateJourneyOverallProgress(steps) {
   const rows = Array.isArray(steps) ? steps : [];
   if (!rows.length) return 0;
 
-  const total = rows.reduce((sum, step) => sum + Number(step.progress_percent || 0), 0);
+  const total = rows.reduce((sum, step) => sum + normalizeProgressPercent(step.progress_percent), 0);
   return Math.round(total / rows.length);
 }
 
@@ -133,13 +144,62 @@ export function getCurrentJourneyStep(steps) {
 
   return (
     rows.find((step) => step.status === "in_progress") ||
-    rows.find((step) => Number(step.progress_percent || 0) < 100) ||
+    rows.find((step) => normalizeProgressPercent(step.progress_percent) < 100) ||
     rows[rows.length - 1]
   );
+}
+
+export function normalizeProgressPercent(value) {
+  const next = Number(value ?? 0);
+  if (!Number.isFinite(next)) return 0;
+  return Math.max(0, Math.min(Math.round(next), 100));
+}
+
+export function buildJourneyStepUpdatePayload(step) {
+  return {
+    title: normalizeRequiredText(step.title),
+    subtitle: normalizeOptionalText(step.subtitle),
+    description: normalizeOptionalText(step.description),
+    status: normalizeOptionalText(step.status) || "pending",
+    progress_percent: normalizeProgressPercent(step.progress_percent),
+    target_date: normalizeOptionalText(step.target_date),
+    completed_date: normalizeOptionalText(step.completed_date),
+    note: normalizeOptionalText(step.note),
+  };
+}
+
+export function normalizeJourneyStepDraft(step) {
+  return {
+    id: step?.id || "",
+    step_no: Number(step?.step_no ?? 0),
+    ...buildJourneyStepUpdatePayload(step || {}),
+  };
+}
+
+export function hasJourneyStepChanges(originalStep, draftStep) {
+  const original = normalizeJourneyStepDraft(originalStep);
+  const draft = normalizeJourneyStepDraft(draftStep);
+  return JOURNEY_STEP_EDIT_FIELDS.some((field) => original[field] !== draft[field]);
+}
+
+export function getChangedJourneyStepPayloads(originalSteps, draftSteps) {
+  const originalById = new Map((Array.isArray(originalSteps) ? originalSteps : []).map((step) => [step.id, step]));
+  return (Array.isArray(draftSteps) ? draftSteps : [])
+    .filter((step) => step.id && hasJourneyStepChanges(originalById.get(step.id), step))
+    .map((step) => ({ id: step.id, values: buildJourneyStepUpdatePayload(step) }));
 }
 
 function normalizeStepOrder(steps) {
   return Array.isArray(steps)
     ? [...steps].sort((first, second) => Number(first.step_no || 0) - Number(second.step_no || 0))
     : [];
+}
+
+function normalizeRequiredText(value) {
+  return String(value ?? "").trim();
+}
+
+function normalizeOptionalText(value) {
+  const next = normalizeRequiredText(value);
+  return next || null;
 }

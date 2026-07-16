@@ -33,7 +33,7 @@ import {
   getJourneySteps,
   updateJourneyStep,
 } from "../services/journeyService.js";
-import { getJourneyStepTitle } from "../services/journeyModel.js";
+import { getChangedJourneyStepPayloads, getJourneyStepTitle, normalizeProgressPercent } from "../services/journeyModel.js";
 import {
   createDocumentSignedUrl,
   deleteDocument,
@@ -115,6 +115,7 @@ export default function AdminLayout() {
   const [paymentSummaries, setPaymentSummaries] = useState({});
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
   const [paymentMethodForm, setPaymentMethodForm] = useState(emptyPaymentMethodForm);
+  const [journeyOriginalSteps, setJourneyOriginalSteps] = useState([]);
   const [journeySteps, setJourneySteps] = useState([]);
   const [journeyMessage, setJourneyMessage] = useAutoDismissMessage("", 10000);
   const [documents, setDocuments] = useState([]);
@@ -159,6 +160,11 @@ export default function AdminLayout() {
     const startIndex = (unitPage - 1) * UNIT_PAGE_SIZE;
     return sortedUnits.slice(startIndex, startIndex + UNIT_PAGE_SIZE);
   }, [sortedUnits, unitPage]);
+  const journeyChanges = useMemo(
+    () => getChangedJourneyStepPayloads(journeyOriginalSteps, journeySteps),
+    [journeyOriginalSteps, journeySteps],
+  );
+  const hasJourneyChanges = journeyChanges.length > 0;
 
   useEffect(() => {
     loadDashboard();
@@ -198,6 +204,7 @@ export default function AdminLayout() {
     }
     setUnits(unitResult.data || []);
     setContractors(contractorResult.data || []);
+    setJourneyOriginalSteps(nextJourneySteps);
     setJourneySteps(nextJourneySteps);
     setJourneyMessage(nextJourneyMessage);
     setDocuments(documentResult.data || []);
@@ -506,17 +513,37 @@ export default function AdminLayout() {
     setStatus("ready");
   }
 
-  async function submitJourneyStep(stepId, values) {
+  function updateJourneyDraftStep(stepId, field, value) {
+    setJourneySteps((current) =>
+      current.map((step) =>
+        step.id === stepId
+          ? {
+              ...step,
+              [field]: field === "progress_percent" ? normalizeProgressPercent(value) : value,
+            }
+          : step,
+      ),
+    );
+  }
+
+  async function submitJourneyChanges() {
+    const changes = getChangedJourneyStepPayloads(journeyOriginalSteps, journeySteps);
+    if (!changes.length) return;
+
     setStatus("saving");
     setMessage("");
     setJourneyMessage("");
-    const result = await updateJourneyStep(stepId, values);
-    if (result.error) {
+    const results = await Promise.all(changes.map((change) => updateJourneyStep(change.id, change.values)));
+    const failedResult = results.find((result) => result.error);
+    if (failedResult) {
       setStatus("ready");
-      setJourneyMessage(result.error);
+      setJourneyMessage(failedResult.error);
       return;
     }
-    setJourneySteps((current) => current.map((step) => (step.id === stepId ? result.data : step)));
+    const updatedById = new Map(results.filter((result) => result.data?.id).map((result) => [result.data.id, result.data]));
+    const nextSteps = journeySteps.map((step) => updatedById.get(step.id) || step);
+    setJourneyOriginalSteps(nextSteps);
+    setJourneySteps(nextSteps);
     setStatus("ready");
     setMessage("Journey 단계가 수정되었습니다.");
   }
@@ -531,6 +558,7 @@ export default function AdminLayout() {
       setJourneyMessage(result.error);
       return;
     }
+    setJourneyOriginalSteps(result.data || []);
     setJourneySteps(result.data || []);
     setStatus("ready");
     setMessage("기본 8단계 Journey가 생성 또는 보완되었습니다.");
@@ -688,6 +716,7 @@ export default function AdminLayout() {
     paymentMethodForm,
     paymentSummaries,
     paymentTotals,
+    hasJourneyChanges,
     journeyOverallProgress,
     journeyMessage,
     journeySteps,
@@ -706,7 +735,7 @@ export default function AdminLayout() {
     submitPaymentItem,
     submitPaymentMethod,
     submitPaymentPlan,
-    submitJourneyStep,
+    submitJourneyChanges,
     submitUnit,
     units,
     sortedContractors,
@@ -719,6 +748,7 @@ export default function AdminLayout() {
     setManualContractorMode,
     updatePaymentPlanField,
     updatePaymentMethodField,
+    updateJourneyDraftStep,
     updateUnitField,
     createDefaultItemsForPlan,
     createPlanForSelectedContractor,
@@ -1105,7 +1135,18 @@ function PaymentsPage({
   );
 }
 
-function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProgress, journeySteps, language, status, submitJourneyStep, t }) {
+function JourneyPage({
+  ensureJourneyDefaults,
+  hasJourneyChanges,
+  journeyMessage,
+  journeyOverallProgress,
+  journeySteps,
+  language,
+  status,
+  submitJourneyChanges,
+  t,
+  updateJourneyDraftStep,
+}) {
   return (
     <>
       <section className="admin-panel">
@@ -1124,11 +1165,23 @@ function JourneyPage({ ensureJourneyDefaults, journeyMessage, journeyOverallProg
         <h2>{t("8단계 공정")}</h2>
         <div className="admin-list">
           {journeySteps.length ? (
-            journeySteps.map((step) => <JourneyStepForm item={step} key={step.id} language={language} onSubmit={submitJourneyStep} saving={status === "saving"} t={t} />)
+            journeySteps.map((step) => (
+              <JourneyStepForm item={step} key={step.id} language={language} onChange={updateJourneyDraftStep} t={t} />
+            ))
           ) : (
             <p>{t("Journey 단계가 아직 등록되지 않았습니다. migration seed를 확인해 주세요.")}</p>
           )}
         </div>
+        {journeySteps.length ? (
+          <button
+            className="primary-button journey-save-button"
+            disabled={!hasJourneyChanges || status === "saving"}
+            onClick={submitJourneyChanges}
+            type="button"
+          >
+            {status === "saving" ? t("저장 중...") : t("Journey 저장")}
+          </button>
+        ) : null}
       </section>
     </>
   );
@@ -1517,21 +1570,16 @@ function PaymentItemForm({ item, language, onSubmit, saving, t }) {
   );
 }
 
-function JourneyStepForm({ item, language, onSubmit, saving, t }) {
-  const [progress, setProgress] = useState(clampProgress(item.progress_percent));
+function JourneyStepForm({ item, language, onChange, t }) {
+  const progress = normalizeProgressPercent(item.progress_percent);
   const displayTitle = getJourneyStepTitle(item, language);
 
-  useEffect(() => {
-    setProgress(clampProgress(item.progress_percent));
-  }, [item.progress_percent]);
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
+  function handleFieldChange(event) {
+    onChange(item.id, event.target.name, event.target.value);
   }
 
-  function updateProgress(event) {
-    setProgress(clampProgress(event.target.value));
+  function handleProgressChange(event) {
+    onChange(item.id, "progress_percent", event.target.value);
   }
 
   return (
@@ -1540,7 +1588,7 @@ function JourneyStepForm({ item, language, onSubmit, saving, t }) {
       summary={`${formatJourneyStatus(item.status, t)} · ${progress}%`}
       title={`${item.step_no}. ${displayTitle}`}
     >
-      <form className="admin-form compact-admin-form journey-step-form" onSubmit={handleSubmit}>
+      <div className="admin-form compact-admin-form journey-step-form">
         <header>
           <div>
             <span className="eyebrow">STEP {item.step_no}</span>
@@ -1548,12 +1596,12 @@ function JourneyStepForm({ item, language, onSubmit, saving, t }) {
           </div>
           <JourneyStatusChip status={item.status} t={t} />
         </header>
-        <TextField label="title" name="title" defaultValue={item.title} required />
-        <TextField label="subtitle" name="subtitle" defaultValue={item.subtitle || ""} />
-        <TextAreaField label="description" name="description" defaultValue={item.description || ""} />
+        <TextField label="title" name="title" onChange={handleFieldChange} required value={item.title || ""} />
+        <TextField label="subtitle" name="subtitle" onChange={handleFieldChange} value={item.subtitle || ""} />
+        <TextAreaField label="description" name="description" onChange={handleFieldChange} value={item.description || ""} />
         <label className="field">
           <span>{t("status")}</span>
-          <select defaultValue={item.status || "pending"} name="status">
+          <select name="status" onChange={handleFieldChange} value={item.status || "pending"}>
             <option value="pending">{formatJourneyStatus("pending", t)}</option>
             <option value="in_progress">{formatJourneyStatus("in_progress", t)}</option>
             <option value="completed">{formatJourneyStatus("completed", t)}</option>
@@ -1562,16 +1610,13 @@ function JourneyStepForm({ item, language, onSubmit, saving, t }) {
         </label>
         <label className="field progress-edit-field">
           <span>{t("progress_percent")}</span>
-          <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={updateProgress} type="range" value={progress} />
+          <input aria-label={`STEP ${item.step_no} 진행률 슬라이더`} max="100" min="0" onChange={handleProgressChange} type="range" value={progress} />
         </label>
-        <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={updateProgress} step="1" type="number" value={progress} />
-        <TextField label="target_date" name="target_date" defaultValue={item.target_date || ""} type="date" />
-        <TextField label="completed_date" name="completed_date" defaultValue={item.completed_date || ""} type="date" />
-        <TextAreaField label="note" name="note" defaultValue={item.note || ""} />
-        <button className="primary-button" disabled={saving} type="submit">
-          {t("Journey 저장")}
-        </button>
-      </form>
+        <TextField label="progress_percent 숫자" name="progress_percent" max="100" min="0" onChange={handleProgressChange} step="1" type="number" value={progress} />
+        <TextField label="target_date" name="target_date" onChange={handleFieldChange} value={item.target_date || ""} type="date" />
+        <TextField label="completed_date" name="completed_date" onChange={handleFieldChange} value={item.completed_date || ""} type="date" />
+        <TextAreaField label="note" name="note" onChange={handleFieldChange} value={item.note || ""} />
+      </div>
     </CollapsiblePanel>
   );
 }
@@ -1589,12 +1634,6 @@ function TextAreaField({ defaultValue, label, name, onChange, value }) {
 
 function JourneyStatusChip({ status, t }) {
   return <span className={`status-chip status-${status || "pending"}`}>{formatJourneyStatus(status, t)}</span>;
-}
-
-function clampProgress(value) {
-  const next = Number(value);
-  if (!Number.isFinite(next)) return 0;
-  return Math.max(0, Math.min(Math.round(next), 100));
 }
 
 function formatJourneyStatus(status, t) {

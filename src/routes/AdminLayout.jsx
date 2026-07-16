@@ -23,10 +23,18 @@ import {
   getAdminPaymentPlans,
   getPaymentItems,
   getPaymentPlanByContractor,
-  updatePaymentItem,
+  updatePaymentItems,
   updatePaymentPlan,
 } from "../services/paymentService.js";
-import { getPaymentStepTitle } from "../services/paymentModel.js";
+import {
+  calculatePaymentAmount,
+  calculatePaymentRatio,
+  getChangedPaymentItemPayloads,
+  getPaymentStepTitle,
+  normalizePaymentAmount,
+  normalizePaymentItems,
+  normalizePaymentRatio,
+} from "../services/paymentModel.js";
 import {
   calculateJourneyOverallProgress,
   ensureDefaultJourneySteps,
@@ -111,6 +119,7 @@ export default function AdminLayout() {
   const [contractorForm, setContractorForm] = useState(emptyContractorForm);
   const [manualContractorMode, setManualContractorMode] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState(null);
+  const [paymentOriginalItems, setPaymentOriginalItems] = useState([]);
   const [paymentItems, setPaymentItems] = useState([]);
   const [paymentSummaries, setPaymentSummaries] = useState({});
   const [paymentPlanForm, setPaymentPlanForm] = useState(emptyPaymentPlanForm);
@@ -165,6 +174,12 @@ export default function AdminLayout() {
     [journeyOriginalSteps, journeySteps],
   );
   const hasJourneyChanges = journeyChanges.length > 0;
+  const paymentTotals = calculatePaymentTotals(paymentPlan, paymentItems);
+  const paymentItemChanges = useMemo(
+    () => getChangedPaymentItemPayloads(paymentOriginalItems, paymentItems, paymentTotals.totalPrice),
+    [paymentOriginalItems, paymentItems, paymentTotals.totalPrice],
+  );
+  const hasPaymentItemChanges = paymentItemChanges.length > 0;
 
   useEffect(() => {
     loadDashboard();
@@ -231,6 +246,7 @@ export default function AdminLayout() {
 
   async function loadPaymentForContractor(contractor) {
     setPaymentPlan(null);
+    setPaymentOriginalItems([]);
     setPaymentItems([]);
     setPaymentPlanForm(emptyPaymentPlanForm);
     setPaymentMethodForm(buildPaymentMethodForm(contractor));
@@ -255,7 +271,9 @@ export default function AdminLayout() {
       setMessage(itemsResult.error);
       return;
     }
-    setPaymentItems(itemsResult.data || []);
+    const normalizedItems = normalizePaymentItems(itemsResult.data || [], planResult.data.total_price);
+    setPaymentOriginalItems(normalizedItems);
+    setPaymentItems(normalizedItems);
   }
 
   function editUnit(unit) {
@@ -482,28 +500,71 @@ export default function AdminLayout() {
     if (!paymentPlan) return;
     setStatus("saving");
     setMessage("");
-    const result = await createDefaultPaymentItems(paymentPlan.id);
+    const result = await createDefaultPaymentItems(paymentPlan);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
       return;
     }
-    setPaymentItems(result.data || []);
+    const normalizedItems = normalizePaymentItems(result.data || [], paymentPlan.total_price);
+    setPaymentOriginalItems(normalizedItems);
+    setPaymentItems(normalizedItems);
     await refreshPaymentState(selectedContractor);
     setMessage("기본 8단계 납부 항목이 생성되었습니다.");
   }
 
-  async function submitPaymentItem(itemId, values) {
+  function updatePaymentDraftItem(itemId, field, value) {
+    const totalPrice = paymentTotals.totalPrice;
+    setPaymentItems((current) =>
+      current.map((item) => {
+        if (item.id !== itemId) return item;
+
+        if (field === "payment_ratio") {
+          const paymentRatio = normalizePaymentRatio(value);
+          return {
+            ...item,
+            payment_ratio: paymentRatio,
+            required_amount: calculatePaymentAmount(totalPrice, paymentRatio),
+          };
+        }
+
+        if (field === "required_amount") {
+          const requiredAmount = normalizePaymentAmount(value, totalPrice);
+          return {
+            ...item,
+            required_amount: requiredAmount,
+            payment_ratio: calculatePaymentRatio(totalPrice, requiredAmount),
+          };
+        }
+
+        if (field === "paid_amount") {
+          return { ...item, paid_amount: normalizePaymentAmount(value, totalPrice) };
+        }
+
+        return { ...item, [field]: value };
+      }),
+    );
+  }
+
+  async function submitPaymentItems() {
+    if (!paymentItemChanges.length) return;
     setStatus("saving");
     setMessage("");
-    const result = await updatePaymentItem(itemId, values);
+    const result = await updatePaymentItems(paymentItemChanges, paymentTotals.totalPrice);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
       return;
     }
+    const updatedById = new Map((result.data || []).map((item) => [item.id, item]));
+    const nextItems = normalizePaymentItems(
+      paymentItems.map((item) => updatedById.get(item.id) || item),
+      paymentTotals.totalPrice,
+    );
+    setPaymentOriginalItems(nextItems);
+    setPaymentItems(nextItems);
     await refreshPaymentState(selectedContractor);
-    setMessage("납부 단계가 수정되었습니다.");
+    setMessage("단계별 납부일정을 저장했습니다.");
   }
 
   async function refreshPaymentState(contractor) {
@@ -698,7 +759,6 @@ export default function AdminLayout() {
 
   const activeContractors = contractors.filter((contractor) => contractor.status === "active").length;
   const activeUnits = units.filter((unit) => unit.status === "active").length;
-  const paymentTotals = calculatePaymentTotals(paymentPlan, paymentItems);
   const journeyOverallProgress = calculateJourneyOverallProgress(journeySteps);
 
   const shell = {
@@ -716,6 +776,7 @@ export default function AdminLayout() {
     paymentMethodForm,
     paymentSummaries,
     paymentTotals,
+    hasPaymentItemChanges,
     hasJourneyChanges,
     journeyOverallProgress,
     journeyMessage,
@@ -732,7 +793,7 @@ export default function AdminLayout() {
     selectedUnitId,
     status,
     submitContractor,
-    submitPaymentItem,
+    submitPaymentItems,
     submitPaymentMethod,
     submitPaymentPlan,
     submitJourneyChanges,
@@ -747,6 +808,7 @@ export default function AdminLayout() {
     updateContractorField,
     setManualContractorMode,
     updatePaymentPlanField,
+    updatePaymentDraftItem,
     updatePaymentMethodField,
     updateJourneyDraftStep,
     updateUnitField,
@@ -1039,16 +1101,18 @@ function PaymentsPage({
   paymentPlanForm,
   paymentSummaries,
   paymentTotals,
+  hasPaymentItemChanges,
   language,
   selectPaymentContractor,
   selectedContractor,
   selectedContractorId,
   sortedContractors,
   status,
-  submitPaymentItem,
+  submitPaymentItems,
   submitPaymentMethod,
   submitPaymentPlan,
   t,
+  updatePaymentDraftItem,
   updatePaymentMethodField,
   updatePaymentPlanField,
 }) {
@@ -1119,11 +1183,27 @@ function PaymentsPage({
                       {t("기본 8단계 payment_items 생성")}
                     </button>
                   ) : (
-                    <div className="admin-list">
-                      {paymentItems.map((item) => (
-                        <PaymentItemForm item={item} key={item.id} language={language} onSubmit={submitPaymentItem} saving={status === "saving"} t={t} />
-                      ))}
-                    </div>
+                    <>
+                      <div className="admin-list">
+                        {paymentItems.map((item) => (
+                          <PaymentItemForm
+                            item={item}
+                            key={item.id}
+                            language={language}
+                            onChange={updatePaymentDraftItem}
+                            t={t}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        className="primary-button payment-save-button"
+                        disabled={!hasPaymentItemChanges || status === "saving"}
+                        onClick={submitPaymentItems}
+                        type="button"
+                      >
+                        {status === "saving" ? t("저장 중...") : t("단계별 납부일정 저장")}
+                      </button>
+                    </>
                   )}
                 </CollapsiblePanel>
               </>
@@ -1529,30 +1609,30 @@ function PaymentMethodForm({ form, onChange, onSubmit, saving, t }) {
   );
 }
 
-function PaymentItemForm({ item, language, onSubmit, saving, t }) {
+function PaymentItemForm({ item, language, onChange, t }) {
   const displayTitle = getPaymentStepTitle(item, language);
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    onSubmit(item.id, Object.fromEntries(new FormData(event.currentTarget)));
+  function handleFieldChange(event) {
+    onChange(item.id, event.target.name, event.target.value);
   }
 
   return (
-    <form className="admin-card payment-item-form" onSubmit={handleSubmit}>
+    <div className="admin-card payment-item-form">
       <header>
         <h3>
           {item.step_no}. {displayTitle}
         </h3>
         <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
       </header>
-      <TextField label="title" name="title" defaultValue={item.title} />
-      <TextField label="required_amount" name="required_amount" defaultValue={item.required_amount} type="number" />
-      <TextField label="paid_amount" name="paid_amount" defaultValue={item.paid_amount} type="number" />
-      <TextField label="due_date" name="due_date" defaultValue={item.due_date || ""} type="date" />
-      <TextField label="paid_date" name="paid_date" defaultValue={item.paid_date || ""} type="date" />
+      <TextField label="title" name="title" onChange={handleFieldChange} value={item.title || ""} />
+      <TextField label="납부 비율 (%)" name="payment_ratio" max="100" min="0" onChange={handleFieldChange} step="1" type="number" value={item.payment_ratio ?? 0} />
+      <TextField label="단계별 납부 금액" name="required_amount" min="0" onChange={handleFieldChange} step="1" type="number" value={item.required_amount ?? 0} />
+      <TextField label="paid_amount" name="paid_amount" min="0" onChange={handleFieldChange} step="1" type="number" value={item.paid_amount ?? 0} />
+      <TextField label="due_date" name="due_date" onChange={handleFieldChange} value={item.due_date || ""} type="date" />
+      <TextField label="paid_date" name="paid_date" onChange={handleFieldChange} value={item.paid_date || ""} type="date" />
       <label className="field">
         <span>{t("status")}</span>
-        <select defaultValue={item.status || "unpaid"} name="status">
+        <select name="status" onChange={handleFieldChange} value={item.status || "unpaid"}>
           <option value="unpaid">{formatDisplayStatus("unpaid", t)}</option>
           <option value="partial">{formatDisplayStatus("partial", t)}</option>
           <option value="paid">{formatDisplayStatus("paid", t)}</option>
@@ -1561,12 +1641,9 @@ function PaymentItemForm({ item, language, onSubmit, saving, t }) {
       </label>
       <label className="field">
         <span>{t("note")}</span>
-        <input defaultValue={item.note || ""} name="note" />
+        <input name="note" onChange={handleFieldChange} value={item.note || ""} />
       </label>
-      <button className="primary-button" disabled={saving} type="submit">
-        {t("단계 저장")}
-      </button>
-    </form>
+    </div>
   );
 }
 
@@ -1664,7 +1741,7 @@ function formatDisplayStatus(status, t) {
 }
 
 function formatMoney(value, currency = "USD") {
-  return `${Number(value || 0).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return `${Math.trunc(Number(value ?? 0)).toLocaleString("ko-KR")} ${currency || "USD"}`;
 }
 
 function formatDate(value) {

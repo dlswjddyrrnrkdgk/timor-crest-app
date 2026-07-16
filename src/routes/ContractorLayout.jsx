@@ -5,7 +5,7 @@ import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getMyContractorSummary } from "../services/contractorService.js";
 import { getMyPaymentSummary } from "../services/paymentService.js";
-import { getPaymentStepTitle } from "../services/paymentModel.js";
+import { getPaymentItemUnpaidAmount, getPaymentStepTitle, normalizePaymentItem } from "../services/paymentModel.js";
 import { calculateJourneyOverallProgress, getCurrentJourneyStep, getJourneySteps } from "../services/journeyService.js";
 import { getJourneyStepDescription, getJourneyStepTitle } from "../services/journeyModel.js";
 import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/documentService.js";
@@ -415,7 +415,7 @@ function PaymentItemsList({ language, paymentSummary, t }) {
       <h3>{t("8단계 납부 현황")}</h3>
       <div className="payment-stage-list">
         {items.length ? (
-          items.map((item) => <PaymentItemCard currency={plan.currency} item={item} key={item.id} language={language} t={t} />)
+          items.map((item) => <PaymentItemCard currency={plan.currency} item={item} key={item.id} language={language} t={t} totalPrice={plan.total_price} />)
         ) : (
           <p>{t("납부 단계가 아직 생성되지 않았습니다. 관리자에게 문의하세요.")}</p>
         )}
@@ -424,8 +424,10 @@ function PaymentItemsList({ language, paymentSummary, t }) {
   );
 }
 
-function PaymentItemCard({ currency, item, language, t }) {
+function PaymentItemCard({ currency, item, language, t, totalPrice }) {
+  const normalizedItem = normalizePaymentItem(item, totalPrice);
   const displayTitle = getPaymentStepTitle(item, language);
+  const unpaidAmount = getPaymentItemUnpaidAmount(normalizedItem);
 
   return (
     <article className="stage-card">
@@ -433,15 +435,17 @@ function PaymentItemCard({ currency, item, language, t }) {
         <h3>
           {item.step_no}. {displayTitle}
         </h3>
-        <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
+        <span className="status-chip">{formatDisplayStatus(normalizedItem.status, t)}</span>
       </header>
       <div className="stage-meta">
-        <MiniStat label={t("납입해야 하는 금액")} value={formatMoney(item.required_amount, currency, t)} />
-        <MiniStat label={t("납입한 금액")} value={formatMoney(item.paid_amount, currency, t)} />
-        <MiniStat label={t("예정일")} value={item.due_date || t("미등록")} />
-        <MiniStat label={t("납부일")} value={item.paid_date || t("미등록")} />
+        <MiniStat label={t("납부 비율")} value={`${normalizedItem.payment_ratio ?? 0}%`} />
+        <MiniStat label={t("단계별 납부 금액")} value={formatMoney(normalizedItem.required_amount, currency, t)} />
+        <MiniStat label={t("납입한 금액")} value={formatMoney(normalizedItem.paid_amount, currency, t)} />
+        <MiniStat label={t("미납 금액")} value={formatMoney(unpaidAmount, currency, t)} />
+        <MiniStat label={t("예정일")} value={normalizedItem.due_date || t("미등록")} />
+        <MiniStat label={t("납부일")} value={normalizedItem.paid_date || t("미등록")} />
       </div>
-      {item.note ? <p>{item.note}</p> : null}
+      {normalizedItem.note ? <p>{normalizedItem.note}</p> : null}
     </article>
   );
 }
@@ -566,7 +570,7 @@ function formatDisplayStatus(status, t) {
 
 function formatMoney(value, currency, t) {
   if (value === null || value === undefined || value === "") return t("미등록");
-  return `${Number(value).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return `${Math.trunc(Number(value)).toLocaleString("ko-KR")} ${currency || "USD"}`;
 }
 
 function formatPaymentMethod(value, t) {

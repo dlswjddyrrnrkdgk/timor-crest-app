@@ -1,6 +1,10 @@
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient.js";
 import { SUPABASE_CONFIG_MESSAGE } from "./authService.js";
-import { DEFAULT_PAYMENT_STEPS } from "./paymentModel.js";
+import {
+  buildDefaultPaymentItems,
+  buildPaymentItemUpdatePayload,
+  normalizePaymentItems,
+} from "./paymentModel.js";
 
 const PAYMENT_PLAN_SELECT = `
   id,
@@ -31,7 +35,7 @@ const PAYMENT_PLAN_SELECT = `
   )
 `;
 
-const PAYMENT_ITEM_SELECT = "id, payment_plan_id, step_no, title, required_amount, paid_amount, due_date, paid_date, status, note";
+const PAYMENT_ITEM_SELECT = "id, payment_plan_id, step_no, title, payment_ratio, required_amount, paid_amount, due_date, paid_date, status, note";
 
 export async function getAdminPaymentPlans() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
@@ -92,17 +96,12 @@ export async function updatePaymentPlan(planId, values) {
   return respond(data, error);
 }
 
-export async function createDefaultPaymentItems(paymentPlanId) {
+export async function createDefaultPaymentItems(paymentPlan) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
-  const rows = DEFAULT_PAYMENT_STEPS.map((title, index) => ({
-    payment_plan_id: paymentPlanId,
-    step_no: index + 1,
-    title,
-    required_amount: 0,
-    paid_amount: 0,
-    status: "unpaid",
-  }));
+  const paymentPlanId = typeof paymentPlan === "string" ? paymentPlan : paymentPlan?.id;
+  const totalPrice = typeof paymentPlan === "string" ? 0 : paymentPlan?.total_price;
+  const rows = buildDefaultPaymentItems(paymentPlanId, totalPrice);
 
   const { data, error } = await supabase
     .from("payment_items")
@@ -113,25 +112,32 @@ export async function createDefaultPaymentItems(paymentPlanId) {
   return respond(data, error);
 }
 
-export async function updatePaymentItem(itemId, values) {
+export async function updatePaymentItem(itemId, values, totalPrice = 0) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
   const { data, error } = await supabase
     .from("payment_items")
-    .update({
-      title: normalizeText(values.title),
-      required_amount: normalizeNumber(values.required_amount),
-      paid_amount: normalizeNumber(values.paid_amount),
-      due_date: normalizeDate(values.due_date),
-      paid_date: normalizeDate(values.paid_date),
-      status: normalizeText(values.status) || "unpaid",
-      note: normalizeText(values.note),
-    })
+    .update(buildPaymentItemUpdatePayload(values, totalPrice))
     .eq("id", itemId)
     .select(PAYMENT_ITEM_SELECT)
     .single();
 
   return respond(data, error);
+}
+
+export async function updatePaymentItems(changes, totalPrice = 0) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const rows = Array.isArray(changes) ? changes : [];
+  const updatedRows = [];
+
+  for (const change of rows) {
+    const result = await updatePaymentItem(change.id, change.values, totalPrice);
+    if (result.error) return fail(result.error);
+    if (result.data) updatedRows.push(result.data);
+  }
+
+  return respond(updatedRows.sort((a, b) => Number(a.step_no) - Number(b.step_no)), null);
 }
 
 export async function getPaymentItems(paymentPlanId) {
@@ -182,7 +188,7 @@ export async function getMyPaymentSummary() {
   const itemsResult = await getPaymentItems(planResult.data.id);
   if (itemsResult.error) return fail(itemsResult.error);
 
-  const items = itemsResult.data || [];
+  const items = normalizePaymentItems(itemsResult.data || [], planResult.data.total_price);
   return respond(
     {
       contractor,
@@ -196,10 +202,10 @@ export async function getMyPaymentSummary() {
 }
 
 export function calculatePaymentTotals(plan, items) {
-  const rows = Array.isArray(items) ? items : [];
-  const totalPrice = Number(plan?.total_price || 0);
-  const totalRequiredAmount = rows.reduce((sum, item) => sum + Number(item.required_amount || 0), 0);
-  const totalPaidAmount = rows.reduce((sum, item) => sum + Number(item.paid_amount || 0), 0);
+  const totalPrice = Number(plan?.total_price ?? 0);
+  const rows = normalizePaymentItems(items, totalPrice);
+  const totalRequiredAmount = rows.reduce((sum, item) => sum + Number(item.required_amount ?? 0), 0);
+  const totalPaidAmount = rows.reduce((sum, item) => sum + Number(item.paid_amount ?? 0), 0);
   const unpaidAmount = Math.max(totalPrice - totalPaidAmount, 0);
   const progressPercent = totalPrice > 0 ? Math.min(Math.round((totalPaidAmount / totalPrice) * 100), 100) : 0;
 

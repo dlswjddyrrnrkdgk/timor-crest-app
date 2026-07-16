@@ -75,7 +75,7 @@ describe("Bilingual UI", () => {
     assert.match(contractorLayoutSource, /getPaymentStepTitle\(item, language\)/);
     assert.match(contractorLayoutSource, /<PaymentItemsList language=\{language\}/);
     assert.match(adminLayoutSource, /getPaymentStepTitle\(item, language\)/);
-    assert.match(adminLayoutSource, /defaultValue=\{item\.title\}/);
+    assert.match(adminLayoutSource, /value=\{item\.title \|\| ""\}/);
     assert.match(adminLayoutSource, /value=\{item\.description \|\| ""\}/);
   });
 

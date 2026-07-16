@@ -24,8 +24,12 @@ test("admin payment schedule uses draft state with one bottom save button", () =
   assert.match(adminLayoutSource, /paymentOriginalItems/);
   assert.match(adminLayoutSource, /getChangedPaymentItemPayloads/);
   assert.match(adminLayoutSource, /updatePaymentDraftItem/);
+  assert.match(adminLayoutSource, /name="payment_ratio"[^>]+step="1"/);
+  assert.match(adminLayoutSource, /name="required_amount"[^>]+step="1"/);
+  assert.match(adminLayoutSource, /Math\.trunc\(Number\(value \?\? 0\)\)/);
   assert.match(adminLayoutSource, /단계별 납부일정 저장/);
   assert.match(adminLayoutSource, /disabled=\{!hasPaymentItemChanges \|\| status === "saving"\}/);
+  assert.doesNotMatch(adminLayoutSource, /step="0\.01"|toFixed\(1\)|maximumFractionDigits:\s*1|minimumFractionDigits/);
 });
 
 test("contractor payment cards show ratio, step amount, paid amount, and unpaid amount read-only", () => {
@@ -34,6 +38,8 @@ test("contractor payment cards show ratio, step amount, paid amount, and unpaid 
   assert.match(contractorLayoutSource, /납부 비율/);
   assert.match(contractorLayoutSource, /단계별 납부 금액/);
   assert.match(contractorLayoutSource, /미납 금액/);
+  assert.match(contractorLayoutSource, /Math\.trunc\(Number\(value\)\)/);
+  assert.doesNotMatch(contractorLayoutSource, /toFixed\(1\)|maximumFractionDigits:\s*1|minimumFractionDigits/);
   assert.doesNotMatch(contractorLayoutSource, /updatePaymentItems|updatePaymentDraftItem|단계별 납부일정 저장/);
 });
 

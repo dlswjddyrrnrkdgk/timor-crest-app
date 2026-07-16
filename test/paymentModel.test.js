@@ -5,6 +5,7 @@ import {
   DEFAULT_PAYMENT_STEPS,
   buildPaymentItemUpdatePayload,
   calculatePaymentAmount,
+  calculatePaymentRatio,
   getChangedPaymentItemPayloads,
   getDefaultPaymentRatio,
   getPaymentStepTitle,
@@ -56,12 +57,27 @@ test("payment amount and ratio calculations preserve zero and clamp unsafe value
   assert.equal(calculatePaymentAmount(100000, 2), 2000);
   assert.equal(calculatePaymentAmount(100000, 28), 28000);
   assert.equal(calculatePaymentAmount(100000, 20), 20000);
+  assert.equal(calculatePaymentAmount(99999, 12.8), 11999);
   assert.equal(normalizePaymentRatio(0), 0);
+  assert.equal(normalizePaymentRatio(12.8), 12);
+  assert.equal(normalizePaymentRatio(12.1), 12);
   assert.equal(normalizePaymentRatio(-10), 0);
   assert.equal(normalizePaymentRatio(120), 100);
   assert.equal(normalizePaymentAmount(0, 100000), 0);
+  assert.equal(normalizePaymentAmount(12345.67, 100000), 12345);
   assert.equal(normalizePaymentAmount(-10, 100000), 0);
   assert.equal(normalizePaymentAmount(120000, 100000), 100000);
+});
+
+test("payment ratio calculated from amount is truncated to an integer", () => {
+  const item = normalizePaymentItem({ id: "c", step_no: 1, payment_ratio: 12.8, required_amount: 12800.99, paid_amount: 0 }, 100000);
+  const payload = buildPaymentItemUpdatePayload({ ...item, required_amount: 12800 }, 100000);
+
+  assert.equal(calculatePaymentRatio(100000, 12800.99), 12);
+  assert.equal(item.payment_ratio, 12);
+  assert.equal(item.required_amount, 12800);
+  assert.equal(payload.payment_ratio, 12);
+  assert.equal(payload.required_amount, 12800);
 });
 
 test("payment item normalization falls back only when saved ratio is missing", () => {

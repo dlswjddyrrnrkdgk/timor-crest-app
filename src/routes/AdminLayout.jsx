@@ -1625,9 +1625,9 @@ function PaymentItemForm({ item, language, onChange, t }) {
         <span className="status-chip">{formatDisplayStatus(item.status, t)}</span>
       </header>
       <TextField label="title" name="title" onChange={handleFieldChange} value={item.title || ""} />
-      <TextField label="납부 비율 (%)" name="payment_ratio" max="100" min="0" onChange={handleFieldChange} step="0.01" type="number" value={item.payment_ratio ?? 0} />
-      <TextField label="단계별 납부 금액" name="required_amount" min="0" onChange={handleFieldChange} step="0.01" type="number" value={item.required_amount ?? 0} />
-      <TextField label="paid_amount" name="paid_amount" min="0" onChange={handleFieldChange} step="0.01" type="number" value={item.paid_amount ?? 0} />
+      <TextField label="납부 비율 (%)" name="payment_ratio" max="100" min="0" onChange={handleFieldChange} step="1" type="number" value={item.payment_ratio ?? 0} />
+      <TextField label="단계별 납부 금액" name="required_amount" min="0" onChange={handleFieldChange} step="1" type="number" value={item.required_amount ?? 0} />
+      <TextField label="paid_amount" name="paid_amount" min="0" onChange={handleFieldChange} step="1" type="number" value={item.paid_amount ?? 0} />
       <TextField label="due_date" name="due_date" onChange={handleFieldChange} value={item.due_date || ""} type="date" />
       <TextField label="paid_date" name="paid_date" onChange={handleFieldChange} value={item.paid_date || ""} type="date" />
       <label className="field">
@@ -1741,7 +1741,7 @@ function formatDisplayStatus(status, t) {
 }
 
 function formatMoney(value, currency = "USD") {
-  return `${Number(value || 0).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return `${Math.trunc(Number(value ?? 0)).toLocaleString("ko-KR")} ${currency || "USD"}`;
 }
 
 function formatDate(value) {

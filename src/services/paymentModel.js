@@ -61,18 +61,18 @@ export function getDefaultPaymentRatios() {
 
 export function normalizePaymentRatio(value) {
   const next = normalizeNumber(value);
-  return roundCurrency(Math.min(Math.max(next, 0), 100));
+  return truncatePaymentNumber(Math.min(Math.max(next, 0), 100));
 }
 
 export function normalizePaymentAmount(value, totalPrice = 0) {
   const next = Math.max(normalizeNumber(value), 0);
   const price = Math.max(normalizeNumber(totalPrice), 0);
   const capped = Math.min(next, price);
-  return roundCurrency(capped);
+  return truncatePaymentNumber(capped);
 }
 
 export function calculatePaymentAmount(totalPrice, ratio) {
-  return roundCurrency((Math.max(normalizeNumber(totalPrice), 0) * normalizePaymentRatio(ratio)) / 100);
+  return truncatePaymentNumber((Math.max(normalizeNumber(totalPrice), 0) * normalizePaymentRatio(ratio)) / 100);
 }
 
 export function calculatePaymentRatio(totalPrice, amount) {
@@ -89,10 +89,10 @@ export function buildDefaultPaymentItems(paymentPlanId, totalPrice = 0) {
     const stepNo = index + 1;
     const paymentRatio = getDefaultPaymentRatio(stepNo);
     const requiredAmount = stepNo === DEFAULT_PAYMENT_STEPS.length
-      ? roundCurrency(Math.max(price - allocatedAmount, 0))
+      ? truncatePaymentNumber(Math.max(price - allocatedAmount, 0))
       : calculatePaymentAmount(price, paymentRatio);
 
-    allocatedAmount = roundCurrency(allocatedAmount + requiredAmount);
+    allocatedAmount = truncatePaymentNumber(allocatedAmount + requiredAmount);
 
     return {
       payment_plan_id: paymentPlanId,
@@ -128,7 +128,7 @@ export function normalizePaymentItems(items, totalPrice = 0) {
 }
 
 export function getPaymentItemUnpaidAmount(item) {
-  return roundCurrency(Math.max(normalizeNumber(item?.required_amount) - normalizeNumber(item?.paid_amount), 0));
+  return truncatePaymentNumber(Math.max(normalizeNumber(item?.required_amount) - normalizeNumber(item?.paid_amount), 0));
 }
 
 export function buildPaymentItemUpdatePayload(item, totalPrice = 0) {
@@ -181,6 +181,6 @@ function normalizeNumber(value) {
   return Number.isFinite(next) ? next : 0;
 }
 
-function roundCurrency(value) {
-  return Math.round(normalizeNumber(value) * 100) / 100;
+function truncatePaymentNumber(value) {
+  return Math.trunc(normalizeNumber(value));
 }

@@ -570,7 +570,7 @@ function formatDisplayStatus(status, t) {
 
 function formatMoney(value, currency, t) {
   if (value === null || value === undefined || value === "") return t("미등록");
-  return `${Number(value).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return `${Math.trunc(Number(value)).toLocaleString("ko-KR")} ${currency || "USD"}`;
 }
 
 function formatPaymentMethod(value, t) {

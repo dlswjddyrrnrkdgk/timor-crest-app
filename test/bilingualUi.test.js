@@ -76,7 +76,7 @@ describe("Bilingual UI", () => {
     assert.match(contractorLayoutSource, /<PaymentItemsList language=\{language\}/);
     assert.match(adminLayoutSource, /getPaymentStepTitle\(item, language\)/);
     assert.match(adminLayoutSource, /defaultValue=\{item\.title\}/);
-    assert.match(adminLayoutSource, /defaultValue=\{item\.description \|\| ""\}/);
+    assert.match(adminLayoutSource, /value=\{item\.description \|\| ""\}/);
   });
 
   it("removes the Contractor Journey shared-project helper sentence", () => {

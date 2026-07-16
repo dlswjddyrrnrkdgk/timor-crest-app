@@ -444,6 +444,10 @@ button:disabled {
 .journey-step-panel {
   margin-top: var(--space-3);
 }
+.journey-save-button {
+  width: 100%;
+  margin-top: var(--space-4);
+}
 @media (min-width: 400px) {
   .expandable-select-row:has(.expandable-select-actions) {
     grid-template-columns: minmax(0, 1fr) auto;

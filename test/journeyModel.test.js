@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_JOURNEY_STEPS,
+  buildJourneyStepUpdatePayload,
   calculateJourneyOverallProgress,
+  getChangedJourneyStepPayloads,
   getCurrentJourneyStep,
   getJourneyStepDescription,
   getJourneyStepTitle,
+  hasJourneyStepChanges,
+  normalizeProgressPercent,
 } from "../src/services/journeyModel.js";
 
 test("default Journey contains the required 8 shared construction steps", () => {
@@ -69,4 +73,48 @@ test("Journey step descriptions are translated for English display without chang
   assert.equal(getJourneyStepDescription(DEFAULT_JOURNEY_STEPS[5], "en"), "Roof, ceiling, and electrical work has been completed.");
   assert.equal(getJourneyStepDescription(customKoreanDescription, "en"), "Interior finishing and inspection have been completed.");
   assert.equal(getJourneyStepDescription(customKoreanDescription, "kr"), "사용자 수정 설명");
+});
+
+test("Journey progress normalization preserves 0 and clamps invalid values", () => {
+  assert.equal(normalizeProgressPercent(0), 0);
+  assert.equal(normalizeProgressPercent("0"), 0);
+  assert.equal(normalizeProgressPercent(""), 0);
+  assert.equal(normalizeProgressPercent(-10), 0);
+  assert.equal(normalizeProgressPercent(120), 100);
+  assert.equal(normalizeProgressPercent(75), 75);
+});
+
+test("Journey dirty checks compare normalized progress values instead of truthiness", () => {
+  const originalAtFifty = { id: "step-1", title: "기초공사", status: "pending", progress_percent: 50 };
+  const draftAtZero = { ...originalAtFifty, progress_percent: 0 };
+  const originalAtZero = { id: "step-2", title: "골조공사", status: "pending", progress_percent: 0 };
+  const draftAtThirty = { ...originalAtZero, progress_percent: 30 };
+
+  assert.equal(hasJourneyStepChanges(originalAtFifty, draftAtZero), true);
+  assert.equal(hasJourneyStepChanges(originalAtZero, draftAtThirty), true);
+  assert.equal(hasJourneyStepChanges(originalAtZero, { ...originalAtZero, progress_percent: "0" }), false);
+});
+
+test("Journey update payloads always include normalized progress_percent including 0 and 100", () => {
+  assert.deepEqual(
+    buildJourneyStepUpdatePayload({ title: "A", progress_percent: 0 }),
+    {
+      title: "A",
+      subtitle: null,
+      description: null,
+      status: "pending",
+      progress_percent: 0,
+      target_date: null,
+      completed_date: null,
+      note: null,
+    },
+  );
+  assert.equal(buildJourneyStepUpdatePayload({ title: "B", progress_percent: 100 }).progress_percent, 100);
+
+  const changes = getChangedJourneyStepPayloads(
+    [{ id: "step-1", title: "A", status: "pending", progress_percent: 50 }],
+    [{ id: "step-1", title: "A", status: "pending", progress_percent: 0 }],
+  );
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].values.progress_percent, 0);
 });

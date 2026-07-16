@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 export default function AnimatedProgress({ duration = 900, label = "진행률", suffix = "%", value = 0 }) {
-  const target = useMemo(() => Math.max(0, Math.min(Number(value || 0), 100)), [value]);
+  const target = useMemo(() => Math.max(0, Math.min(Number(value ?? 0), 100)), [value]);
   const [displayValue, setDisplayValue] = useState(target);
   const [barValue, setBarValue] = useState(target);
 

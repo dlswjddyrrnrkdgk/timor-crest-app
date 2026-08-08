@@ -135,6 +135,13 @@ export async function updateUnit(id, input) {
   return respond(data, error);
 }
 
+export async function deleteUnit(id) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const { error } = await supabase.from("units").delete().eq("id", id);
+  return error ? fail(error.message) : respond(true, null);
+}
+
 export async function getMyContractorSummary() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 

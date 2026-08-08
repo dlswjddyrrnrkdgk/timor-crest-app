@@ -267,6 +267,19 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **Accessibility**: each cell is a real button with an accessible unit-code/status label; status is communicated by text as well as color.
 - **Motion**: selection uses the existing 160ms CRM transition and respects reduced motion.
 
+#### Payment Management
+- **Structure**: page heading, searchable customer selector, selected-customer summary, payment method card, plan settings, and an eight-step schedule table.
+- **Variants**: no customer, no plan, empty schedule, populated schedule, unsaved changes, saving, and saved/error feedback.
+- **States**: paid, partially paid, pending, no amount, ratio warning, selected customer, and disabled save.
+- **Accessibility**: customer records are real buttons; every schedule input has a visible label; status is text plus semantic color; the save bar remains keyboard reachable.
+- **Scroll ownership**: the CRM document owns page scrolling; only the dense payment table may scroll horizontally, and the save bar remains visible without covering mobile inputs.
+
+#### Payment Summary
+- **Structure**: customer identity, contract/required/paid/outstanding metrics, progress ring, and payment method metadata.
+- **Variants**: cash, bank transfer with bank details, and not set.
+- **States**: zero totals, partial progress, complete progress, and missing payment data.
+- **Accessibility**: numeric values include readable labels and progress exposes an accessible percentage.
+
 ### CRM motion
 
 - Sidebar links and cards use a 160ms color/transform transition.

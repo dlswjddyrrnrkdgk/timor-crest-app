@@ -3,10 +3,11 @@ import AdminIcon from "./AdminIcon.jsx";
 
 export default function QuickActionCard({ description, icon, label, to }) {
   return (
-    <NavLink className="crm-quick-action" to={to}>
+    <NavLink aria-label={label} className="crm-quick-action" title={label} to={to}>
       <span className="crm-quick-action__icon"><AdminIcon name={icon} size={18} /></span>
       <span><strong>{label}</strong><small>{description}</small></span>
       <AdminIcon name="chevron" size={15} />
+      <span aria-hidden="true" className="crm-quick-action__tooltip" role="tooltip">{label}</span>
     </NavLink>
   );
 }

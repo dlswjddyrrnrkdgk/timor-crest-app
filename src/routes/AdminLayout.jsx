@@ -6,11 +6,14 @@ import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import AdminDashboard from "../components/admin/AdminDashboard.jsx";
 import AdminShell from "../components/admin/AdminShell.jsx";
 import CustomersPage from "../components/admin/CustomersPage.jsx";
+import UnitsInventoryPage from "../components/admin/UnitsPage.jsx";
+import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
   createContractorWithAuth,
   deleteContractor,
+  deleteUnit,
   createUnit,
   getAdminContractors,
   getUnits,
@@ -349,6 +352,22 @@ export default function AdminLayout() {
     setUnitPage(1);
     await loadDashboard();
     setMessage(selectedUnitId ? "호수 정보가 수정되었습니다." : "호수 정보가 생성되었습니다.");
+  }
+
+  async function deleteUnitRecord(unit) {
+    if (!unit?.id || !window.confirm(t("Delete this unit?"))) return;
+    setStatus("saving");
+    setMessage("");
+    const result = await deleteUnit(unit.id);
+    if (result.error) {
+      setStatus("ready");
+      setMessage(result.error);
+      return;
+    }
+    resetUnitForm();
+    setUnitPage(1);
+    await loadDashboard();
+    setMessage("Unit was deleted.");
   }
 
   async function submitContractor(event) {
@@ -780,6 +799,7 @@ export default function AdminLayout() {
     ensureJourneyDefaults,
     resetContractorForm,
     resetUnitForm,
+    deleteUnitRecord,
     deleteContractorRecord,
     selectPaymentContractor,
     selectedContractor,
@@ -838,8 +858,8 @@ export default function AdminLayout() {
       <Routes>
         <Route index element={<AdminHome {...shell} />} />
         <Route path="contractors" element={<CustomersPage {...shell} />} />
-        <Route path="units" element={<UnitsPage {...shell} />} />
-        <Route path="payments" element={<PaymentsPage {...shell} />} />
+        <Route path="units" element={<UnitsInventoryPage {...shell} />} />
+        <Route path="payments" element={<PaymentsCrmPage {...shell} />} />
         <Route path="journey" element={<JourneyPage {...shell} />} />
         <Route path="documents" element={<DocumentsPage {...shell} />} />
       </Routes>

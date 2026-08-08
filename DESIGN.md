@@ -254,6 +254,19 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **Structure**: icon, action label, short description, route link.
 - **States**: default, hover, focus, pressed, disabled placeholder.
 
+#### Unit Inventory
+- **Structure**: page heading, KPI strip, filter cluster, inventory table, and summary/map aside.
+- **Variants**: desktop list-detail, tablet stacked aside, mobile card rows with horizontal data fallback.
+- **States**: available, assigned, reserved, hold, unknown, empty, loading, saving, selected.
+- **Accessibility**: table rows and map cells expose the unit code and status text; filters use labeled native controls; edit/delete actions remain keyboard reachable.
+- **Scroll ownership**: the CRM document remains the page scroll owner; only the dense table wrapper and map grid may scroll horizontally or within a bounded map region.
+
+#### Unit Map
+- **Structure**: grouped building/floor context with a responsive grid of unit-code buttons.
+- **States**: available, assigned, reserved, hold, unknown, selected, empty.
+- **Accessibility**: each cell is a real button with an accessible unit-code/status label; status is communicated by text as well as color.
+- **Motion**: selection uses the existing 160ms CRM transition and respects reduced motion.
+
 ### CRM motion
 
 - Sidebar links and cards use a 160ms color/transform transition.

@@ -5,6 +5,7 @@ import CollapsiblePanel from "../components/CollapsiblePanel.jsx";
 import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import AdminDashboard from "../components/admin/AdminDashboard.jsx";
 import AdminShell from "../components/admin/AdminShell.jsx";
+import CustomersPage from "../components/admin/CustomersPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
@@ -836,7 +837,7 @@ export default function AdminLayout() {
       {status === "loading" ? <p className="crm-loading-message">{t("데이터를 불러오고 있습니다.")}</p> : null}
       <Routes>
         <Route index element={<AdminHome {...shell} />} />
-        <Route path="contractors" element={<ContractorsPage {...shell} />} />
+        <Route path="contractors" element={<CustomersPage {...shell} />} />
         <Route path="units" element={<UnitsPage {...shell} />} />
         <Route path="payments" element={<PaymentsPage {...shell} />} />
         <Route path="journey" element={<JourneyPage {...shell} />} />

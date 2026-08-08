@@ -1,4 +1,4 @@
-# Timor Crest Purchaser Mobile Demo Design System
+# Timor Crest Product Design System
 
 ## 1. Atmosphere & Identity
 
@@ -200,3 +200,63 @@ White card surfaces with light blue borders and soft blue shadows.
 | Prominent | 0 24px 70px rgba(11, 46, 111, 0.18) | Device frame |
 
 The UI should read like a real mobile app, not a desktop dashboard squeezed into a phone.
+
+## 9. Admin CRM Surface
+
+The Admin route is a separate desktop-first surface. It keeps the purchaser mobile canvas untouched and uses the supplied CRM dashboard reference as its visual contract: a fixed deep-navy sidebar, a light-gray workspace, compact white cards, blue primary actions, and restrained semantic status colors.
+
+### CRM tokens
+
+| Role | Token | Value | Usage |
+|------|-------|-------|-------|
+| CRM/sidebar | --crm-sidebar | #071B41 | Fixed navigation rail |
+| CRM/sidebar-hover | --crm-sidebar-hover | #102E66 | Sidebar hover and secondary surface |
+| CRM/sidebar-active | --crm-sidebar-active | #1D64D8 | Current route |
+| CRM/workspace | --crm-workspace | #F6F7FB | Main background |
+| CRM/card | --crm-card | #FFFFFF | Panels and KPI cards |
+| CRM/text | --crm-text | #15233D | Headlines and values |
+| CRM/muted | --crm-muted | #6B7890 | Supporting metadata |
+| CRM/border | --crm-border | #E7EBF2 | Dividers and card borders |
+| CRM/primary | --crm-primary | #2168D5 | Primary actions and links |
+| CRM/success | --crm-success | #23A27A | Paid and assigned states |
+| CRM/warning | --crm-warning | #F29A2E | Due-soon and reserved states |
+| CRM/danger | --crm-danger | #D94C58 | Outstanding and error states |
+
+### CRM layout
+
+- `crm-shell` is a two-column desktop app shell with a 254px sidebar and a flexible workspace.
+- `crm-main` owns the document scroll; cards never create an additional page-level scroll trap.
+- At 1024px the sidebar remains a compact desktop rail; below 780px it becomes an overlay drawer opened by the menu button.
+- The dashboard uses a 7-column KPI row, a 3-column information row, a 3-column lower row, and a five-action quick action strip.
+- Cards use 12px radius, a 1px border, and a low-opacity shadow. Nested cards are avoided; existing management panels reuse the same card surface.
+
+### CRM primitives
+
+#### AdminShell
+- **Structure**: `AdminSidebar`, `AdminTopbar`, `main.crm-main`.
+- **States**: sidebar open/compact, route active, loading/error notice.
+- **Accessibility**: landmark navigation, labeled search, visible focus rings.
+
+#### KpiCard
+- **Structure**: icon, label, value, supporting trend or helper copy.
+- **Variants**: count, currency, percentage.
+- **States**: default, loading, empty.
+
+#### StatusBadge
+- **Structure**: semantic text plus color token; never color-only.
+- **Variants**: success, warning, danger, neutral, info.
+
+#### EmptyState
+- **Structure**: compact icon, message, optional route action.
+- **States**: empty and error.
+
+#### QuickActionCard
+- **Structure**: icon, action label, short description, route link.
+- **States**: default, hover, focus, pressed, disabled placeholder.
+
+### CRM motion
+
+- Sidebar links and cards use a 160ms color/transform transition.
+- Buttons and links scale to 0.98 on press; no layout properties are animated.
+- KPI progress bars use the existing 900ms meter easing and respect `prefers-reduced-motion`.
+- Placeholder routes remain visibly disabled and do not navigate to broken screens.

@@ -5,6 +5,7 @@ import { sortContractors, sortUnits } from "../src/services/adminListModel.js";
 import { getVisibleExpandableItems } from "../src/services/expandableSelectModel.js";
 
 const adminLayoutSource = readFileSync(new URL("../src/routes/AdminLayout.jsx", import.meta.url), "utf8");
+const adminDashboardSource = readFileSync(new URL("../src/components/admin/AdminDashboard.jsx", import.meta.url), "utf8");
 const contractorServiceSource = readFileSync(new URL("../src/services/contractorService.js", import.meta.url), "utf8");
 const expandableSelectSource = readFileSync(new URL("../src/components/ExpandableSelectList.jsx", import.meta.url), "utf8");
 
@@ -17,7 +18,8 @@ describe("Admin expandable list selectors", () => {
   it("uses the shared expandable selector on admin list surfaces", () => {
     const usages = adminLayoutSource.match(/<ExpandableSelectList/g) || [];
 
-    assert.ok(usages.length >= 5);
+    assert.ok(usages.length >= 4);
+    assert.match(adminLayoutSource, /<AdminDashboard/);
   });
 
   it("hard deletes contractor rows without deleting auth users", () => {
@@ -27,12 +29,9 @@ describe("Admin expandable list selectors", () => {
     assert.doesNotMatch(contractorServiceSource, /status: "archived"/);
   });
 
-  it("uses compact previews only on the admin dashboard lists", () => {
+  it("keeps the redesigned dashboard free of legacy management list previews", () => {
     assert.match(expandableSelectSource, /renderPreviewItem/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{\(contractor\) => renderContractorPreview\(contractor, t\)\}/);
-    assert.match(adminLayoutSource, /renderPreviewItem=\{\(unit\) => renderUnitPreview\(unit, t\)\}/);
-    assert.match(adminLayoutSource, /function renderContractorPreview/);
-    assert.match(adminLayoutSource, /function renderUnitPreview/);
+    assert.doesNotMatch(adminDashboardSource, /ExpandableSelectList|renderPreviewItem/);
   });
 
   it("exposes accessible collapsed and expanded list controls", () => {

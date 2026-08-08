@@ -9,6 +9,7 @@ const languageToggleSource = readFileSync(new URL("../src/components/LanguageTog
 const loginPageSource = readFileSync(new URL("../src/routes/LoginPage.jsx", import.meta.url), "utf8");
 const protectedRouteSource = readFileSync(new URL("../src/routes/ProtectedRoute.jsx", import.meta.url), "utf8");
 const adminLayoutSource = readFileSync(new URL("../src/routes/AdminLayout.jsx", import.meta.url), "utf8");
+const adminTopbarSource = readFileSync(new URL("../src/components/admin/AdminTopbar.jsx", import.meta.url), "utf8");
 const contractorLayoutSource = readFileSync(new URL("../src/routes/ContractorLayout.jsx", import.meta.url), "utf8");
 const stylesSource = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
@@ -32,7 +33,7 @@ describe("Bilingual UI", () => {
   });
 
   it("connects the toggle and translator to login, auth, admin, and contractor screens", () => {
-    for (const source of [loginPageSource, protectedRouteSource, adminLayoutSource, contractorLayoutSource]) {
+    for (const source of [loginPageSource, protectedRouteSource, adminTopbarSource, contractorLayoutSource]) {
       assert.match(source, /LanguageToggle/);
     }
     assert.match(loginPageSource, /const \{ t \} = useLanguage\(\)/);

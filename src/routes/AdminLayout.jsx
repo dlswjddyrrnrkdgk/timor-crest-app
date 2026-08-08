@@ -1,9 +1,10 @@
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import CollapsiblePanel from "../components/CollapsiblePanel.jsx";
 import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
-import LanguageToggle from "../components/LanguageToggle.jsx";
+import AdminDashboard from "../components/admin/AdminDashboard.jsx";
+import AdminShell from "../components/admin/AdminShell.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
@@ -53,16 +54,8 @@ import {
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { sortContractors, sortUnits } from "../services/adminListModel.js";
+import { calculateDashboardKpis } from "../services/adminDashboardModel.js";
 import { signOut } from "../services/authService.js";
-
-const adminTabs = [
-  ["", "Dashboard"],
-  ["contractors", "계약자 관리"],
-  ["units", "호수 관리"],
-  ["payments", "납부일정 관리"],
-  ["journey", "Journey 관리"],
-  ["documents", "문서 관리"],
-];
 
 const UNIT_PAGE_SIZE = 10;
 
@@ -760,6 +753,7 @@ export default function AdminLayout() {
   const activeContractors = contractors.filter((contractor) => contractor.status === "active").length;
   const activeUnits = units.filter((unit) => unit.status === "active").length;
   const journeyOverallProgress = calculateJourneyOverallProgress(journeySteps);
+  const dashboardStats = calculateDashboardKpis({ contractors, units, paymentSummaries, journeySteps });
 
   const shell = {
     activeContractors,
@@ -815,6 +809,7 @@ export default function AdminLayout() {
     createDefaultItemsForPlan,
     createPlanForSelectedContractor,
     contractorForm,
+    dashboardStats,
     documents,
     documentFile,
     documentForm,
@@ -836,95 +831,31 @@ export default function AdminLayout() {
   };
 
   return (
-    <main className="demo-stage" aria-label="Timor Crest admin portal">
-      <section className="phone-frame" aria-label="20:9 smartphone screen">
-        <header className="phone-status" aria-label="App status">
-          <span>Timor Crest</span>
-          <span className="status-actions">
-            <span>{t("Admin")}</span>
-            <LanguageToggle />
-          </span>
-        </header>
-        <div className="screen-viewport">
-          <section className="view-screen is-active admin-screen phase-shell">
-            <div className="admin-topbar">
-              <div>
-                <span className="eyebrow">ADMIN</span>
-                <h1>{t("Dashboard")}</h1>
-              </div>
-              <button className="secondary-button shell-logout" onClick={handleLogout} type="button">
-                {t("로그아웃")}
-              </button>
-            </div>
-            <div className="admin-tabs" aria-label="Admin sections">
-              {adminTabs.map(([path, label]) => (
-                <NavLink className={({ isActive }) => (isActive ? "is-active" : "")} end={path === ""} key={path || "home"} to={path}>
-                  {t(label)}
-                </NavLink>
-              ))}
-            </div>
-            {message ? <p className="form-error">{t(message)}</p> : null}
-            {status === "loading" ? <p>{t("데이터를 불러오고 있습니다.")}</p> : null}
-            <Routes>
-              <Route index element={<AdminHome {...shell} />} />
-              <Route path="contractors" element={<ContractorsPage {...shell} />} />
-              <Route path="units" element={<UnitsPage {...shell} />} />
-              <Route path="payments" element={<PaymentsPage {...shell} />} />
-              <Route path="journey" element={<JourneyPage {...shell} />} />
-              <Route path="documents" element={<DocumentsPage {...shell} />} />
-            </Routes>
-          </section>
-        </div>
-      </section>
-    </main>
+    <AdminShell onLogout={handleLogout}>
+      {message ? <p className="crm-global-message">{t(message)}</p> : null}
+      {status === "loading" ? <p className="crm-loading-message">{t("데이터를 불러오고 있습니다.")}</p> : null}
+      <Routes>
+        <Route index element={<AdminHome {...shell} />} />
+        <Route path="contractors" element={<ContractorsPage {...shell} />} />
+        <Route path="units" element={<UnitsPage {...shell} />} />
+        <Route path="payments" element={<PaymentsPage {...shell} />} />
+        <Route path="journey" element={<JourneyPage {...shell} />} />
+        <Route path="documents" element={<DocumentsPage {...shell} />} />
+      </Routes>
+    </AdminShell>
   );
 }
 
 function AdminHome({
-  activeContractors,
-  activeUnits,
-  editContractor,
-  editUnit,
-  selectedContractorId,
-  selectedUnitId,
-  sortedContractors,
-  sortedUnits,
+  contractors,
+  dashboardStats,
+  documents,
+  language,
+  paymentSummaries,
   t,
+  units,
 }) {
-  return (
-    <>
-      <section className="admin-panel">
-        <div className="metric-grid">
-          <Metric label={t("전체 계약자")} value={sortedContractors.length} />
-          <Metric label={t("전체 호수")} value={sortedUnits.length} />
-          <Metric label={t("active 계약자")} value={activeContractors} />
-          <Metric label={t("active 호수")} value={activeUnits} />
-        </div>
-      </section>
-      <section className="admin-panel">
-        <ExpandableSelectList
-          emptyMessage={t("등록된 호수가 없습니다.")}
-          items={sortedUnits}
-          onSelect={editUnit}
-          renderPreviewItem={(unit) => renderUnitPreview(unit, t)}
-          renderItem={(unit) => renderUnitRecord(unit, t)}
-          selectedId={selectedUnitId}
-          title={t("호수 목록")}
-        />
-      </section>
-      <section className="admin-panel">
-        <ExpandableSelectList
-          emptyMessage={t("등록된 계약자가 없습니다.")}
-          items={sortedContractors}
-          onSelect={editContractor}
-          renderPreviewItem={(contractor) => renderContractorPreview(contractor, t)}
-          renderItem={(contractor) => renderContractorRecord(contractor, t)}
-          selectedId={selectedContractorId}
-          title={t("계약자 목록")}
-        />
-      </section>
-    </>
-  );
+  return <AdminDashboard contractors={contractors} documents={documents} language={language} paymentSummaries={paymentSummaries} stats={dashboardStats} t={t} units={units} />;
 }
 
 function ContractorsPage({

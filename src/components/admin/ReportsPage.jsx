@@ -4,8 +4,10 @@ import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import {
-  buildReportsCsv,
+  buildExcelTableHtml,
   buildReportsSummary,
+  buildUnitPaymentExportRows,
+  buildUnitPaymentExportSummary,
   filterReportsByDateRange,
   flattenPaymentSummaries,
   REPORT_DATE_RANGES,
@@ -50,16 +52,27 @@ export default function ReportsPage({ contractors = [], documents = [], journeyS
     });
   }, [contractors, dateRange, documents, journeySteps, paymentItems, paymentPlans, units]);
   const paymentRows = summary.payments.rows;
+  const exportRows = useMemo(
+    () => buildUnitPaymentExportRows({ contractors, paymentSummaries, units }, language),
+    [contractors, language, paymentSummaries, units],
+  );
+  const exportSummary = useMemo(
+    () => buildUnitPaymentExportSummary({ contractors, paymentSummaries, units }, language, exportRows),
+    [contractors, exportRows, language, paymentSummaries, units],
+  );
 
   function handleExport() {
-    const blob = new Blob([buildReportsCsv(summary)], { type: "text/csv;charset=utf-8;" });
+    const html = buildExcelTableHtml(exportSummary, exportRows, language);
+    const blob = new Blob([`\ufeff${html}`], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "timor-crest-reports.csv";
+    link.download = `timor-crest-unit-payment-report-${getLocalDateStamp()}.xls`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
-    setExportMessage(t("Report exported successfully."));
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setExportMessage(t("Excel report downloaded successfully."));
     window.setTimeout(() => setExportMessage(""), 3000);
   }
 
@@ -86,13 +99,33 @@ export default function ReportsPage({ contractors = [], documents = [], journeyS
             <AdminIcon name="document" size={16} />{t("Print")}
           </button>
           <button className="crm-button crm-button--primary" onClick={handleExport} type="button">
-            <AdminIcon name="download" size={16} />{t("Export CSV")}
+            <AdminIcon name="download" size={16} />{t("Export Excel")}
           </button>
         </div>
       </header>
 
       {exportMessage ? <p className="crm-reports__feedback" role="status">{exportMessage}</p> : null}
       <div className="crm-reports__active-filter"><AdminIcon name="calendar" size={14} />{t(RANGE_LABELS[dateRange])}</div>
+
+      <section aria-labelledby="unit-payment-export-title" className="crm-card crm-reports__export-preview">
+        <div className="crm-reports__export-preview-heading">
+          <div>
+            <span className="crm-reports__section-icon"><AdminIcon name="download" size={17} /></span>
+            <div>
+              <h2 id="unit-payment-export-title">{t("Unit Payment Export")}</h2>
+              <p>{t("This Excel file includes all units, assigned buyers, and installment payment details in one sheet.")}</p>
+            </div>
+          </div>
+          <StatusBadge tone="info">.xls</StatusBadge>
+        </div>
+        <div className="crm-reports__export-preview-stats">
+          <ReportMetric label={t("Export rows")} value={formatNumber(exportSummary.rowCount, language)} />
+          <ReportMetric label={t("Total Units")} value={formatNumber(exportSummary.totalUnits, language)} />
+          <ReportMetric label={t("Assigned Units")} value={formatNumber(exportSummary.assignedUnits, language)} />
+          <ReportMetric label={t("Total Paid")} value={formatCurrency(exportSummary.totalPaid, language)} tone="success" />
+          <ReportMetric label={t("Outstanding Balance")} value={formatCurrency(exportSummary.outstandingBalance, language)} tone="danger" />
+        </div>
+      </section>
 
       <section aria-label={t("Reports")} className="crm-reports__kpis">
         <KpiCard icon="customers" label={t("Total Customers")} tone="blue" value={formatNumber(summary.kpis.totalCustomers, language)} />
@@ -232,4 +265,8 @@ function formatNumber(value, language) {
 
 function percentOf(value, total) {
   return total > 0 ? Math.round((value / total) * 100) : 0;
+}
+
+function getLocalDateStamp(date = new Date()) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }

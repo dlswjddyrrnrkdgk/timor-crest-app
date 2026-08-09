@@ -1,4 +1,7 @@
+import { getPaymentStepTitle } from "./paymentModel.js";
+
 const PAYMENT_STATUS_KEYS = ["paid", "partial", "pending", "noAmount"];
+const EXPORT_PAYMENT_STEP_COUNT = 8;
 
 export const REPORT_DATE_RANGES = ["all", "7", "30", "month", "year"];
 
@@ -215,21 +218,223 @@ export function flattenPaymentSummaries(paymentSummaries = {}) {
   });
 }
 
-export function buildReportsCsv(summary = {}) {
-  const rows = [
-    ["metric", "value"],
-    ["total_customers", summary.kpis?.totalCustomers ?? 0],
-    ["total_units", summary.kpis?.totalUnits ?? 0],
-    ["assigned_units", summary.kpis?.assignedUnits ?? 0],
-    ["total_contract_value", summary.kpis?.totalContractValue ?? 0],
-    ["total_required", summary.payments?.totalRequired ?? 0],
-    ["total_paid", summary.payments?.totalPaid ?? 0],
-    ["outstanding_balance", summary.payments?.outstanding ?? 0],
-    ["collection_rate", summary.payments?.collectionRate ?? 0],
-    ["documents", summary.kpis?.documents ?? 0],
-    ["journey_progress", summary.kpis?.journeyProgress ?? 0],
+export function buildUnitPaymentExportRows(data = {}, language = "en") {
+  const units = Array.isArray(data.units) ? data.units : [];
+  const contractors = (Array.isArray(data.contractors) ? data.contractors : [])
+    .filter((contractor) => !["archived", "deleted"].includes(normalizeStatus(contractor?.status)));
+  const paymentSummaries = data.paymentSummaries || {};
+  const contractorByUnitId = new Map();
+  const contractorById = new Map(contractors.filter((contractor) => contractor?.id).map((contractor) => [contractor.id, contractor]));
+  const summaryByContractorId = new Map();
+  const summaryByUnitId = new Map();
+
+  contractors.forEach((contractor) => {
+    if (contractor?.unit_id && !contractorByUnitId.has(contractor.unit_id)) contractorByUnitId.set(contractor.unit_id, contractor);
+  });
+  Object.entries(paymentSummaries).forEach(([contractorId, summary]) => {
+    const plan = summary?.plan;
+    const key = plan?.contractor_id || contractorId;
+    if (key) summaryByContractorId.set(key, summary);
+    if (plan?.unit_id) summaryByUnitId.set(plan.unit_id, summary);
+  });
+
+  const rows = units.map((unit, index) => {
+    const contractor = contractorByUnitId.get(unit?.id) || null;
+    const summary = (contractor?.id && summaryByContractorId.get(contractor.id)) || summaryByUnitId.get(unit?.id) || null;
+    return buildUnitPaymentExportRow({ contractor, isOrphan: false, no: index + 1, summary, unit }, language);
+  });
+  const unitIds = new Set(units.map((unit) => unit?.id).filter(Boolean));
+  const assignedContractorIds = new Set(rows.map((row) => row.contractorId).filter(Boolean));
+
+  contractors.filter((contractor) => !assignedContractorIds.has(contractor.id)).forEach((contractor) => {
+    const summary = summaryByContractorId.get(contractor.id) || null;
+    rows.push(buildUnitPaymentExportRow({
+      contractor: contractorById.get(contractor.id) || contractor,
+      isOrphan: !unitIds.has(contractor.unit_id),
+      no: rows.length + 1,
+      summary,
+      unit: null,
+    }, language));
+  });
+
+  return rows;
+}
+
+export function buildUnitPaymentExportSummary(data = {}, language = "en", rows = null) {
+  const exportRows = Array.isArray(rows) ? rows : buildUnitPaymentExportRows(data, language);
+  const unitRows = exportRows.filter((row) => !row.isOrphan);
+  const totalRequired = exportRows.reduce((sum, row) => sum + row.totalRequired, 0);
+  const totalPaid = exportRows.reduce((sum, row) => sum + row.totalPaid, 0);
+  const outstandingBalance = exportRows.reduce((sum, row) => sum + row.outstandingBalance, 0);
+
+  return {
+    exportDate: formatExportDate(new Date(), language),
+    totalUnits: Array.isArray(data.units) ? data.units.length : 0,
+    assignedUnits: unitRows.filter((row) => row.contractorId).length,
+    unassignedUnits: unitRows.filter((row) => !row.contractorId).length,
+    totalContractValue: unitRows.reduce((sum, row) => sum + row.contractPrice, 0),
+    totalRequired,
+    totalPaid,
+    outstandingBalance,
+    collectionRate: percentOf(totalPaid, totalRequired),
+    rowCount: exportRows.length,
+  };
+}
+
+export function getPaymentStepExportColumns(language = "en") {
+  const isKorean = language !== "en";
+  const base = isKorean
+    ? ["No", "세대 코드", "세대 타입", "층", "세대 상태", "계약금액", "분양자", "이메일", "연락처", "여권번호", "결제 방식", "총 납부예정액", "총 납부액", "미수금", "납부율"]
+    : ["No", "Unit Code", "Unit Type", "Floor", "Unit Status", "Contract Price", "Buyer Name", "Buyer Email", "Buyer Phone", "Passport No.", "Payment Method", "Total Required", "Total Paid", "Outstanding Balance", "Collection Rate"];
+  const stepLabels = isKorean
+    ? ["차수 항목", "납부해야 할 금액", "현재 납입한 금액", "미납액", "차수 상태"]
+    : ["Step Title", "Required Amount", "Paid Amount", "Outstanding Amount", "Status"];
+
+  return [...base, ...Array.from({ length: EXPORT_PAYMENT_STEP_COUNT }, (_, index) => {
+    const stepNo = index + 1;
+    const ordinal = isKorean ? `${stepNo}차` : getOrdinal(stepNo);
+    return stepLabels.map((label) => `${ordinal} ${label}`);
+  }).flat()];
+}
+
+export function calculateExportStepStatus(required, paid, language = "en") {
+  const requiredAmount = normalizeAmount(required);
+  const paidAmount = normalizeAmount(paid);
+  const isKorean = language !== "en";
+  if (requiredAmount > 0 && paidAmount >= requiredAmount) return isKorean ? "납부완료" : "Paid";
+  if (requiredAmount > 0 && paidAmount > 0) return isKorean ? "일부납부" : "Partially Paid";
+  if (requiredAmount > 0) return isKorean ? "대기" : "Pending";
+  return isKorean ? "금액없음" : "No Amount";
+}
+
+export function buildExcelTableHtml(summary = {}, rows = [], language = "en") {
+  const isKorean = language !== "en";
+  const labels = isKorean
+    ? { title: "Timor Crest 세대 납부 리포트", exportDate: "내보낸 날짜", totalUnits: "총 세대", assignedUnits: "배정 세대", unassignedUnits: "미배정 세대", totalContractValue: "총 계약금액", totalRequired: "총 납부예정액", totalPaid: "총 납부액", outstandingBalance: "미수금" }
+    : { title: "Timor Crest Unit Payment Report", exportDate: "Export Date", totalUnits: "Total Units", assignedUnits: "Assigned Units", unassignedUnits: "Unassigned Units", totalContractValue: "Total Contract Value", totalRequired: "Total Required", totalPaid: "Total Paid", outstandingBalance: "Total Outstanding" };
+  const columns = getPaymentStepExportColumns(language);
+  const summaryRows = [
+    [labels.exportDate, summary.exportDate ?? formatExportDate(new Date(), language)],
+    [labels.totalUnits, normalizeAmount(summary.totalUnits)],
+    [labels.assignedUnits, normalizeAmount(summary.assignedUnits)],
+    [labels.unassignedUnits, normalizeAmount(summary.unassignedUnits)],
+    [labels.totalContractValue, normalizeAmount(summary.totalContractValue)],
+    [labels.totalRequired, normalizeAmount(summary.totalRequired)],
+    [labels.totalPaid, normalizeAmount(summary.totalPaid)],
+    [labels.outstandingBalance, normalizeAmount(summary.outstandingBalance)],
   ];
-  return rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+  const body = (Array.isArray(rows) ? rows : []).map((row) => {
+    const values = [
+      row.no,
+      row.unitCode,
+      row.unitType,
+      row.floor,
+      row.unitStatus,
+      row.contractPrice,
+      row.buyerName,
+      row.buyerEmail,
+      row.buyerPhone,
+      row.passportNo,
+      row.paymentMethod,
+      row.totalRequired,
+      row.totalPaid,
+      row.outstandingBalance,
+      `${row.collectionRate}%`,
+      ...row.steps.flatMap((step) => [step.title, step.requiredAmount, step.paidAmount, step.outstandingAmount, step.status]),
+    ];
+    return `<tr>${values.map((value, index) => renderExcelCell(value, index, columns[index])).join("")}</tr>`;
+  }).join("");
+  const summaryHtml = summaryRows.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td class="${typeof value === "number" ? "amount" : ""}">${renderExcelValue(value, typeof value === "number")}</td></tr>`).join("");
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(labels.title)}</title><style>body{font-family:Arial,"Malgun Gothic",sans-serif;color:#17233d}table{border-collapse:collapse;margin:0 0 16px;width:100%}th,td{border:1px solid #d8dee9;padding:6px 8px;font-size:11px;vertical-align:top}th{background:#eaf1ff;font-weight:700;text-align:left}.summary th{width:220px}.amount{text-align:right;mso-number-format:"0";white-space:nowrap}.detail th{background:#12315b;color:#fff;white-space:normal}.detail td{white-space:nowrap}.detail td:nth-child(n+6){text-align:right}.detail td:nth-child(7),.detail td:nth-child(8),.detail td:nth-child(9),.detail td:nth-child(10),.detail td:nth-child(11),.detail td:nth-child(20),.detail td:nth-child(25),.detail td:nth-child(30),.detail td:nth-child(35),.detail td:nth-child(40),.detail td:nth-child(45),.detail td:nth-child(50),.detail td:nth-child(55){text-align:left;white-space:normal}</style></head><body><table class="summary"><tr><th colspan="2">${escapeHtml(labels.title)}</th></tr>${summaryHtml}</table><table class="detail"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+}
+
+export function formatExportDate(date = new Date(), language = "en") {
+  return new Intl.DateTimeFormat(language === "en" ? "en-US" : "ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(date));
+}
+
+function buildUnitPaymentExportRow({ contractor, isOrphan, no, summary, unit }, language) {
+  const plan = summary?.plan || {};
+  const items = Array.isArray(summary?.items) ? summary.items : [];
+  const itemByStep = new Map(items.map((item) => [Number(item?.step_no), item]));
+  const steps = Array.from({ length: EXPORT_PAYMENT_STEP_COUNT }, (_, index) => {
+    const stepNo = index + 1;
+    const item = itemByStep.get(stepNo) || { step_no: stepNo };
+    const requiredAmount = normalizeAmount(item.required_amount);
+    const paidAmount = normalizeAmount(item.paid_amount);
+    return { stepNo, title: getPaymentStepTitle(item, language === "en" ? "en" : "kr"), requiredAmount, paidAmount, outstandingAmount: Math.max(requiredAmount - paidAmount, 0), status: calculateExportStepStatus(requiredAmount, paidAmount, language) };
+  });
+  const totalRequired = items.reduce((sum, item) => sum + normalizeAmount(item?.required_amount), 0);
+  const totalPaid = items.reduce((sum, item) => sum + normalizeAmount(item?.paid_amount), 0);
+  const buyer = contractor || (isActiveContractor(plan?.contractor) ? plan.contractor : null);
+  const contractPrice = firstNumeric(unit?.total_price, unit?.price, plan?.total_price, plan?.contract_price, plan?.total_amount) ?? 0;
+  const statusKey = isOrphan ? "unassigned" : getUnitStatus(unit, new Set(buyer && unit?.id ? [unit.id] : []));
+  return {
+    no,
+    isOrphan,
+    unitId: unit?.id ?? null,
+    unitCode: unit?.unit_code ?? (isOrphan ? (language === "en" ? "Unassigned" : "미배정") : ""),
+    unitType: unit?.property_type ?? unit?.type ?? "",
+    floor: unit?.floor ?? "",
+    unitStatus: getExportUnitStatusLabel(statusKey, language),
+    contractPrice,
+    contractorId: buyer?.id ?? null,
+    buyerName: buyer?.full_name ?? "",
+    buyerEmail: buyer?.email ?? "",
+    buyerPhone: buyer?.phone ?? "",
+    passportNo: buyer?.passport_no ?? "",
+    paymentMethod: getPaymentMethodLabel(buyer?.payment_method, language),
+    totalRequired,
+    totalPaid,
+    outstandingBalance: Math.max(totalRequired - totalPaid, 0),
+    collectionRate: percentOf(totalPaid, totalRequired),
+    steps,
+  };
+}
+
+function getPaymentMethodLabel(value, language) {
+  const normalized = normalizeStatus(value);
+  if (normalized === "cash") return language === "en" ? "Cash" : "현금";
+  if (normalized === "bank_transfer" || normalized === "bank") return language === "en" ? "Bank Transfer" : "계좌이체";
+  return language === "en" ? "Not set" : "미설정";
+}
+
+function getExportUnitStatusLabel(status, language) {
+  const labels = language === "en"
+    ? { available: "Available", assigned: "Assigned", reserved: "Reserved", hold: "Hold", unassigned: "Unassigned" }
+    : { available: "분양가능", assigned: "배정", reserved: "예약", hold: "보류", unassigned: "미배정" };
+  return labels[status] || (language === "en" ? "Unknown" : "미확인");
+}
+
+function isActiveContractor(contractor) {
+  return contractor && !["archived", "deleted"].includes(normalizeStatus(contractor.status));
+}
+
+function getOrdinal(value) {
+  const remainder = value % 100;
+  if (remainder >= 11 && remainder <= 13) return `${value}th`;
+  return `${value}${{ 1: "st", 2: "nd", 3: "rd" }[value % 10] || "th"}`;
+}
+
+function renderExcelCell(value, index, column) {
+  const numeric = typeof value === "number";
+  const className = numeric || index === 14 || /Rate|납부율$/.test(column || "") ? "amount" : "";
+  return `<td class="${className}">${renderExcelValue(value, numeric)}</td>`;
+}
+
+function renderExcelValue(value, numeric = false) {
+  if (numeric) return String(Number.isFinite(Number(value)) ? Number(value) : 0);
+  return escapeHtml(sanitizeExcelText(value));
+}
+
+function sanitizeExcelText(value) {
+  const text = String(value ?? "");
+  return /^[=+\-@]/.test(text.trim()) ? `'${text}` : text;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
 }
 
 export function getPaymentStatus(requiredAmount, paidAmount) {
@@ -315,9 +520,4 @@ function getRangeStart(range, now) {
   if (range === "month") return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
   if (range === "year") return new Date(date.getFullYear(), 0, 1).getTime();
   return Number.NEGATIVE_INFINITY;
-}
-
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

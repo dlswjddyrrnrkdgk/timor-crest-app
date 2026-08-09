@@ -333,6 +333,13 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: completed, in progress, pending, and empty.
 - **Accessibility**: progress is written as a percentage and status text; the row remains readable when cards stack at tablet/mobile widths.
 
+#### Unit Payment Export
+- **Structure**: read-only export preview followed by a single HTML worksheet document containing export date, unit/payment summary rows, and one detail row per unit.
+- **Data contract**: every unit is included, unassigned units remain visible, and payment steps 1-8 are flattened into five columns per step. Active buyer rows without a matching unit row remain available as separate unassigned records.
+- **States**: zero units, missing payment plan/items, zero amounts, partial payments, completed payments, and language-specific headers.
+- **Safety**: the `.xls` download uses UTF-8 HTML with escaped text and formula-injection protection. It contains only current Supabase-derived unit, buyer, and payment fields; keys, tokens, storage paths, and session data never enter the export.
+- **Constraint**: no CSV fallback, mock rows, extra worksheets, schema changes, or new spreadsheet/chart dependency.
+
 #### Admin Settings Workspace
 - **Structure**: page heading followed by a two-column read-only settings layout. The left column owns Account & Access, App Preferences, and Portal Information; the right column owns Security & Environment, Data Management shortcuts, System Information, and the Danger Zone notice.
 - **Variants**: active admin session, unavailable session/profile metadata, configured/unconfigured environment indicators, and English/Korean local preference.

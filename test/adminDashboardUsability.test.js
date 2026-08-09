@@ -65,6 +65,7 @@ describe("Admin Dashboard usability", () => {
       "Outstanding amount",
       "Unpaid steps",
       "No alert selected.",
+      "No notifications.",
     ]) {
       assert.ok(translations.en[key], `Missing EN translation: ${key}`);
       assert.ok(translations.kr[key], `Missing KR translation: ${key}`);
@@ -75,11 +76,18 @@ describe("Admin Dashboard usability", () => {
     assert.match(dashboard, /crm-alert-detail/);
     assert.match(shell, /is-sidebar-collapsed/);
     assert.match(shell, /timorcrest_admin_sidebar_collapsed/);
+    assert.match(shell, /dashboardAlerts/);
     assert.match(topbar, /Show sidebar/);
     assert.match(topbar, /Hide sidebar/);
+    assert.match(topbar, /toggleNotifications/);
+    assert.match(topbar, /aria-haspopup="dialog"/);
+    assert.match(topbar, /buildDashboardAlertReason/);
     assert.match(sidebar, /data-label=\{t\(label\)\}/);
     assert.match(kpi, /className = \"\"/);
     assert.match(styles, /--crm-sidebar-collapsed-width/);
+    assert.match(styles, /overflow-x: hidden/);
+    assert.match(styles, /sidebar__link/);
+    assert.match(styles, /notification/);
     assert.match(styles, /\.crm-shell\.is-sidebar-collapsed/);
     assert.match(styles, /\.crm-kpi-card--amount/);
     assert.match(styles, /\.crm-alert-detail/);

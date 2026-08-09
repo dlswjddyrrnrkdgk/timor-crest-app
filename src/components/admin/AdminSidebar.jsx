@@ -18,7 +18,7 @@ export default function AdminSidebar({ collapsed, onNavigate, t }) {
       <div className="crm-brand">
         <span className="crm-brand__mark"><AdminIcon name="building" size={22} /></span>
         <span className="crm-brand__compact" aria-hidden="true">TC</span>
-        <span><strong>TIMOR CREST</strong><small>CRM</small></span>
+        <span className="crm-brand__text"><strong>TIMOR CREST</strong><small>CRM</small></span>
       </div>
       <nav className="crm-sidebar__nav">
         <span className="crm-sidebar__label">{t("Workspace")}</span>

@@ -316,6 +316,23 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: disabled without customer/file, uploading, reset after success, and validation error.
 - **Accessibility**: every field has a visible label; upload progress is communicated through button text and status messaging; the file input remains keyboard reachable.
 
+#### Reports Analytics Workspace
+- **Structure**: page heading with date/export controls, six-metric KPI strip, and read-only Sales, Units, Payments, Documents, and Journey report cards.
+- **Variants**: all-time, date-filtered, zero-data, export feedback, and print view.
+- **States**: positive, warning, danger, neutral, filtered, and empty; all values come from existing Supabase records.
+- **Accessibility**: filters have visible labels; summary bars include text counts and percentages; export and print controls are real buttons; status is communicated through text as well as color.
+- **Scroll ownership**: the CRM main owns page scrolling; report cards use `min-width: 0` and collapse from two columns to one on mobile; print hides navigation chrome.
+
+#### Report Distribution Row
+- **Structure**: semantic label, count, percentage, and a CSS progress bar for actual unit/document distributions.
+- **States**: available, assigned, reserved, hold, empty, and filtered.
+- **Constraint**: distribution rows never invent trend or monthly values when the source data does not contain them.
+
+#### Report Journey Row
+- **Structure**: ordered step number, translated title/description, progress meter, and text status badge.
+- **States**: completed, in progress, pending, and empty.
+- **Accessibility**: progress is written as a percentage and status text; the row remains readable when cards stack at tablet/mobile widths.
+
  ### CRM motion
 
 - Sidebar links and cards use a 160ms color/transform transition.

@@ -90,5 +90,9 @@ describe("Admin Payments CRM model", () => {
     assert.match(pageSource, /submitPaymentMethod/);
     assert.match(pageSource, /updatePaymentDraftItem/);
     assert.match(pageSource, /Payment Schedule/);
+    assert.match(pageSource, /useState\(false\)/);
+    assert.match(pageSource, /setMethodOpen\(false\)/);
+    assert.match(pageSource, /setScheduleOpen\(false\)/);
+    assert.match(pageSource, /aria-controls={contentId}/);
   });
 });

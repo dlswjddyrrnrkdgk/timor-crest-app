@@ -387,7 +387,7 @@ export default function AdminLayout() {
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
-      return;
+      return false;
     }
     const createdEmail = result.data?.user?.email || contractorForm.email;
     const createdPassword = result.data?.temporary_password || contractorForm.temporary_password;
@@ -400,6 +400,7 @@ export default function AdminLayout() {
     } else {
       setMessage(`${t("계약자 계정이 생성되었습니다.")} ${t("로그인 이메일")}: ${createdEmail} / ${t("임시 비밀번호")}: ${createdPassword}`);
     }
+    return true;
   }
 
   async function deleteContractorRecord(contractor) {

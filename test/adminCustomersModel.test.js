@@ -122,6 +122,12 @@ describe("Admin Customers CRM model", () => {
     assert.match(customersPageSource, /submitContractor/);
     assert.match(customersPageSource, /selectDocumentContractor\(customer\)/);
     assert.match(customersPageSource, /<CustomerDetailPanel/);
+    assert.match(customersPageSource, /<CustomerModal/);
+    assert.match(customersPageSource, /crm-modal-backdrop/);
+    assert.match(customersPageSource, /event\.key === \"Escape\"/);
+    assert.match(customersPageSource, /aria-modal=\"true\"/);
+    assert.match(customersPageSource, /focusableSelector/);
+    assert.match(customersPageSource, /opener\.focus\(\)/);
     assert.match(customersPageSource, /placeholder={t\("Search customers\.\.\."\)}/);
     assert.match(stylesSource, /\.crm-customers__workspace/);
     assert.match(stylesSource, /\.crm-customers__table/);

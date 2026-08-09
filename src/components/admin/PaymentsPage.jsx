@@ -38,8 +38,8 @@ export default function PaymentsPage({
 }) {
   const navigate = useNavigate();
   const [customerQuery, setCustomerQuery] = useState("");
-  const [scheduleOpen, setScheduleOpen] = useState(true);
-  const [methodOpen, setMethodOpen] = useState(true);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [methodOpen, setMethodOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const filteredContractors = useMemo(
     () => filterPaymentContractors(sortedContractors, customerQuery),
@@ -52,7 +52,8 @@ export default function PaymentsPage({
 
   useEffect(() => {
     setCustomerQuery("");
-    setScheduleOpen(true);
+    setScheduleOpen(false);
+    setMethodOpen(false);
     setPlanOpen(false);
   }, [selectedContractorId]);
 
@@ -126,6 +127,7 @@ export default function PaymentsPage({
           <>
             <PaymentSummary contractor={selectedContractor} summary={summary} t={t} />
             <PaymentMethodCard
+              contentId="crm-payment-method-panel"
               form={paymentMethodForm}
               isOpen={methodOpen}
               onChange={updatePaymentMethodField}
@@ -136,6 +138,7 @@ export default function PaymentsPage({
             />
             {paymentPlan ? (
               <PaymentPlanCard
+                contentId="crm-payment-plan-panel"
                 form={paymentPlanForm}
                 isOpen={planOpen}
                 onChange={updatePaymentPlanField}
@@ -165,6 +168,7 @@ export default function PaymentsPage({
             ) : null}
             {paymentPlan && paymentItems.length ? (
               <PaymentScheduleCard
+                contentId="crm-payment-schedule-panel"
                 hasChanges={hasPaymentItemChanges}
                 isOpen={scheduleOpen}
                 items={summary.rows}
@@ -224,13 +228,13 @@ function PaymentSummary({ contractor, summary, t }) {
   );
 }
 
-function PaymentMethodCard({ form, isOpen, onChange, onSubmit, onToggle, saving, t }) {
+function PaymentMethodCard({ contentId, form, isOpen, onChange, onSubmit, onToggle, saving, t }) {
   const usesBankTransfer = form.payment_method === "bank_transfer";
   return (
     <section className="crm-card crm-payments__method-card">
-      <SectionHeader isOpen={isOpen} onToggle={onToggle} summary={getPaymentMethodLabel(form.payment_method, t)} title={t("Payment Method")} />
-      {isOpen ? (
-        <form className="crm-payments__form" onSubmit={onSubmit}>
+      <SectionHeader contentId={contentId} isOpen={isOpen} onToggle={onToggle} summary={getPaymentMethodLabel(form.payment_method, t)} title={t("Payment Method")} />
+      <div className="crm-payments__panel-body" hidden={!isOpen} id={contentId}>
+          <form className="crm-payments__form" onSubmit={onSubmit}>
           <label className="crm-payments__field">
             <span>{t("Payment Method")}</span>
             <select name="payment_method" onChange={onChange} value={form.payment_method}>
@@ -249,18 +253,18 @@ function PaymentMethodCard({ form, isOpen, onChange, onSubmit, onToggle, saving,
           <div className="crm-payments__form-actions">
             <button className="crm-payments__primary-action" disabled={saving} type="submit">{saving ? t("Saving...") : t("Save Payment Method")}</button>
           </div>
-        </form>
-      ) : null}
+          </form>
+      </div>
     </section>
   );
 }
 
-function PaymentPlanCard({ form, isOpen, onChange, onSubmit, onToggle, saving, summary, t }) {
+function PaymentPlanCard({ contentId, form, isOpen, onChange, onSubmit, onToggle, saving, summary, t }) {
   return (
     <section className="crm-card crm-payments__plan-card">
-      <SectionHeader isOpen={isOpen} onToggle={onToggle} summary={`${formatMoney(form.total_price, form.currency)} · ${summary.ratioTotal}%`} title={t("Payment Plan")}/>
-      {isOpen ? (
-        <form className="crm-payments__form" onSubmit={onSubmit}>
+      <SectionHeader contentId={contentId} isOpen={isOpen} onToggle={onToggle} summary={`${formatMoney(form.total_price, form.currency)} · ${summary.ratioTotal}%`} title={t("Payment Plan")}/>
+      <div className="crm-payments__panel-body" hidden={!isOpen} id={contentId}>
+          <form className="crm-payments__form" onSubmit={onSubmit}>
           <PaymentField label={t("Total Contract Price")} name="total_price" onChange={onChange} min="0" step="1" type="number" value={form.total_price} />
           <PaymentField label={t("Currency")} name="currency" onChange={onChange} value={form.currency} />
           <label className="crm-payments__field">
@@ -274,19 +278,18 @@ function PaymentPlanCard({ form, isOpen, onChange, onSubmit, onToggle, saving, s
           <div className="crm-payments__form-actions">
             <button className="crm-payments__primary-action" disabled={saving} type="submit">{saving ? t("Saving...") : t("Save Plan")}</button>
           </div>
-        </form>
-      ) : null}
+          </form>
+      </div>
     </section>
   );
 }
 
-function PaymentScheduleCard({ hasChanges, isOpen, items, language, onChange, onSave, onToggle, saving, summary, t }) {
+function PaymentScheduleCard({ contentId, hasChanges, isOpen, items, language, onChange, onSave, onToggle, saving, summary, t }) {
   const ratioIsComplete = Math.round(summary.ratioTotal) === 100;
   return (
     <section className="crm-card crm-payments__schedule-card">
-      <SectionHeader isOpen={isOpen} onToggle={onToggle} summary={`${items.length} ${t("Steps")} · ${Math.round(summary.ratioTotal)}%`} title={t("Payment Schedule")}/>
-      {isOpen ? (
-        <>
+      <SectionHeader contentId={contentId} isOpen={isOpen} onToggle={onToggle} summary={`${items.length} ${t("Steps")} · ${Math.round(summary.ratioTotal)}%`} title={t("Payment Schedule")}/>
+      <div className="crm-payments__panel-body" hidden={!isOpen} id={contentId}>
           {!ratioIsComplete ? <p className="crm-payments__notice crm-payments__notice--warning">{t("Ratio total")} {Math.round(summary.ratioTotal)}% · {t("Review the schedule before saving.")}</p> : null}
           <div className="crm-payments__table-wrap">
             <table className="crm-payments__table">
@@ -301,8 +304,7 @@ function PaymentScheduleCard({ hasChanges, isOpen, items, language, onChange, on
             <div><strong>{hasChanges ? t("Unsaved changes") : t("Payment schedule saved.")}</strong><span>{t("0 values remain valid and are saved as entered.")}</span></div>
             <button className="crm-payments__primary-action" disabled={!hasChanges || saving} onClick={onSave} type="button">{saving ? t("Saving...") : t("Save Changes")}</button>
           </div>
-        </>
-      ) : null}
+      </div>
     </section>
   );
 }
@@ -329,8 +331,8 @@ function PaymentRow({ currency, item, language, onChange, t }) {
   );
 }
 
-function SectionHeader({ isOpen, onToggle, summary, title }) {
-  return <header className="crm-payments__section-header"><div><h2>{title}</h2><span>{summary}</span></div><button aria-expanded={isOpen} className="crm-payments__icon-button" onClick={onToggle} type="button"><AdminIcon name="chevron" size={16} /></button></header>;
+function SectionHeader({ contentId, isOpen, onToggle, summary, title }) {
+  return <header className="crm-payments__section-header"><div><h2>{title}</h2><span>{summary}</span></div><button aria-controls={contentId} aria-expanded={isOpen} className="crm-payments__icon-button" onClick={onToggle} type="button"><AdminIcon name="chevron" size={16} /></button></header>;
 }
 
 function SummaryMetric({ label, tone, value }) {

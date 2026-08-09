@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
@@ -30,6 +30,7 @@ export default function CustomersPage({
   const navigate = navigateFromParent || fallbackNavigate;
   const [filters, setFilters] = useState({ paymentMethod: "all", query: "", status: "all", unitAssigned: "all" });
   const [formOpen, setFormOpen] = useState(Boolean(selectedContractor));
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(selectedContractorId || "");
 
   const filteredCustomers = useMemo(() => filterCustomers(sortedContractors, filters), [filters, sortedContractors]);
@@ -49,6 +50,7 @@ export default function CustomersPage({
     if (selectedContractorId) {
       setSelectedCustomerId(selectedContractorId);
       setFormOpen(true);
+      setCreateModalOpen(false);
       return;
     }
 
@@ -63,17 +65,28 @@ export default function CustomersPage({
     setSelectedCustomerId(customer.id);
     editContractor(customer);
     setFormOpen(true);
+    setCreateModalOpen(false);
   }
 
   function handleNewCustomer() {
     resetContractorForm();
     setSelectedCustomerId("");
     setFormOpen(true);
+    setCreateModalOpen(true);
   }
 
   function handleCloseForm() {
     resetContractorForm();
     setFormOpen(false);
+    setCreateModalOpen(false);
+  }
+
+  async function handleFormSubmit(event) {
+    const didCreate = await submitContractor(event);
+    if (didCreate === true && !selectedContractor) {
+      setFormOpen(false);
+      setCreateModalOpen(false);
+    }
   }
 
   function handleManagePayments(customer) {
@@ -86,7 +99,7 @@ export default function CustomersPage({
     navigate("/admin/documents");
   }
 
-  const createButtonLabel = manualContractorMode ? t("수동 계약자 생성") : t("New Customer");
+  const createButtonLabel = manualContractorMode ? t("수동 계약자 생성") : t("Add Customer");
 
   return (
     <div className="crm-customers">
@@ -98,7 +111,7 @@ export default function CustomersPage({
         </div>
         <button className="crm-customers__primary-action" onClick={handleNewCustomer} type="button">
           <AdminIcon name="customers" size={17} />
-          {t("New Customer")}
+          {t("Add Customer")}
         </button>
       </header>
 
@@ -109,13 +122,13 @@ export default function CustomersPage({
         <KpiCard helper={t("Customers without a unit")} icon="customers" label={t("Unassigned Customers")} tone="warning" value={kpis.unassignedCustomers.toLocaleString()} />
       </section>
 
-      {formOpen ? (
+      {formOpen && selectedContractor ? (
         <CustomerForm
           contractorForm={contractorForm}
           createButtonLabel={createButtonLabel}
           manualContractorMode={manualContractorMode}
           onClose={handleCloseForm}
-          onSubmit={submitContractor}
+          onSubmit={handleFormSubmit}
           onToggleManual={() => setManualContractorMode((current) => !current)}
           sortedUnits={sortedUnits}
           status={status}
@@ -123,6 +136,26 @@ export default function CustomersPage({
           t={t}
           updateContractorField={updateContractorField}
         />
+      ) : null}
+
+      {createModalOpen ? (
+        <CustomerModal onClose={handleCloseForm} t={t} titleId="crm-add-customer-title">
+          <CustomerForm
+            contractorForm={contractorForm}
+            createButtonLabel={createButtonLabel}
+            manualContractorMode={manualContractorMode}
+            modal
+            onClose={handleCloseForm}
+            onSubmit={handleFormSubmit}
+            onToggleManual={() => setManualContractorMode((current) => !current)}
+            sortedUnits={sortedUnits}
+            status={status}
+            selectedContractor={null}
+            t={t}
+            titleId="crm-add-customer-title"
+            updateContractorField={updateContractorField}
+          />
+        </CustomerModal>
       ) : null}
 
       <section className="crm-customers__workspace">
@@ -184,11 +217,61 @@ export default function CustomersPage({
   );
 }
 
-function CustomerForm({ contractorForm, createButtonLabel, manualContractorMode, onClose, onSubmit, onToggleManual, selectedContractor, sortedUnits, status, t, updateContractorField }) {
+function CustomerModal({ children, onClose, t, titleId }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const opener = document.activeElement;
+    const dialog = dialogRef.current;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex=\"-1\"])";
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = [...dialog.querySelectorAll(focusableSelector)];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    window.requestAnimationFrame(() => dialog?.querySelector(focusableSelector)?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      if (opener && typeof opener.focus === "function") opener.focus();
+    };
+  }, []);
+
   return (
-    <section className="crm-card crm-customers__form-card">
+    <div className="crm-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} role="presentation">
+      <div aria-labelledby={titleId} aria-modal="true" className="crm-modal" ref={dialogRef} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <span className="sr-only">{t("Add Customer")}</span>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function CustomerForm({ contractorForm, createButtonLabel, manualContractorMode, modal = false, onClose, onSubmit, onToggleManual, selectedContractor, sortedUnits, status, t, titleId, updateContractorField }) {
+  return (
+    <section className={`crm-card crm-customers__form-card${modal ? " crm-customers__form-card--modal" : ""}`}>
       <header className="crm-customers__form-header">
-        <div><h2>{selectedContractor ? t("Edit Customer") : t("New Customer")}</h2><p>{selectedContractor ? t("Update customer information.") : t("Create a customer account and contract record.")}</p></div>
+        <div><h2 id={titleId}>{selectedContractor ? t("Edit Customer") : t("Add Customer")}</h2><p>{selectedContractor ? t("Update customer information.") : t("Create a customer account and contract record.")}</p></div>
         <button aria-label={t("Close")} className="crm-customers__icon-button" onClick={onClose} type="button">×</button>
       </header>
       <form className="crm-customers__form" onSubmit={onSubmit}>

@@ -10,6 +10,7 @@ import {
   getUnitStatus,
 } from "../src/services/adminUnitsModel.js";
 import { translations } from "../src/i18n/translations.js";
+import { clampPage, getPaginationWindow } from "../src/services/adminListModel.js";
 
 const units = [
   { created_at: "2026-06-01T00:00:00Z", id: "available", property_type: "2 Bedroom", status: "active", total_price: 135000, unit_code: "A-0501" },
@@ -76,6 +77,19 @@ describe("Admin Units CRM model", () => {
     assert.deepEqual(available.payment, { currency: "USD", hasData: false, totalPaid: 0, totalRequired: 0, unpaid: 0 });
   });
 
+  it("shows unit pages in groups of five and clamps invalid pages", () => {
+    assert.deepEqual(getPaginationWindow(1, 0), []);
+    assert.deepEqual(getPaginationWindow(1, 3), [1, 2, 3]);
+    assert.deepEqual(getPaginationWindow(5, 7), [1, 2, 3, 4, 5]);
+    assert.deepEqual(getPaginationWindow(6, 20), [6, 7, 8, 9, 10]);
+    assert.deepEqual(getPaginationWindow(10, 20), [6, 7, 8, 9, 10]);
+    assert.deepEqual(getPaginationWindow(11, 20), [11, 12, 13, 14, 15]);
+    assert.deepEqual(getPaginationWindow(99, 7), [6, 7]);
+    assert.equal(clampPage(0, 7), 1);
+    assert.equal(clampPage(99, 7), 7);
+    assert.equal(clampPage(3, 0), 1);
+  });
+
   it("provides the Units CRM labels in both languages", () => {
     for (const key of ["Units", "New Unit", "Unit Inventory", "Unit Code", "Buyer", "Inventory Summary", "Unit Map", "No units found.", "Delete Unit"]) {
       assert.ok(translations.en[key], `Missing EN translation: ${key}`);
@@ -94,6 +108,9 @@ describe("Admin Units CRM model", () => {
     assert.match(pageSource, /submitUnit/);
     assert.match(pageSource, /resetUnitForm/);
     assert.match(pageSource, /<UnitMap/);
+    assert.match(pageSource, /getPaginationWindow/);
+    assert.match(pageSource, /Previous pages/);
+    assert.match(pageSource, /Next pages/);
     assert.doesNotMatch(pageSource, /unit_name/);
   });
 });

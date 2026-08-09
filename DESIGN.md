@@ -280,6 +280,25 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: zero totals, partial progress, complete progress, and missing payment data.
 - **Accessibility**: numeric values include readable labels and progress exposes an accessible percentage.
 
+#### Document File Center
+- **Structure**: page heading, document KPI strip, customer scope selector, search/filter controls, document table, and selected-file detail panel.
+- **Variants**: all documents, customer-scoped documents, empty results, upload open, selected file, and loading/error feedback.
+- **States**: uploaded, pending/review, active, selected, opening, deleting, and disabled upload action.
+- **Accessibility**: document rows are real buttons; file actions use explicit labels; file type and status are communicated as text as well as icon/color; filters have native labels.
+- **Scroll ownership**: the CRM document owns page scrolling; only the dense document table may scroll horizontally, while the detail panel remains readable on tablet and mobile.
+
+#### File Detail Panel
+- **Structure**: file-type preview block, metadata list, note, and Open/Download/Delete actions.
+- **Variants**: selected PDF, office file, image, unknown type, and no selection.
+- **States**: ready, opening, error, and deleting.
+- **Accessibility**: selected file name is the panel heading; action buttons retain visible labels and focus rings; storage paths and signed URL tokens never render.
+
+#### Document Upload Panel
+- **Structure**: customer selector, title/category/note fields, file input, selected-file hint, and submit action.
+- **Variants**: collapsed, open, selected customer, missing file, uploading, success, and error.
+- **States**: disabled without customer/file, uploading, reset after success, and validation error.
+- **Accessibility**: every field has a visible label; upload progress is communicated through button text and status messaging; the file input remains keyboard reachable.
+
  ### CRM motion
 
 - Sidebar links and cards use a 160ms color/transform transition.

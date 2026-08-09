@@ -172,6 +172,16 @@ export async function createDocumentSignedUrl(filePath) {
   return respond(data?.signedUrl || null, error);
 }
 
+export async function createDocumentDownloadUrl(filePath, fileName) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+
+  const { data, error } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .createSignedUrl(filePath, SIGNED_URL_EXPIRES_IN_SECONDS, { download: fileName || true });
+
+  return respond(data?.signedUrl || null, error);
+}
+
 export async function getMyDocuments() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 

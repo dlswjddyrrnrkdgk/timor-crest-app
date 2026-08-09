@@ -12,17 +12,18 @@ const menuItems = [
   ["/admin/settings", "Settings", "settings"],
 ];
 
-export default function AdminSidebar({ onNavigate, t }) {
+export default function AdminSidebar({ collapsed, onNavigate, t }) {
   return (
     <aside className="crm-sidebar" aria-label="Admin CRM navigation">
       <div className="crm-brand">
         <span className="crm-brand__mark"><AdminIcon name="building" size={22} /></span>
+        <span className="crm-brand__compact" aria-hidden="true">TC</span>
         <span><strong>TIMOR CREST</strong><small>CRM</small></span>
       </div>
       <nav className="crm-sidebar__nav">
         <span className="crm-sidebar__label">{t("Workspace")}</span>
         {menuItems.map(([to, label, icon, end]) => (
-          <NavLink className={({ isActive }) => `crm-sidebar__link${isActive ? " is-active" : ""}`} end={end} key={to} onClick={onNavigate} to={to}>
+          <NavLink aria-label={t(label)} className={({ isActive }) => `crm-sidebar__link${isActive ? " is-active" : ""}`} data-label={t(label)} end={end} key={to} onClick={onNavigate} title={collapsed ? t(label) : undefined} to={to}>
             <AdminIcon name={icon} size={18} /><span>{t(label)}</span>
           </NavLink>
         ))}

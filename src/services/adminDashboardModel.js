@@ -89,18 +89,76 @@ function getPaymentRows(paymentSummaries, contractors) {
       const paidAmount = normalizeAmount(item?.paid_amount);
       return {
         id: item?.id || `${plan.id || "plan"}-${item?.step_no || "step"}`,
+        alertType: "outstanding",
         title: item?.title || `Step ${item?.step_no || ""}`.trim(),
         stepNo: Number(item?.step_no || 0),
         customerName: contractor?.full_name || "",
+        unitCode: contractor?.unit?.unit_code || plan?.unit?.unit_code || plan?.contractor?.unit?.unit_code || "",
         requiredAmount,
         paidAmount,
         unpaidAmount: Math.max(requiredAmount - paidAmount, 0),
+        planRequiredAmount: (summary?.items || []).reduce((sum, paymentItem) => sum + normalizeAmount(paymentItem?.required_amount), 0),
+        planPaidAmount: (summary?.items || []).reduce((sum, paymentItem) => sum + normalizeAmount(paymentItem?.paid_amount), 0),
+        unpaidSteps: (summary?.items || []).filter((paymentItem) => normalizeAmount(paymentItem?.required_amount) > normalizeAmount(paymentItem?.paid_amount)).length,
         dueDate: item?.due_date || "",
         status: item?.status || "unpaid",
         currency: plan.currency || "USD",
       };
     });
   });
+}
+
+export function buildDashboardAlertReason(alert, language = "en") {
+  const type = String(alert?.alertType || alert?.type || "").trim().toLowerCase();
+  if (["outstanding", "payment", "unpaid"].includes(type)) {
+    return language === "en"
+      ? "This alert appears because this customer has an outstanding unpaid balance."
+      : "이 고객에게 미납 금액이 있어 알림이 표시됩니다.";
+  }
+  if (["document", "documents"].includes(type)) {
+    return language === "en"
+      ? "This alert appears because the customer has no uploaded documents or needs document review."
+      : "업로드된 문서가 없거나 문서 확인이 필요해 알림이 표시됩니다.";
+  }
+  if (["unit_assignment", "unit-assignment", "unassigned"].includes(type)) {
+    return language === "en"
+      ? "This alert appears because the customer is not assigned to a unit."
+      : "고객에게 배정된 세대가 없어 알림이 표시됩니다.";
+  }
+  return language === "en" ? "This alert requires attention." : "확인이 필요한 알림입니다.";
+}
+
+export function buildDashboardAlertDetailRows(alert, language = "en") {
+  const isKorean = language !== "en";
+  const type = String(alert?.alertType || alert?.type || "").trim().toLowerCase();
+  const labels = isKorean
+    ? { totalRequired: "총 납부예정액", totalPaid: "총 납부액", outstanding: "미수금", unpaidSteps: "미납 차수", unit: "세대", documents: "문서 수", latestDocument: "최근 문서", customer: "고객" }
+    : { totalRequired: "Total required", totalPaid: "Total paid", outstanding: "Outstanding amount", unpaidSteps: "Unpaid steps", unit: "Unit", documents: "Document count", latestDocument: "Latest document", customer: "Customer" };
+  if (["outstanding", "payment", "unpaid"].includes(type)) {
+    const totalRequired = normalizeAmount(alert?.planRequiredAmount ?? alert?.totalRequired);
+    const totalPaid = normalizeAmount(alert?.planPaidAmount ?? alert?.totalPaid);
+    return [
+      { label: labels.totalRequired, kind: "amount", value: totalRequired },
+      { label: labels.totalPaid, kind: "amount", value: totalPaid },
+      { label: labels.outstanding, kind: "amount", value: Math.max(totalRequired - totalPaid, 0) },
+      { label: labels.unpaidSteps, kind: "count", value: normalizeAmount(alert?.unpaidSteps) },
+      { label: labels.unit, value: alert?.unitCode ?? (isKorean ? "확인 불가" : "Not available") },
+    ];
+  }
+  if (["document", "documents"].includes(type)) {
+    return [
+      { label: labels.customer, value: alert?.customerName ?? (isKorean ? "확인 불가" : "Not available") },
+      { label: labels.documents, value: normalizeAmount(alert?.documentCount) },
+      { label: labels.latestDocument, value: alert?.latestDocumentDate ?? (isKorean ? "확인 불가" : "Not available") },
+    ];
+  }
+  if (["unit_assignment", "unit-assignment", "unassigned"].includes(type)) {
+    return [
+      { label: labels.customer, value: alert?.customerName ?? (isKorean ? "확인 불가" : "Not available") },
+      { label: labels.unit, value: alert?.unitCode ?? (isKorean ? "미배정" : "Unassigned") },
+    ];
+  }
+  return [{ label: isKorean ? "알림 상세" : "Alert details", value: isKorean ? "확인 불가" : "Not available" }];
 }
 
 function isAssignedUnit(unit, assignedUnitIds) {

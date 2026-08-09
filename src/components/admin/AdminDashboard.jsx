@@ -1,5 +1,13 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { getPaymentAlerts, getRecentCustomers, getRecentDocuments, getUnitStatusSummary } from "../../services/adminDashboardModel.js";
+import {
+  buildDashboardAlertDetailRows,
+  buildDashboardAlertReason,
+  getPaymentAlerts,
+  getRecentCustomers,
+  getRecentDocuments,
+  getUnitStatusSummary,
+} from "../../services/adminDashboardModel.js";
 import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
 import QuickActionCard from "./QuickActionCard.jsx";
@@ -7,6 +15,7 @@ import StatusBadge from "./StatusBadge.jsx";
 import AdminIcon from "./AdminIcon.jsx";
 
 export default function AdminDashboard({ contractors, documents, language, paymentSummaries, stats, t, units }) {
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
   const recentCustomers = getRecentCustomers(contractors);
   const paymentAlerts = getPaymentAlerts(paymentSummaries, contractors);
   const unitSummary = getUnitStatusSummary(units, contractors);
@@ -24,7 +33,7 @@ export default function AdminDashboard({ contractors, documents, language, payme
         <KpiCard icon="building" label={t("Total Units")} tone="blue" value={stats.totalUnits.toLocaleString()} />
         <KpiCard helper={t("Currently unassigned")} icon="building" label={t("Available Units")} tone="success" value={stats.availableUnits.toLocaleString()} />
         <KpiCard helper={t("Assigned or contracted")} icon="customers" label={t("Contracted Units")} tone="blue" value={stats.assignedUnits.toLocaleString()} />
-        <KpiCard helper={t("Across payment schedules")} icon="payment" label={t("Outstanding Balance")} tone="warning" value={formatMoney(stats.outstandingBalance)} />
+        <KpiCard className="crm-kpi-card--amount" helper={t("Across payment schedules")} icon="payment" label={t("Outstanding Balance")} tone="warning" value={formatMoney(stats.outstandingBalance)} />
         <KpiCard helper={`${stats.paidAmount.toLocaleString()} / ${stats.requiredAmount.toLocaleString()} USD`} icon="trend" label={t("Payment Progress")} tone="success" value={`${stats.paymentProgress}%`} />
         <KpiCard helper={t("Average template progress")} icon="journey" label={t("Journey Progress")} tone="purple" value={`${stats.journeyProgress}%`} />
       </section>
@@ -34,7 +43,7 @@ export default function AdminDashboard({ contractors, documents, language, payme
           {recentCustomers.length ? <div className="crm-customer-list">{recentCustomers.map((customer) => <CustomerRow customer={customer} key={customer.id} t={t} />)}</div> : <EmptyState>{t("No recent customers yet.")}</EmptyState>}
         </DashboardCard>
         <DashboardCard action={t("View All")} actionTo="/admin/payments" title={t("Payment Alerts")}>
-          {paymentAlerts.length ? <div className="crm-alert-list">{paymentAlerts.map((alert) => <PaymentAlert alert={alert} key={alert.id} t={t} />)}</div> : <EmptyState>{t("No payment alerts.")}</EmptyState>}
+          {paymentAlerts.length ? <div className="crm-alert-list">{paymentAlerts.map((alert) => <PaymentAlert alert={alert} expanded={selectedAlertId === alert.id} key={alert.id} language={language} onToggle={() => setSelectedAlertId((current) => current === alert.id ? null : alert.id)} t={t} />)}</div> : <EmptyState>{t("No payment alerts.")}</EmptyState>}
         </DashboardCard>
         <DashboardCard action={t("Manage")} actionTo="/admin/units" title={t("Unit Status Summary")}>
           <UnitSummary summary={unitSummary} t={t} />
@@ -68,8 +77,32 @@ function CustomerRow({ customer, t }) {
   return <article className="crm-list-row"><span className="crm-avatar">{getInitials(customer.full_name)}</span><span className="crm-list-row__main"><strong>{customer.full_name || t("Unnamed customer")}</strong><small>{customer.email || t("No email")}</small></span><span className="crm-list-row__meta"><strong>{customer.unit?.unit_code || t("Unassigned")}</strong><small>{formatRelativeDate(customer.created_at, t)}</small></span><StatusBadge tone={customer.status === "active" ? "success" : "neutral"}>{formatStatus(customer.status, t)}</StatusBadge></article>;
 }
 
-function PaymentAlert({ alert, t }) {
-  return <article className="crm-alert-row"><span className="crm-alert-row__icon"><AdminIcon name="payment" size={16} /></span><span className="crm-list-row__main"><strong>{alert.title}</strong><small>{alert.customerName || t("Customer unavailable")}</small></span><span className="crm-alert-row__amount"><strong>{formatMoney(alert.unpaidAmount, alert.currency)}</strong><small>{alert.dueDate ? `${t("Due")} ${formatDate(alert.dueDate)}` : t("Outstanding")}</small></span></article>;
+function PaymentAlert({ alert, expanded, language, onToggle, t }) {
+  const detailId = `dashboard-alert-detail-${alert.id}`;
+  const detailRows = buildDashboardAlertDetailRows(alert, language);
+  return (
+    <div className="crm-alert-item">
+      <button aria-controls={detailId} aria-expanded={expanded} className={`crm-alert-row${expanded ? " is-expanded" : ""}`} onClick={onToggle} type="button">
+        <span className="crm-alert-row__icon"><AdminIcon name="payment" size={16} /></span>
+        <span className="crm-list-row__main"><strong>{alert.title}</strong><small>{alert.customerName || t("Customer unavailable")}</small></span>
+        <span className="crm-alert-row__amount"><strong>{formatMoney(alert.unpaidAmount, alert.currency)}</strong><small>{alert.dueDate ? `${t("Due")} ${formatDate(alert.dueDate)}` : t("Outstanding")}</small></span>
+      </button>
+      {expanded ? (
+        <div className="crm-alert-detail" id={detailId}>
+          <strong className="crm-alert-detail__title">{t("Alert details")}</strong>
+          <p>{buildDashboardAlertReason(alert, language)}</p>
+          <dl>
+            {detailRows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.kind === "amount" ? formatMoney(row.value, alert.currency) : String(row.value ?? t("Not available"))}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function UnitSummary({ summary, t }) {
@@ -82,7 +115,8 @@ function DocumentRow({ document, t }) {
 }
 
 function formatMoney(value, currency = "USD") {
-  return `${Math.trunc(Number(value || 0)).toLocaleString()} ${currency}`;
+  const amount = Number(value ?? 0);
+  return `${Math.trunc(Number.isFinite(amount) ? amount : 0).toLocaleString()} ${currency}`;
 }
 
 function formatDate(value) {

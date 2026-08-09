@@ -9,6 +9,7 @@ import {
   filterUnitInventory,
   getUnitFilterOptions,
 } from "../../services/adminUnitsModel.js";
+import { clampPage, getPaginationWindow } from "../../services/adminListModel.js";
 
 const PAGE_SIZE = 10;
 const STATUS_FILTERS = ["available", "assigned", "reserved", "hold", "unknown"];
@@ -41,10 +42,11 @@ export default function UnitsPage({
     [allRows, filteredRows, selectedInventoryId],
   );
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const paginationPages = getPaginationWindow(page, pageCount, 5);
   const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => {
-    setPage((current) => Math.min(current, pageCount));
+    setPage((current) => clampPage(current, pageCount));
   }, [pageCount]);
 
   useEffect(() => {
@@ -88,6 +90,8 @@ export default function UnitsPage({
 
   const pageStart = filteredRows.length ? (page - 1) * PAGE_SIZE + 1 : 0;
   const pageEnd = Math.min(page * PAGE_SIZE, filteredRows.length);
+  const firstPaginationPage = paginationPages[0] || 1;
+  const lastPaginationPage = paginationPages[paginationPages.length - 1] || pageCount;
 
   return (
     <div className="crm-units">
@@ -154,7 +158,11 @@ export default function UnitsPage({
           ) : <EmptyState>{t("No units found.")}</EmptyState>}
           <footer className="crm-units__pagination">
             <span>{pageStart ? `${pageStart}-${pageEnd} / ${filteredRows.length}` : t("No units found.")}</span>
-            <div><button aria-label={t("Previous")} disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">‹</button><strong>{page}</strong><button aria-label={t("Next")} disabled={page === pageCount} onClick={() => setPage((current) => current + 1)} type="button">›</button></div>
+            <div>
+              <button aria-label={t("Previous pages")} disabled={firstPaginationPage === 1} onClick={() => setPage(firstPaginationPage - 5)} type="button">‹</button>
+              {paginationPages.map((pageNumber) => <button aria-current={pageNumber === page ? "page" : undefined} aria-label={`${t("Page")} ${pageNumber}`} className={pageNumber === page ? "is-active" : ""} key={pageNumber} onClick={() => setPage(pageNumber)} type="button">{pageNumber}</button>)}
+              <button aria-label={t("Next pages")} disabled={lastPaginationPage === pageCount} onClick={() => setPage(lastPaginationPage + 1)} type="button">›</button>
+            </div>
           </footer>
         </section>
 

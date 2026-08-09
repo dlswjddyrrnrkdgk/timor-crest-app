@@ -9,6 +9,7 @@ const menuItems = [
   ["/admin/documents", "Documents", "document"],
   ["/admin/journey", "Journey", "journey"],
   ["/admin/reports", "Reports", "trend"],
+  ["/admin/settings", "Settings", "settings"],
 ];
 
 export default function AdminSidebar({ onNavigate, t }) {
@@ -24,12 +25,6 @@ export default function AdminSidebar({ onNavigate, t }) {
           <NavLink className={({ isActive }) => `crm-sidebar__link${isActive ? " is-active" : ""}`} end={end} key={to} onClick={onNavigate} to={to}>
             <AdminIcon name={icon} size={18} /><span>{t(label)}</span>
           </NavLink>
-        ))}
-        <span className="crm-sidebar__label crm-sidebar__label--secondary">{t("More")}</span>
-        {["Settings"].map((label) => (
-          <span aria-disabled="true" className="crm-sidebar__link is-disabled" key={label}>
-            <AdminIcon name="settings" size={18} /><span>{t(label)}</span><small>{t("Soon")}</small>
-          </span>
         ))}
       </nav>
       <div className="crm-property-card">

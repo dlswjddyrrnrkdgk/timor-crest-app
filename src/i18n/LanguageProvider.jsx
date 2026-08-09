@@ -27,7 +27,7 @@ export function LanguageProvider({ children }) {
     );
   }
 
-  const value = useMemo(() => ({ language, t, toggleLanguage }), [language]);
+  const value = useMemo(() => ({ changeLanguage, language, t, toggleLanguage }), [language]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

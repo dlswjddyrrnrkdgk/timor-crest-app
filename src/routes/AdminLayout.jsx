@@ -63,7 +63,7 @@ import {
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { sortContractors, sortUnits } from "../services/adminListModel.js";
-import { calculateDashboardKpis } from "../services/adminDashboardModel.js";
+import { calculateDashboardKpis, getPaymentAlerts } from "../services/adminDashboardModel.js";
 import { signOut } from "../services/authService.js";
 
 const UNIT_PAGE_SIZE = 10;
@@ -799,6 +799,7 @@ export default function AdminLayout() {
   const activeUnits = units.filter((unit) => unit.status === "active").length;
   const journeyOverallProgress = calculateJourneyOverallProgress(journeySteps);
   const dashboardStats = calculateDashboardKpis({ contractors, units, paymentSummaries, journeySteps });
+  const dashboardAlerts = getPaymentAlerts(paymentSummaries, contractors);
 
   const shell = {
     activeContractors,
@@ -880,7 +881,7 @@ export default function AdminLayout() {
   };
 
   return (
-    <AdminShell onLogout={handleLogout}>
+    <AdminShell dashboardAlerts={dashboardAlerts} onLogout={handleLogout}>
       {message ? <p className="crm-global-message">{t(message)}</p> : null}
       {status === "loading" ? <p className="crm-loading-message">{t("데이터를 불러오고 있습니다.")}</p> : null}
       <Routes>

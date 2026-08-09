@@ -1,8 +1,8 @@
 import AdminIcon from "./AdminIcon.jsx";
 
-export default function KpiCard({ helper, icon, label, value, tone = "blue" }) {
+export default function KpiCard({ className = "", helper, icon, label, value, tone = "blue" }) {
   return (
-    <article className={`crm-kpi-card crm-kpi-card--${tone}`}>
+    <article className={`crm-kpi-card crm-kpi-card--${tone}${className ? ` ${className}` : ""}`}>
       <span className="crm-kpi-card__icon"><AdminIcon name={icon} size={19} /></span>
       <span className="crm-kpi-card__label">{label}</span>
       <strong className="crm-kpi-card__value">{value}</strong>

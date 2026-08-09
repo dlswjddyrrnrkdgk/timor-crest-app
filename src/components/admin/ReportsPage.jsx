@@ -98,9 +98,6 @@ export default function ReportsPage({ contractors = [], documents = [], journeyS
           <button className="crm-button crm-button--secondary" onClick={handlePrint} type="button">
             <AdminIcon name="document" size={16} />{t("Print")}
           </button>
-          <button className="crm-button crm-button--primary" onClick={handleExport} type="button">
-            <AdminIcon name="download" size={16} />{t("Export Excel")}
-          </button>
         </div>
       </header>
 
@@ -116,7 +113,12 @@ export default function ReportsPage({ contractors = [], documents = [], journeyS
               <p>{t("This Excel file includes all units, assigned buyers, and installment payment details in one sheet.")}</p>
             </div>
           </div>
-          <StatusBadge tone="info">.xls</StatusBadge>
+          <div className="crm-reports__export-preview-actions">
+            <StatusBadge tone="info">.xls</StatusBadge>
+            <button className="crm-button crm-button--primary" onClick={handleExport} type="button">
+              <AdminIcon name="download" size={16} />{t("Export Excel")}
+            </button>
+          </div>
         </div>
         <div className="crm-reports__export-preview-stats">
           <ReportMetric label={t("Export rows")} value={formatNumber(exportSummary.rowCount, language)} />

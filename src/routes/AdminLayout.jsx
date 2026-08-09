@@ -6,8 +6,9 @@ import ExpandableSelectList from "../components/ExpandableSelectList.jsx";
 import AdminDashboard from "../components/admin/AdminDashboard.jsx";
 import AdminShell from "../components/admin/AdminShell.jsx";
 import CustomersPage from "../components/admin/CustomersPage.jsx";
+import DocumentsCrmPage from "../components/admin/DocumentsPage.jsx";
 import UnitsInventoryPage from "../components/admin/UnitsPage.jsx";
-import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
+ import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
@@ -49,6 +50,7 @@ import {
 import { getChangedJourneyStepPayloads, getJourneyStepTitle, normalizeProgressPercent } from "../services/journeyModel.js";
 import {
   createDocumentSignedUrl,
+  createDocumentDownloadUrl,
   deleteDocument,
   getAdminDocuments,
   getDocumentsByContractor,
@@ -734,7 +736,9 @@ export default function AdminLayout() {
       setDocumentMessage(result.error);
       return;
     }
-    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
+    const refreshed = selectedDocumentContractorId
+      ? await reloadDocumentsForContractor(selectedDocumentContractorId)
+      : (await reloadDocuments(), true);
     setStatus("ready");
     if (refreshed) setDocumentMessage("문서 정보가 수정되었습니다.");
   }
@@ -742,6 +746,16 @@ export default function AdminLayout() {
   async function openDocument(filePath) {
     setDocumentMessage("");
     const result = await createDocumentSignedUrl(filePath);
+    if (result.error) {
+      setDocumentMessage(result.error);
+      return;
+    }
+    window.open(result.data, "_blank", "noopener,noreferrer");
+  }
+
+  async function downloadDocument(filePath, fileName) {
+    setDocumentMessage("");
+    const result = await createDocumentDownloadUrl(filePath, fileName);
     if (result.error) {
       setDocumentMessage(result.error);
       return;
@@ -760,7 +774,9 @@ export default function AdminLayout() {
       setDocumentMessage(result.error);
       return;
     }
-    const refreshed = await reloadDocumentsForContractor(selectedDocumentContractorId);
+    const refreshed = selectedDocumentContractorId
+      ? await reloadDocumentsForContractor(selectedDocumentContractorId)
+      : (await reloadDocuments(), true);
     setStatus("ready");
     if (refreshed) setDocumentMessage("문서가 삭제되었습니다.");
   }
@@ -832,9 +848,11 @@ export default function AdminLayout() {
     contractorForm,
     dashboardStats,
     documents,
+    downloadDocument,
     documentFile,
     documentForm,
     documentMessage,
+    reloadDocuments,
     openDocument,
     removeDocument,
     selectedContractorDocuments,
@@ -859,9 +877,9 @@ export default function AdminLayout() {
         <Route index element={<AdminHome {...shell} />} />
         <Route path="contractors" element={<CustomersPage {...shell} />} />
         <Route path="units" element={<UnitsInventoryPage {...shell} />} />
-        <Route path="payments" element={<PaymentsCrmPage {...shell} />} />
+         <Route path="payments" element={<PaymentsCrmPage {...shell} />} />
         <Route path="journey" element={<JourneyPage {...shell} />} />
-        <Route path="documents" element={<DocumentsPage {...shell} />} />
+        <Route path="documents" element={<DocumentsCrmPage {...shell} />} />
       </Routes>
     </AdminShell>
   );

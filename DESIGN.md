@@ -333,6 +333,25 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: completed, in progress, pending, and empty.
 - **Accessibility**: progress is written as a percentage and status text; the row remains readable when cards stack at tablet/mobile widths.
 
+#### Admin Settings Workspace
+- **Structure**: page heading followed by a two-column read-only settings layout. The left column owns Account & Access, App Preferences, and Portal Information; the right column owns Security & Environment, Data Management shortcuts, System Information, and the Danger Zone notice.
+- **Variants**: active admin session, unavailable session/profile metadata, configured/unconfigured environment indicators, and English/Korean local preference.
+- **States**: loading account metadata, safe boolean checklist, shortcut hover/focus, empty or unavailable values, and read-only notice. Settings has no fake save state and no destructive controls.
+- **Access**: `/admin/settings` remains inside the existing admin-only protected route; contractor routes and screens do not reuse this surface.
+- **Responsive contract**: desktop uses two equal columns; at 900px and below the columns stack; at 640px and below definition lists become single-column, language controls stretch, and shortcut cards stack.
+- **Accessibility**: language choices are native buttons with selected state; management shortcuts are real links; checklist status is communicated with text and color; long emails, domains, and identifiers wrap within their card.
+
+#### SettingsCard and SettingList
+- **Structure**: `crm-settings__card` is a single white panel with a heading/icon row. Definition-list rows use `crm-settings__list` with label/value columns and divider borders.
+- **Tokens**: Settings spacing, sizes, typography, border width, line height, radius, selected shadow, and semantic danger colors use `--crm-settings-*` tokens layered over the shared CRM palette.
+- **States**: default, selected language, configured/safe status, unavailable metadata, shortcut hover/focus, and read-only danger notice.
+- **Layout contract**: every card and list value has `min-width: 0` and `overflow-wrap: anywhere`; Korean headings use `word-break: keep-all` while long identifiers remain breakable; cards keep the CRM 1px border and compact radius without nested page-section cards.
+
+#### Settings Security Checklist
+- **Structure**: a compact list of environment and route checks with a check icon, human-readable label, and status badge.
+- **Data boundary**: only configured booleans are rendered. Supabase URLs, anon keys, service-role keys, session tokens, and other environment values never appear in the DOM or logs.
+- **States**: configured, not configured, safe/not exposed, and unavailable; the checklist never provides a secret-management or credential-editing control.
+
  ### CRM motion
 
 - Sidebar links and cards use a 160ms color/transform transition.

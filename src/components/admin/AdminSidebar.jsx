@@ -8,6 +8,7 @@ const menuItems = [
   ["/admin/payments", "Payments", "payment"],
   ["/admin/documents", "Documents", "document"],
   ["/admin/journey", "Journey", "journey"],
+  ["/admin/reports", "Reports", "trend"],
 ];
 
 export default function AdminSidebar({ onNavigate, t }) {
@@ -25,9 +26,9 @@ export default function AdminSidebar({ onNavigate, t }) {
           </NavLink>
         ))}
         <span className="crm-sidebar__label crm-sidebar__label--secondary">{t("More")}</span>
-        {["Reports", "Settings"].map((label) => (
+        {["Settings"].map((label) => (
           <span aria-disabled="true" className="crm-sidebar__link is-disabled" key={label}>
-            <AdminIcon name={label === "Reports" ? "trend" : "settings"} size={18} /><span>{t(label)}</span><small>{t("Soon")}</small>
+            <AdminIcon name="settings" size={18} /><span>{t(label)}</span><small>{t("Soon")}</small>
           </span>
         ))}
       </nav>

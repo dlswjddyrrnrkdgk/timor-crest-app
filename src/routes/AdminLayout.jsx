@@ -12,6 +12,7 @@ import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
 import JourneyCrmPage from "../components/admin/JourneyPage.jsx";
 import ReportsPage from "../components/admin/ReportsPage.jsx";
 import SettingsPage from "../components/admin/SettingsPage.jsx";
+import CustomerManagementPage from "../components/admin/CustomerManagementPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
@@ -891,6 +892,7 @@ export default function AdminLayout() {
         <Route path="units" element={<UnitsInventoryPage {...shell} />} />
          <Route path="payments" element={<PaymentsCrmPage {...shell} />} />
         <Route path="journey" element={<JourneyCrmPage {...shell} />} />
+        <Route path="customer-management" element={<CustomerManagementPage />} />
         <Route path="documents" element={<DocumentsCrmPage {...shell} />} />
         <Route path="reports" element={<ReportsPage {...shell} />} />
         <Route path="settings" element={<SettingsPage {...shell} />} />

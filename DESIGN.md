@@ -155,6 +155,23 @@ All spacing derives from 4px.
 - **Accessibility**: toggle uses `aria-expanded` and `aria-controls`; the button remains smaller than the dashboard expandable-list toggle.
 - **Motion**: simple chevron direction change and common active press feedback.
 
+### Project Journey Management
+- **Structure**: page heading, KPI strip, shared 8-step timeline/progress board, selected-stage editor, contractor preview, and sticky save bar.
+- **Variants**: loading, no data/default generation, clean, unsaved, saving, saved, and error.
+- **States**: completed, in progress, pending, selected, disabled.
+- **Accessibility**: stages are real buttons, progress values have labels, range and number inputs expose the same value, and status is text plus color.
+- **Scroll ownership**: the CRM page owns scrolling; timeline and editor cards stack at tablet/mobile widths; the sticky save bar never hides inputs.
+
+### Journey Stage Editor
+- **Structure**: translated stage context, synchronized range/number progress controls, quick progress buttons, and editable status/date fields.
+- **States**: clean, dirty, saving, disabled, and validation-safe normalized progress from 0 to 100.
+- **Accessibility**: every control has a visible label or accessible name; keyboard focus remains visible.
+
+### Journey Preview
+- **Structure**: overall progress meter and compact eight-stage list using the same global journey data as the editor.
+- **Variants**: current stage, completed stages, in-progress stages, and pending stages.
+- **Constraint**: preview is display-only and does not create contractor-specific journey data.
+
 ### Language Toggle
 - **Structure**: small pill button in the phone status row, paired with the current role label.
 - **Variants**: `KR` while English UI is active, `EN` while Korean UI is active.

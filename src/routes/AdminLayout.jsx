@@ -8,7 +8,8 @@ import AdminShell from "../components/admin/AdminShell.jsx";
 import CustomersPage from "../components/admin/CustomersPage.jsx";
 import DocumentsCrmPage from "../components/admin/DocumentsPage.jsx";
 import UnitsInventoryPage from "../components/admin/UnitsPage.jsx";
- import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
+import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
+import JourneyCrmPage from "../components/admin/JourneyPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import {
   createContractor,
@@ -640,6 +641,12 @@ export default function AdminLayout() {
     setMessage("기본 8단계 Journey가 생성 또는 보완되었습니다.");
   }
 
+  function resetJourneyChanges() {
+    setJourneySteps(journeyOriginalSteps);
+    setJourneyMessage("");
+    setMessage("");
+  }
+
   function selectDocumentContractor(contractor) {
     setSelectedDocumentContractorId(contractor.id);
     setDocumentMessage("");
@@ -813,6 +820,7 @@ export default function AdminLayout() {
     journeySteps,
     language,
     ensureJourneyDefaults,
+    resetJourneyChanges,
     resetContractorForm,
     resetUnitForm,
     deleteUnitRecord,
@@ -878,7 +886,7 @@ export default function AdminLayout() {
         <Route path="contractors" element={<CustomersPage {...shell} />} />
         <Route path="units" element={<UnitsInventoryPage {...shell} />} />
          <Route path="payments" element={<PaymentsCrmPage {...shell} />} />
-        <Route path="journey" element={<JourneyPage {...shell} />} />
+        <Route path="journey" element={<JourneyCrmPage {...shell} />} />
         <Route path="documents" element={<DocumentsCrmPage {...shell} />} />
       </Routes>
     </AdminShell>

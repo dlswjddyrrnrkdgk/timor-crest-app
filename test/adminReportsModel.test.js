@@ -3,15 +3,19 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { translations } from "../src/i18n/translations.js";
 import {
-  buildReportsCsv,
+  buildExcelTableHtml,
   buildReportsSummary,
+  buildUnitPaymentExportRows,
+  buildUnitPaymentExportSummary,
   calculateDocumentReport,
   calculateJourneyReport,
   calculatePaymentReport,
   calculateReportKpis,
   calculateSalesReport,
   calculateUnitReport,
+  calculateExportStepStatus,
   filterReportsByDateRange,
+  getPaymentStepExportColumns,
   getPaymentStatus,
   normalizeProgress,
 } from "../src/services/adminReportsModel.js";
@@ -33,6 +37,15 @@ const paymentItems = [
   { contractor_id: "jose", paid_amount: 0, required_amount: 0, step_no: 2 },
   { contractor_id: "sarah", paid_amount: 120000, required_amount: 100000, step_no: 1 },
 ];
+const paymentSummaries = {
+  jose: {
+    plan: { contractor_id: "jose", id: "plan-jose", total_price: 100000, unit_id: "unit-1" },
+    items: [
+      { paid_amount: 25000, required_amount: 100000, step_no: 1 },
+      { paid_amount: 0, required_amount: 0, step_no: 2 },
+    ],
+  },
+};
 const documents = [
   { category: "contract", contractor_id: "jose", created_at: "2026-08-07T12:00:00Z", file_name: "contract.pdf" },
   { category: "receipt", contractor_id: "jose", created_at: "2026-07-01T12:00:00Z", file_name: "receipt.pdf" },
@@ -116,11 +129,62 @@ describe("Admin Reports CRM model", () => {
     assert.equal(filtered.paymentItems.length, 3);
   });
 
-  it("builds a summary-only CSV without customer PII", () => {
-    const csv = buildReportsCsv(buildReportsSummary({ contractors, units, paymentItems, documents, journeySteps }));
-    assert.match(csv, /metric,value/);
-    assert.match(csv, /outstanding_balance,75000/);
-    assert.doesNotMatch(csv, /Jose Costa/);
+  it("builds one export row per unit and preserves unassigned buyers", () => {
+    const rows = buildUnitPaymentExportRows({ contractors, paymentSummaries, units }, "en");
+    assert.equal(rows.length, 5);
+    assert.equal(rows.filter((row) => !row.isOrphan).length, 4);
+    assert.equal(rows.find((row) => row.unitCode === "A-0501").buyerName, "Jose Costa");
+    assert.equal(rows.find((row) => row.unitCode === "A-0502").unitStatus, "Reserved");
+    assert.equal(rows.find((row) => row.unitCode === "B-0101").buyerName, "");
+    assert.equal(rows.at(-1).buyerName, "Sarah Lee");
+    assert.equal(rows.at(-1).unitCode, "Unassigned");
+  });
+
+  it("flattens eight payment steps and keeps zero amounts and non-negative outstanding", () => {
+    const rows = buildUnitPaymentExportRows({ contractors, paymentSummaries, units }, "en");
+    const jose = rows.find((row) => row.unitCode === "A-0501");
+    assert.equal(jose.steps.length, 8);
+    assert.equal(jose.steps[0].requiredAmount, 100000);
+    assert.equal(jose.steps[0].paidAmount, 25000);
+    assert.equal(jose.steps[0].outstandingAmount, 75000);
+    assert.equal(jose.steps[0].status, "Partially Paid");
+    assert.equal(jose.steps[1].requiredAmount, 0);
+    assert.equal(jose.steps[1].paidAmount, 0);
+    assert.equal(jose.steps[1].status, "No Amount");
+    assert.equal(jose.steps[7].title, "Before Move-in");
+    assert.equal(calculateExportStepStatus(100, 100), "Paid");
+    assert.equal(calculateExportStepStatus(100, 25), "Partially Paid");
+    assert.equal(calculateExportStepStatus(100, 0), "Pending");
+    assert.equal(calculateExportStepStatus(0, 0), "No Amount");
+    assert.equal(rows.every((row) => row.outstandingBalance >= 0), true);
+  });
+
+  it("calculates export summary totals from the same rows", () => {
+    const rows = buildUnitPaymentExportRows({ contractors, paymentSummaries, units }, "en");
+    const summary = buildUnitPaymentExportSummary({ contractors, paymentSummaries, units }, "en", rows);
+    assert.equal(summary.totalUnits, 4);
+    assert.equal(summary.assignedUnits, 1);
+    assert.equal(summary.unassignedUnits, 3);
+    assert.equal(summary.totalContractValue, 230000);
+    assert.equal(summary.totalRequired, 100000);
+    assert.equal(summary.totalPaid, 25000);
+    assert.equal(summary.outstandingBalance, 75000);
+    assert.equal(summary.collectionRate, 25);
+  });
+
+  it("builds a single-sheet Excel-compatible HTML export with safe bilingual cells", () => {
+    const rows = buildUnitPaymentExportRows({ contractors, paymentSummaries, units }, "en");
+    rows[0].buyerName = "=CMD()";
+    const html = buildExcelTableHtml(buildUnitPaymentExportSummary({ contractors, paymentSummaries, units }, "en", rows), rows, "en");
+    assert.match(html, /meta charset="UTF-8"/);
+    assert.match(html, /Timor Crest Unit Payment Report/);
+    assert.match(html, /1st Step Title/);
+    assert.match(html, /8th Status/);
+    assert.match(html, /A-0501/);
+    assert.match(html, /&#39;=CMD\(\)/);
+    assert.equal(getPaymentStepExportColumns("en").length, 55);
+    assert.equal(getPaymentStepExportColumns("kr").length, 55);
+    assert.match(buildExcelTableHtml({}, rows, "kr"), /세대 코드/);
   });
 
   it("connects the protected reports route, sidebar, page, styles, and bilingual labels", () => {
@@ -128,14 +192,18 @@ describe("Admin Reports CRM model", () => {
     const sidebar = readFileSync(new URL("../src/components/admin/AdminSidebar.jsx", import.meta.url), "utf8");
     const page = readFileSync(new URL("../src/components/admin/ReportsPage.jsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
-    for (const key of ["Reports", "Analyze sales, unit inventory, payments, documents, and project progress.", "Export CSV", "Print", "Date Range", "Sales Overview", "Unit Inventory Report", "Payment Collection Report", "Documents Report", "Journey Progress Report", "Outstanding Balance", "Collection Rate", "No report data."]) {
+    for (const key of ["Reports", "Analyze sales, unit inventory, payments, documents, and project progress.", "Export Excel", "Unit Payment Export", "This Excel file includes all units, assigned buyers, and installment payment details in one sheet.", "Print", "Date Range", "Sales Overview", "Unit Inventory Report", "Payment Collection Report", "Documents Report", "Journey Progress Report", "Outstanding Balance", "Collection Rate", "No report data."]) {
       assert.ok(translations.en[key], `Missing EN translation: ${key}`);
       assert.ok(translations.kr[key], `Missing KR translation: ${key}`);
     }
     assert.match(layout, /<Route path="reports" element={<ReportsPage \{\.\.\.shell\} \/>} \/>/);
     assert.match(sidebar, /\["\/admin\/reports", "Reports", "trend"\]/);
-    assert.match(page, /buildReportsCsv/);
+    assert.doesNotMatch(page, /buildReportsCsv|Export CSV|\.csv/);
+    assert.match(page, /buildExcelTableHtml/);
+    assert.match(page, /\.xls/);
+    assert.match(page, /crm-reports__export-preview/);
     assert.match(page, /window\.print/);
     assert.match(styles, /\.crm-reports__section-grid/);
+    assert.match(styles, /\.crm-reports__export-preview/);
   });
 });

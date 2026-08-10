@@ -4,7 +4,10 @@ import { describe, it } from "node:test";
 import { translations } from "../src/i18n/translations.js";
 import {
   buildExcelTableHtml,
+  buildOfficeHealthSnapshot,
+  buildReportsExecutiveSummary,
   buildReportsSummary,
+  buildTodayOfficeBrief,
   buildUnitPaymentExportRows,
   buildUnitPaymentExportSummary,
   calculateDocumentReport,
@@ -15,6 +18,7 @@ import {
   calculateUnitReport,
   calculateExportStepStatus,
   filterReportsByDateRange,
+  filterReportsDataByPeriod,
   getPaymentStepExportColumns,
   getPaymentStatus,
   normalizeProgress,
@@ -170,6 +174,78 @@ describe("Admin Reports CRM model", () => {
     assert.equal(summary.totalPaid, 25000);
     assert.equal(summary.outstandingBalance, 75000);
     assert.equal(summary.collectionRate, 25);
+  });
+
+  it("builds the professional executive summary from real inventory and payments", () => {
+    const summary = buildReportsExecutiveSummary({ contractors, paymentItems, paymentPlans: [{ total_price: 230000 }], units }, "all", now);
+    assert.equal(summary.totalUnits, 4);
+    assert.equal(summary.soldOrAssignedUnits, 2);
+    assert.equal(summary.availableUnits, 1);
+    assert.equal(summary.salesRate, 50);
+    assert.equal(summary.totalContractValue, 230000);
+    assert.equal(summary.totalPaid, 145000);
+    assert.equal(summary.totalOutstanding, 85000);
+    assert.equal(summary.todayOfficeTasks, 0);
+  });
+
+  it("builds today consultations, schedules, follow-ups, and payment attention", () => {
+    const data = {
+      contractors,
+      events: [
+        { event_date: "2026-08-09", event_type: "meeting", id: "event-1", lead_id: "lead-1", start_time: "10:00", status: "scheduled", title: "Unit tour" },
+        { event_date: "2026-08-09", id: "event-2", start_time: "11:00", status: "cancelled", title: "Cancelled" },
+      ],
+      leads: [{ full_name: "Maria Fernandes", id: "lead-1", phone: "+670 7000 0000" }],
+      consultations: [
+        { consultation_date: "2026-08-09T09:30:00", id: "consult-1", lead_id: "lead-1", next_action: "Send floor plan", next_follow_up_date: "2026-08-09", result: "high_interest", summary: "Interested" },
+      ],
+      paymentSummaries,
+      units,
+    };
+    const brief = buildTodayOfficeBrief(data, now);
+    assert.equal(brief.consultations.length, 1);
+    assert.equal(brief.consultations[0].customerName, "Maria Fernandes");
+    assert.equal(brief.schedules.length, 1);
+    assert.equal(brief.schedules[0].customerName, "Maria Fernandes");
+    assert.equal(brief.followUps.length, 1);
+    assert.equal(brief.followUps[0].next_action, "Send floor plan");
+    assert.equal(brief.taskCount, 3);
+    assert.equal(brief.attention[0].amount, 75000);
+  });
+
+  it("calculates office health and period-filtered CRM rows safely", () => {
+    const data = {
+      contractors,
+      consultations: [{ consultation_date: "2026-08-09T09:00:00Z" }, { consultation_date: "2026-07-01T09:00:00Z" }],
+      documents,
+      leads: [{ lead_date: "2026-08-09", status: "high_potential" }, { lead_date: "2026-08-01", status: "converted" }],
+      paymentItems,
+      units,
+    };
+    const filtered = filterReportsDataByPeriod(data, "today", now);
+    assert.equal(filtered.consultations.length, 1);
+    assert.equal(filtered.leads.length, 1);
+    const health = buildOfficeHealthSnapshot(data, now);
+    assert.equal(health.payment.collectionRate, 73);
+    assert.equal(health.inventory.availableUnits, 1);
+    assert.equal(health.pipeline.newLeads, 2);
+    assert.equal(health.pipeline.highPotential, 1);
+    assert.equal(health.documents.customersWithoutDocuments, 2);
+  });
+
+  it("does not fall back to all-time payments when a selected period is empty", () => {
+    const summary = buildReportsExecutiveSummary({
+      paymentItems: [{ paid_amount: 500, required_amount: 1000, updated_at: "2026-08-01T12:00:00Z" }],
+      units: [{ id: "unit-period", status: "active", total_price: 1000 }],
+    }, "today", now);
+    assert.equal(summary.totalPaid, 0);
+    assert.equal(summary.totalOutstanding, 1000);
+
+    const summaryFromPlans = buildReportsExecutiveSummary({
+      paymentSummaries: { contractor: { plan: { id: "plan", total_price: 1000 }, items: [{ paid_amount: 500, required_amount: 1000 }] } },
+      units: [{ id: "unit-period", status: "active", total_price: 1000 }],
+    }, "today", now);
+    assert.equal(summaryFromPlans.totalPaid, 0);
   });
 
   it("builds a single-sheet Excel-compatible HTML export with safe bilingual cells", () => {

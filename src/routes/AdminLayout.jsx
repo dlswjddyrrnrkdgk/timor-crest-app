@@ -65,7 +65,7 @@ import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../servi
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { sortContractors, sortUnits } from "../services/adminListModel.js";
 import { calculateDashboardKpis, getPaymentAlerts, getTodayScheduleAlerts } from "../services/adminDashboardModel.js";
-import { listConsultationNotes, listCrmEvents, listSalesLeads } from "../services/adminCustomerManagementService.js";
+import { listConsultationNotes, listCrmEvents, listSalesLeads, listSearchPerformanceSnapshots } from "../services/adminCustomerManagementService.js";
 import { signOut } from "../services/authService.js";
 import { formatCurrencyAmount } from "../services/formatters.js";
 
@@ -137,7 +137,7 @@ export default function AdminLayout() {
   const [documentForm, setDocumentForm] = useState(emptyDocumentForm);
   const [documentFile, setDocumentFile] = useState(null);
   const [documentMessage, setDocumentMessage] = useAutoDismissMessage("", 10000);
-  const [customerManagementAlertsData, setCustomerManagementAlertsData] = useState({ consultations: [], events: [], leads: [] });
+  const [customerManagementAlertsData, setCustomerManagementAlertsData] = useState({ consultations: [], events: [], leads: [], searchSnapshots: [], error: "" });
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useAutoDismissMessage("", 10000);
 
@@ -213,7 +213,7 @@ export default function AdminLayout() {
     setMessage("");
     setJourneyMessage("");
     setDocumentMessage("");
-    const [unitResult, contractorResult, planResult, journeyResult, documentResult, leadsResult, consultationsResult, eventsResult] = await Promise.all([
+    const [unitResult, contractorResult, planResult, journeyResult, documentResult, leadsResult, consultationsResult, eventsResult, searchResult] = await Promise.all([
       getUnits(),
       getAdminContractors(),
       getAdminPaymentPlans(),
@@ -222,6 +222,7 @@ export default function AdminLayout() {
       listSalesLeads(),
       listConsultationNotes(),
       listCrmEvents(),
+      listSearchPerformanceSnapshots(),
     ]);
     if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
@@ -246,17 +247,21 @@ export default function AdminLayout() {
       consultations: consultationsResult.data || [],
       events: eventsResult.data || [],
       leads: leadsResult.data || [],
+      searchSnapshots: searchResult.data || [],
+      error: [leadsResult.error, consultationsResult.error, eventsResult.error, searchResult.error].filter(Boolean).join(" "),
     });
     await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
   }
 
   async function loadCustomerManagementAlerts() {
-    const [leadsResult, consultationsResult, eventsResult] = await Promise.all([listSalesLeads(), listConsultationNotes(), listCrmEvents()]);
+    const [leadsResult, consultationsResult, eventsResult, searchResult] = await Promise.all([listSalesLeads(), listConsultationNotes(), listCrmEvents(), listSearchPerformanceSnapshots()]);
     setCustomerManagementAlertsData({
       consultations: consultationsResult.data || [],
       events: eventsResult.data || [],
       leads: leadsResult.data || [],
+      searchSnapshots: searchResult.data || [],
+      error: [leadsResult.error, consultationsResult.error, eventsResult.error, searchResult.error].filter(Boolean).join(" "),
     });
   }
 
@@ -892,6 +897,7 @@ export default function AdminLayout() {
     createPlanForSelectedContractor,
     contractorForm,
     dashboardStats,
+    customerManagementData: customerManagementAlertsData,
     documents,
     downloadDocument,
     documentFile,

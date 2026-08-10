@@ -690,6 +690,8 @@ button:disabled {
   --crm-report-font-md: 13px;
   --crm-report-font-lg: 16px;
   --crm-report-font-xl: 20px;
+  --crm-report-line-height: 1.4;
+  --crm-report-line-height-tight: 1.3;
   --crm-settings-card-padding: var(--space-5);
   --crm-settings-gap: var(--space-4);
   --crm-settings-control-gap: var(--space-2);
@@ -3281,6 +3283,143 @@ button:disabled {
   margin: 0 0 var(--space-3);
 }
 
+.crm-reports__data-warning {
+  padding: var(--space-3) var(--space-4);
+  border: var(--crm-report-border-width) solid #F1D39A;
+  border-radius: var(--crm-report-radius);
+  color: #8B5E16;
+  background: #FFF9ED;
+}
+
+.crm-reports__overview-section {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  min-width: 0;
+}
+
+.crm-reports__overview-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.crm-reports__overview-heading h2 {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-lg);
+  line-height: var(--crm-report-line-height-tight);
+  margin: var(--space-1) 0 0;
+}
+
+.crm-reports__overview-period,
+.crm-reports__overview-date {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-sm);
+  white-space: nowrap;
+}
+
+.crm-reports__brief-grid,
+.crm-reports__health-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.crm-reports__brief-card,
+.crm-reports__health-card {
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.crm-reports__brief-card .crm-reports__section-header {
+  margin-bottom: var(--space-3);
+}
+
+.crm-reports__brief-card .crm-reports__section-header h3,
+.crm-reports__health-card h3 {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-md);
+  line-height: var(--crm-report-line-height-tight);
+  margin: 0;
+}
+
+.crm-reports__brief-list {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.crm-reports__office-item {
+  border-bottom: var(--crm-report-border-width) solid var(--crm-border-soft);
+  min-width: 0;
+  padding: var(--space-2) 0;
+}
+
+.crm-reports__office-item:first-child { padding-top: 0; }
+.crm-reports__office-item:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.crm-reports__office-item-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.crm-reports__office-item-copy strong,
+.crm-reports__office-item-copy span,
+.crm-reports__office-item-copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.crm-reports__office-item-copy strong {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-sm);
+}
+
+.crm-reports__office-item-copy small {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+}
+
+.crm-reports__office-item-copy span {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+  line-height: var(--crm-report-line-height);
+}
+
+.crm-reports__office-item--danger .crm-reports__office-item-copy strong,
+.crm-reports__office-item--danger .crm-reports__office-item-copy span { color: var(--crm-danger); }
+
+.crm-reports__health-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.crm-reports__health-card-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.crm-reports__health-card-heading strong {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-lg);
+  white-space: nowrap;
+}
+
+.crm-reports__health-card p {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+  line-height: var(--crm-report-line-height);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .crm-reports__kpis {
   display: grid;
   gap: var(--space-3);
@@ -3598,6 +3737,8 @@ button:disabled {
   .crm-reports__controls { justify-content: flex-start; width: 100%; }
   .crm-reports__section-grid { grid-template-columns: 1fr; }
   .crm-reports__card--wide { grid-column: auto; }
+  .crm-reports__brief-grid,
+  .crm-reports__health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -3612,6 +3753,7 @@ button:disabled {
   .crm-reports__journey-meter { grid-column: 2; }
   .crm-reports__journey-row .crm-status-badge { grid-column: 2; justify-self: start; }
   .crm-reports__controls .crm-button { flex: 1; min-width: var(--crm-report-button-min-width); }
+  .crm-reports__overview-heading { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 420px) {
@@ -3622,6 +3764,8 @@ button:disabled {
   .crm-reports__controls { align-items: stretch; flex-direction: column; }
   .crm-reports__filter { width: 100%; }
   .crm-reports__controls .crm-button { flex: initial; width: 100%; }
+  .crm-reports__brief-grid,
+  .crm-reports__health-grid { grid-template-columns: 1fr; }
 }
 
 @media print {

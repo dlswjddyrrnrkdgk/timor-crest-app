@@ -8,6 +8,19 @@ import {
   calculateConsultationStats,
   calculateEventStats,
   calculateSearchStats,
+  buildCalendarMonth,
+  buildCrmEventPayload,
+  buildScheduleSummary,
+  filterCrmEvents,
+  formatEventTimeRange,
+  getEventStatusLabel,
+  getEventTypeLabel,
+  getEventsForDate,
+  getThisWeekEvents,
+  getTodayEvents,
+  getUpcomingEvents,
+  sortCrmEvents,
+  validateCrmEventForm,
   filterConsultationNotes,
   filterSalesLeads,
   getConsultationMethodLabel,
@@ -115,6 +128,76 @@ describe("Customer Management model", () => {
     assert.equal(getConsultationResultLabel("high_interest", "en"), "High Interest");
     assert.equal(getLeadStatusLabel("high_potential", "kr"), "계약 가능성 높음");
     assert.equal(getLeadSourceLabel("google_search", "en"), "Google Search");
+  });
+
+  it("builds and validates schedule payloads without losing optional nulls", () => {
+    const payload = buildCrmEventPayload({
+      title: "  Maria consultation ",
+      lead_id: "lead-1",
+      contractor_id: "",
+      event_type: "site visit",
+      event_date: "2026-08-12",
+      start_time: "09:00:00",
+      end_time: "10:00",
+      location: "  Timor Crest Office ",
+      assigned_to: "",
+      status: "scheduled",
+      memo: "",
+    });
+    assert.deepEqual(payload, {
+      title: "Maria consultation",
+      lead_id: "lead-1",
+      contractor_id: null,
+      event_type: "site_visit",
+      event_date: "2026-08-12",
+      start_time: "09:00",
+      end_time: "10:00",
+      location: "Timor Crest Office",
+      assigned_to: null,
+      status: "scheduled",
+      memo: null,
+    });
+    assert.equal(validateCrmEventForm(payload).valid, true);
+    assert.deepEqual(validateCrmEventForm({}).errors, ["title", "event_date"]);
+    assert.deepEqual(validateCrmEventForm({ title: "Meeting", event_date: "2026-08-12", start_time: "10:00", end_time: "09:00" }).errors, ["end_time"]);
+  });
+
+  it("filters, sorts, and maps linked schedules safely", () => {
+    const leads = [{ id: "lead-1", full_name: "Maria Fernandes", phone: "7777" }];
+    const contractors = [{ id: "contractor-1", full_name: "Jose da Costa" }];
+    const events = [
+      { id: "later", event_date: "2026-08-12", start_time: "11:00", title: "Payment follow-up", lead_id: "lead-1", event_type: "payment", status: "scheduled" },
+      { id: "earlier", event_date: "2026-08-12", start_time: "09:00", title: "Maria consultation", lead_id: "lead-1", event_type: "consultation", status: "completed" },
+      { id: "unlinked", event_date: "2026-08-13", title: "Site visit", contractor_id: "contractor-1", location: "Site Office", event_type: "site_visit", status: "scheduled" },
+    ];
+    assert.deepEqual(sortCrmEvents(events).map((event) => event.id), ["earlier", "later", "unlinked"]);
+    assert.equal(filterCrmEvents(events, leads, contractors, { query: "maria", event_type: "all", status: "all" }).length, 2);
+    assert.equal(filterCrmEvents(events, leads, contractors, { query: "site office", event_type: "site_visit", status: "scheduled" }).length, 1);
+    assert.equal(getEventsForDate(events, "2026-08-12").length, 2);
+    assert.equal(getEventTypeLabel("site_visit", "kr"), "현장 방문");
+    assert.equal(getEventStatusLabel("no_show", "en"), "No Show");
+    assert.equal(formatEventTimeRange(null, null, "kr"), "종일");
+  });
+
+  it("calculates schedule summaries for today, this week, upcoming, and completed", () => {
+    const events = [
+      { id: "today", event_date: "2026-08-09", status: "scheduled" },
+      { id: "tomorrow", event_date: "2026-08-10", status: "scheduled" },
+      { id: "cancelled", event_date: "2026-08-11", status: "cancelled" },
+      { id: "completed", event_date: "2026-08-08", status: "completed" },
+      { id: "next-month", event_date: "2026-09-01", status: "scheduled" },
+    ];
+    assert.equal(getTodayEvents(events, now).length, 1);
+    assert.equal(getThisWeekEvents(events, now).length, 2);
+    assert.equal(getUpcomingEvents(events, now).length, 2);
+    assert.deepEqual(buildScheduleSummary(events, now).counts, { today: 1, thisWeek: 2, upcoming: 2, completed: 1, total: 4 });
+  });
+
+  it("builds a complete calendar month grid", () => {
+    const calendar = buildCalendarMonth(2026, 7);
+    assert.equal(calendar.daysInMonth, 31);
+    assert.equal(calendar.cells.length % 7, 0);
+    assert.equal(calendar.cells.filter(Boolean).length, 31);
   });
 
   it("declares the admin-only migration and new route wiring", () => {

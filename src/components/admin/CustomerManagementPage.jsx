@@ -18,14 +18,11 @@ import {
   filterConsultationNotes,
   filterSalesLeads,
   formatCustomerManagementDate,
-  getCalendarMonth,
   getConsultationMethodLabel,
   getConsultationResultLabel,
   getLeadSourceLabel,
   getLeadStatusLabel,
-  normalizeConsultationMethod,
   normalizeConsultationResult,
-  normalizeEventStatus,
   normalizeLeadSource,
   normalizeLeadStatus,
   sortConsultationNotes,
@@ -35,6 +32,7 @@ import { ConsultationDetailPanel, LeadDetailPanel, consultationTone, leadStatusT
 import ConsultationModal from "./customer-management/ConsultationModal.jsx";
 import DeleteConfirmModal from "./customer-management/DeleteConfirmModal.jsx";
 import SalesLeadModal from "./customer-management/SalesLeadModal.jsx";
+import ScheduleManagementPanel from "./customer-management/ScheduleManagementPanel.jsx";
 
 const LEAD_STATUS_OPTIONS = ["new", "scheduled", "consulted", "high_potential", "converted", "on_hold", "cancelled"];
 const LEAD_SOURCE_OPTIONS = ["google_search", "google_ads", "instagram", "facebook", "referral", "walk_in", "phone", "whatsapp", "website", "other"];
@@ -54,15 +52,11 @@ export default function CustomerManagementPage() {
   const [mutation, setMutation] = useState({ scope: "", state: "idle", error: "" });
   const now = useMemo(() => new Date(), []);
   const summary = useMemo(() => buildCustomerManagementSummary(data, now), [data, now]);
-  const contractorById = useMemo(() => new Map(data.contractors.map((contractor) => [contractor.id, contractor])), [data.contractors]);
   const leadById = useMemo(() => new Map(data.salesLeads.map((lead) => [lead.id, lead])), [data.salesLeads]);
   const selectedLead = data.salesLeads.find((lead) => lead.id === selectedLeadId) || null;
   const selectedConsultation = data.consultationNotes.find((note) => note.id === selectedConsultationId) || null;
   const filteredLeads = useMemo(() => sortSalesLeads(filterSalesLeads(data.salesLeads, filters.leads)), [data.salesLeads, filters.leads]);
   const filteredConsultations = useMemo(() => sortConsultationNotes(filterConsultationNotes(data.consultationNotes, data.salesLeads, filters.consultations)), [data.consultationNotes, data.salesLeads, filters.consultations]);
-  const calendar = useMemo(() => getCalendarMonth(now), [now]);
-  const eventDateKeys = useMemo(() => new Set(data.crmEvents.map((event) => event.event_date).filter(Boolean)), [data.crmEvents]);
-  const upcomingEvents = useMemo(() => summary.events.upcoming.filter((event) => !summary.events.today.includes(event)).slice(0, 4), [summary.events]);
   const leadSourceOptions = useMemo(() => uniqueOptions(data.salesLeads, "source", normalizeLeadSource, LEAD_SOURCE_OPTIONS), [data.salesLeads]);
   const leadStatusOptions = useMemo(() => uniqueOptions(data.salesLeads, "status", normalizeLeadStatus, LEAD_STATUS_OPTIONS), [data.salesLeads]);
 
@@ -149,9 +143,6 @@ export default function CustomerManagementPage() {
     setMessage(t(type === "lead" ? "Lead deleted successfully." : "Consultation deleted successfully."));
   }
 
-  const monthLabel = new Intl.DateTimeFormat(language === "en" ? "en-US" : "ko-KR", { month: "long", year: "numeric" }).format(now);
-  const weekdays = language === "en" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : ["일", "월", "화", "수", "목", "금", "토"];
-  const calendarCells = Array.from({ length: calendar.firstDay + calendar.daysInMonth }, (_, index) => index < calendar.firstDay ? null : index - calendar.firstDay + 1);
 
   return (
     <main className="crm-page crm-customer-management">
@@ -189,9 +180,7 @@ export default function CustomerManagementPage() {
           {selectedConsultation ? <ConsultationDetailPanel consultation={selectedConsultation} language={language} lead={leadById.get(selectedConsultation.lead_id)} onDelete={openDeleteModal.bind(null, "consultation")} onEdit={openConsultationModal} t={t} /> : null}
         </ManagementPanel>
 
-        <ManagementPanel action={t("Add Schedule")} actionIcon="calendar" icon="calendar" iconLabel={t("Coming soon")} title={t("Schedule Management")}>
-          <div className="crm-customer-management__schedule"><div className="crm-customer-management__calendar" aria-label={t("Schedule Management")}><div className="crm-customer-management__calendar-heading"><strong>{monthLabel}</strong><span>{summary.events.count} {t("Upcoming")}</span></div><div className="crm-customer-management__calendar-weekdays">{weekdays.map((day) => <span key={day}>{day}</span>)}</div><div className="crm-customer-management__calendar-grid">{calendarCells.map((day, index) => { const key = day ? `${calendar.year}-${String(calendar.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : `empty-${index}`; return <span className={day && eventDateKeys.has(key) ? "has-event" : ""} key={key}>{day || ""}{day && eventDateKeys.has(key) ? <i aria-hidden="true" /> : null}</span>; })}</div></div><div className="crm-customer-management__event-list"><strong>{t("Today")}</strong>{summary.events.today.length ? summary.events.today.map((event) => <EventRow event={event} key={event.id || event.title} contractorById={contractorById} />) : <small>{t("No schedules yet.")}</small>}{upcomingEvents.length ? <><strong>{t("Upcoming")}</strong>{upcomingEvents.map((event) => <EventRow event={event} key={event.id || event.title} contractorById={contractorById} />)}</> : null}</div></div>
-        </ManagementPanel>
+        <ScheduleManagementPanel contractors={data.contractors} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} t={t} />
 
         <ManagementPanel action={t("Import Data")} actionIcon="trend" icon="trend" iconLabel={t("Coming soon")} title={t("Statistics Management")}>
           <div className="crm-customer-management__stat-grid"><StatMetric label={t("Impressions")} value={formatNumber(summary.search.impressions, language)} /><StatMetric label={t("Clicks")} value={formatNumber(summary.search.clicks, language)} /><StatMetric label={t("CTR")} value={`${formatNumber(summary.search.ctr, language)}%`} /><StatMetric label={t("Average Position")} value={summary.search.averagePosition === null ? "—" : formatNumber(summary.search.averagePosition, language)} /></div>
@@ -235,10 +224,6 @@ function ConsultationRow({ consultation, language, lead, onDelete, onEdit, onSel
 
 function RowActions({ onDelete, onEdit, t }) {
   return <span className="crm-cm-row-actions"><button aria-label={t("Edit")} className="crm-cm-row-action" onClick={(event) => { event.stopPropagation(); onEdit(); }} type="button"><AdminIcon name="edit" size={13} />{t("Edit")}</button><button aria-label={t("Delete")} className="crm-cm-row-action crm-cm-row-action--danger" onClick={(event) => { event.stopPropagation(); onDelete(); }} type="button"><AdminIcon name="trash" size={13} />{t("Delete")}</button></span>;
-}
-
-function EventRow({ contractorById, event }) {
-  return <div className="crm-customer-management__event-row"><span className="crm-customer-management__event-dot" /><div><strong>{event.title}</strong><small>{event.start_time || ""}{event.contractor_id && contractorById.get(event.contractor_id)?.full_name ? ` · ${contractorById.get(event.contractor_id).full_name}` : ""}</small></div><StatusBadge tone={normalizeEventStatus(event.status) === "cancelled" ? "danger" : "info"}>{event.event_type || event.status || "scheduled"}</StatusBadge></div>;
 }
 
 function StatMetric({ label, value }) {

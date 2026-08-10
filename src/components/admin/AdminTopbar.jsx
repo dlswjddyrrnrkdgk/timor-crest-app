@@ -44,8 +44,9 @@ export default function AdminTopbar({ dashboardAlerts = [], isMobileViewport, on
   }
 
   function markAlertsRead() {
-    const nextIds = [...new Set([...acknowledgedIds, ...dashboardAlerts.map((alert) => alert?.id).filter(Boolean)])];
+    const nextIds = [...new Set([...acknowledgedIds, ...unreadAlerts.map((alert) => alert?.id).filter(Boolean)])];
     setAcknowledgedIds(nextIds);
+    setSelectedNotificationId(null);
     try {
       window.localStorage.setItem("timorcrest_admin_acknowledged_alerts", JSON.stringify(nextIds));
     } catch {
@@ -67,7 +68,7 @@ export default function AdminTopbar({ dashboardAlerts = [], isMobileViewport, on
             <AdminIcon name="bell" size={19} />
             {unreadAlerts.length ? <span>{unreadAlerts.length}</span> : null}
           </button>
-          {notificationsOpen ? <NotificationPopover alerts={dashboardAlerts} language={language} onMarkRead={markAlertsRead} selectedId={selectedNotificationId} setSelectedId={setSelectedNotificationId} t={t} unreadCount={unreadAlerts.length} /> : null}
+          {notificationsOpen ? <NotificationPopover alerts={unreadAlerts} language={language} onMarkRead={markAlertsRead} selectedId={selectedNotificationId} setSelectedId={setSelectedNotificationId} t={t} unreadCount={unreadAlerts.length} /> : null}
         </div>
         <span className="crm-language-toggle">{language === "en" ? <><span className="crm-language-toggle__active">EN</span><LanguageToggle /></> : <><LanguageToggle /><span className="crm-language-toggle__active">KR</span></>}</span>
         <button className="crm-profile" onClick={onLogout} title={t("Log out")} type="button">
@@ -85,47 +86,49 @@ function NotificationPopover({ alerts, language, onMarkRead, selectedId, setSele
     <div aria-label={t("Notifications")} className="crm-notification-popover" id="crm-notification-popover" role="dialog">
       <header className="crm-notification-popover__header">
         <div><strong>{t("Notifications")}</strong><small>{alerts.length ? alerts.length + " " + t("alerts") : t("No new alerts")}</small></div>
-        {unreadCount ? <button aria-label={t("Mark as read")} className="crm-notification-popover__confirm" onClick={onMarkRead} type="button">{t("Confirm")}</button> : <small className="crm-notification-popover__read-state">{t("No new alerts")}</small>}
         <AdminIcon name="bell" size={16} />
       </header>
-      {alerts.length ? (
-        <div className="crm-notification-list">
-          {alerts.map((alert) => {
-            const expanded = selectedId === alert.id;
-            const detailId = "crm-notification-detail-" + alert.id;
-            const detailRows = buildDashboardAlertDetailRows(alert, language);
-            const scheduleAlert = Boolean(alert.isScheduleAlert);
-            return (
-              <div className={`crm-notification-item${scheduleAlert ? " is-schedule" : ""}`} key={alert.id}>
-                <button aria-controls={detailId} aria-expanded={expanded} className={"crm-notification-item__trigger" + (expanded ? " is-expanded" : "")} onClick={() => setSelectedId(expanded ? null : alert.id)} type="button">
-                  <span className="crm-notification-item__icon"><AdminIcon name={scheduleAlert ? "calendar" : "payment"} size={14} /></span>
-                  <span className="crm-notification-item__main"><strong>{getNotificationTitle(alert, language, t)}</strong><small>{alert.customerName || (alert.isMore ? "" : t("Customer unavailable"))}</small></span>
-                  {scheduleAlert && alert.startTime ? <span className="crm-notification-item__amount">{alert.startTime}</span> : null}
-                  {!scheduleAlert ? <span className="crm-notification-item__amount">{formatNotificationMoney(alert.unpaidAmount, alert.currency, language)}</span> : null}
-                </button>
-                {expanded ? (
-                  <div className="crm-notification-item__detail" id={detailId}>
-                    <strong>{t("Why this alert appears")}</strong>
-                    <p>{scheduleAlert ? getScheduleAlertReason(alert, language, t) : buildDashboardAlertReason(alert, language)}</p>
-                    <dl>
-                      {detailRows.map((row) => (
-                        <div key={row.label}>
-                          <dt>{row.label}</dt>
-                          <dd>{row.kind === "amount" ? formatNotificationMoney(row.value, alert.currency, language) : String(row.value ?? t("Not available"))}</dd>
-                        </div>
-                      ))}
-                      {scheduleAlert && !alert.isMore ? <>
-                        <div><dt>{t("Event Type")}</dt><dd>{alert.eventType || t("Not available")}</dd></div>
-                        {alert.nextAction ? <div><dt>{t("Next Action")}</dt><dd>{alert.nextAction}</dd></div> : null}
-                      </> : null}
-                    </dl>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : <p className="crm-notification-empty">{t("No new alerts")}</p>}
+      <div className="crm-notification-popover__body">
+        {alerts.length ? (
+          <div className="crm-notification-list">
+            {alerts.map((alert) => {
+              const expanded = selectedId === alert.id;
+              const detailId = "crm-notification-detail-" + alert.id;
+              const detailRows = buildDashboardAlertDetailRows(alert, language);
+              const scheduleAlert = Boolean(alert.isScheduleAlert);
+              return (
+                <div className={`crm-notification-item${scheduleAlert ? " is-schedule" : ""}`} key={alert.id}>
+                  <button aria-controls={detailId} aria-expanded={expanded} className={"crm-notification-item__trigger" + (expanded ? " is-expanded" : "")} onClick={() => setSelectedId(expanded ? null : alert.id)} type="button">
+                    <span className="crm-notification-item__icon"><AdminIcon name={scheduleAlert ? "calendar" : "payment"} size={14} /></span>
+                    <span className="crm-notification-item__main"><strong>{getNotificationTitle(alert, language, t)}</strong><small>{alert.customerName || (alert.isMore ? "" : t("Customer unavailable"))}</small></span>
+                    {scheduleAlert && alert.startTime ? <span className="crm-notification-item__amount">{alert.startTime}</span> : null}
+                    {!scheduleAlert ? <span className="crm-notification-item__amount">{formatNotificationMoney(alert.unpaidAmount, alert.currency, language)}</span> : null}
+                  </button>
+                  {expanded ? (
+                    <div className="crm-notification-item__detail" id={detailId}>
+                      <strong>{t("Why this alert appears")}</strong>
+                      <p>{scheduleAlert ? getScheduleAlertReason(alert, language, t) : buildDashboardAlertReason(alert, language)}</p>
+                      <dl>
+                        {detailRows.map((row) => (
+                          <div key={row.label}>
+                            <dt>{row.label}</dt>
+                            <dd>{row.kind === "amount" ? formatNotificationMoney(row.value, alert.currency, language) : String(row.value ?? t("Not available"))}</dd>
+                          </div>
+                        ))}
+                        {scheduleAlert && !alert.isMore ? <>
+                          <div><dt>{t("Event Type")}</dt><dd>{alert.eventType || t("Not available")}</dd></div>
+                          {alert.nextAction ? <div><dt>{t("Next Action")}</dt><dd>{alert.nextAction}</dd></div> : null}
+                        </> : null}
+                      </dl>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : <p className="crm-notification-empty">{t("No new alerts")}</p>}
+      </div>
+      {unreadCount ? <footer className="crm-notification-popover__footer"><button aria-label={t("Mark as read")} className="crm-notification-popover__confirm" onClick={onMarkRead} type="button">{t("Confirm")}</button></footer> : null}
     </div>
   );
 }

@@ -64,7 +64,7 @@ export function getTodayScheduleAlerts({ events = [], consultations = [], leads 
 
   const visible = activities.slice(0, Math.max(0, limit));
   const alerts = visible.map((activity) => ({
-    id: activity.id,
+    id: `${activity.id}:${activity.date}`,
     alertType: activity.source_type,
     sourceType: activity.source_type,
     title: activity.title,
@@ -140,7 +140,7 @@ function getPaymentRows(paymentSummaries, contractors) {
       const requiredAmount = normalizeAmount(item?.required_amount);
       const paidAmount = normalizeAmount(item?.paid_amount);
       return {
-        id: item?.id || `${plan.id || "plan"}-${item?.step_no || "step"}`,
+        id: `${item?.id || `${plan.id || "plan"}-${item?.step_no || "step"}`}:${item?.due_date || "no-due-date"}`,
         alertType: "outstanding",
         title: item?.title || `Step ${item?.step_no || ""}`.trim(),
         stepNo: Number(item?.step_no || 0),

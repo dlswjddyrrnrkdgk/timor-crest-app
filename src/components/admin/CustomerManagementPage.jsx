@@ -61,6 +61,14 @@ export default function CustomerManagementPage() {
   const leadSourceOptions = useMemo(() => uniqueOptions(data.salesLeads, "source", normalizeLeadSource, LEAD_SOURCE_OPTIONS), [data.salesLeads]);
   const leadStatusOptions = useMemo(() => uniqueOptions(data.salesLeads, "status", normalizeLeadStatus, LEAD_STATUS_OPTIONS), [data.salesLeads]);
 
+  useEffect(() => {
+    if (selectedLeadId && !filteredLeads.some((lead) => lead.id === selectedLeadId)) setSelectedLeadId("");
+  }, [filteredLeads, selectedLeadId]);
+
+  useEffect(() => {
+    if (selectedConsultationId && !filteredConsultations.some((note) => note.id === selectedConsultationId)) setSelectedConsultationId("");
+  }, [filteredConsultations, selectedConsultationId]);
+
   const refreshData = useCallback(async (nextStatus = "ready") => {
     setStatus(nextStatus);
     const result = await loadCustomerManagementDashboard();
@@ -81,6 +89,14 @@ export default function CustomerManagementPage() {
 
   function updateConsultationFilters(next) {
     setFilters((current) => ({ ...current, consultations: { ...current.consultations, ...next } }));
+  }
+
+  function toggleLeadSelection(leadId) {
+    setSelectedLeadId((current) => current === leadId ? "" : leadId);
+  }
+
+  function toggleConsultationSelection(consultationId) {
+    setSelectedConsultationId((current) => current === consultationId ? "" : consultationId);
   }
 
   function openLeadModal(lead = null) {
@@ -169,7 +185,7 @@ export default function CustomerManagementPage() {
             <FilterSelect label={t("Status")} labeler={(value) => getLeadStatusLabel(value, language)} onChange={(value) => updateLeadFilters({ status: value })} options={leadStatusOptions} placeholder={t("All Statuses")} value={filters.leads.status} />
             <FilterSelect label={t("Source")} labeler={(value) => getLeadSourceLabel(value, language)} onChange={(value) => updateLeadFilters({ source: value })} options={leadSourceOptions} placeholder={t("All Sources")} value={filters.leads.source} />
           </FilterBar>
-          {filteredLeads.length ? <DataTable headers={[t("Lead Date"), t("Name"), t("Phone"), t("Source"), t("Interested Unit"), t("Assigned To"), t("Status"), t("Actions")]}>{filteredLeads.map((lead) => <LeadRow key={lead.id} language={language} lead={lead} onDelete={() => openDeleteModal("lead", lead)} onEdit={() => openLeadModal(lead)} onSelect={() => setSelectedLeadId(lead.id)} selected={lead.id === selectedLeadId} t={t} />)}</DataTable> : <EmptyState>{hasLeadFilters(filters.leads) ? t("No matching leads.") : t("No leads yet.")}</EmptyState>}
+          {filteredLeads.length ? <DataTable headers={[t("Lead Date"), t("Name"), t("Phone"), t("Source"), t("Interested Unit"), t("Assigned To"), t("Status"), t("Actions")]}>{filteredLeads.map((lead) => <LeadRow key={lead.id} language={language} lead={lead} onDelete={() => openDeleteModal("lead", lead)} onEdit={() => openLeadModal(lead)} onSelect={() => toggleLeadSelection(lead.id)} selected={lead.id === selectedLeadId} t={t} />)}</DataTable> : <EmptyState>{hasLeadFilters(filters.leads) ? t("No matching leads.") : t("No leads yet.")}</EmptyState>}
           {selectedLead ? <LeadDetailPanel language={language} lead={selectedLead} onDelete={openDeleteModal.bind(null, "lead")} onEdit={openLeadModal} t={t} /> : null}
         </ManagementPanel>
 
@@ -178,7 +194,7 @@ export default function CustomerManagementPage() {
             <FilterSelect label={t("Method")} labeler={(value) => getConsultationMethodLabel(value, language)} onChange={(value) => updateConsultationFilters({ method: value })} options={CONSULTATION_METHOD_OPTIONS} placeholder={t("All Methods")} value={filters.consultations.method} />
             <FilterSelect label={t("Result")} labeler={(value) => getConsultationResultLabel(value, language)} onChange={(value) => updateConsultationFilters({ result: value })} options={CONSULTATION_RESULT_OPTIONS} placeholder={t("All Results")} value={filters.consultations.result} />
           </FilterBar>
-          {filteredConsultations.length ? <DataTable headers={[t("Customer"), t("Date"), t("Method"), t("Result"), t("Next Action"), t("Actions")]}>{filteredConsultations.map((note) => <ConsultationRow key={note.id} consultation={note} language={language} lead={leadById.get(note.lead_id)} onDelete={() => openDeleteModal("consultation", note)} onEdit={() => openConsultationModal(note)} onSelect={() => setSelectedConsultationId(note.id)} selected={note.id === selectedConsultationId} t={t} />)}</DataTable> : <EmptyState>{hasConsultationFilters(filters.consultations) ? t("No matching consultations.") : t("No consultation notes yet.")}</EmptyState>}
+          {filteredConsultations.length ? <DataTable headers={[t("Customer"), t("Date"), t("Method"), t("Result"), t("Next Action"), t("Actions")]}>{filteredConsultations.map((note) => <ConsultationRow key={note.id} consultation={note} language={language} lead={leadById.get(note.lead_id)} onDelete={() => openDeleteModal("consultation", note)} onEdit={() => openConsultationModal(note)} onSelect={() => toggleConsultationSelection(note.id)} selected={note.id === selectedConsultationId} t={t} />)}</DataTable> : <EmptyState>{hasConsultationFilters(filters.consultations) ? t("No matching consultations.") : t("No consultation notes yet.")}</EmptyState>}
           {selectedConsultation ? <ConsultationDetailPanel consultation={selectedConsultation} language={language} lead={leadById.get(selectedConsultation.lead_id)} onDelete={openDeleteModal.bind(null, "consultation")} onEdit={openConsultationModal} t={t} /> : null}
         </ManagementPanel>
 

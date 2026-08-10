@@ -55,11 +55,11 @@ export default function CustomersPage({
       return;
     }
 
-    setSelectedCustomerId((current) => (current && sortedContractors.some((customer) => customer.id === current) ? current : filteredCustomers[0]?.id || ""));
+    setSelectedCustomerId((current) => (current && filteredCustomers.some((customer) => customer.id === current) ? current : ""));
   }, [filteredCustomers, selectedContractorId, sortedContractors]);
 
   function handleSelect(customer) {
-    setSelectedCustomerId(customer.id);
+    setSelectedCustomerId((current) => current === customer.id ? "" : customer.id);
   }
 
   function handleEdit(customer) {

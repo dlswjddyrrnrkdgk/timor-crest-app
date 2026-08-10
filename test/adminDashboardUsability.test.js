@@ -63,6 +63,21 @@ describe("Admin Dashboard usability", () => {
     assert.equal(getUnreadDashboardAlerts(alerts, [alerts[0].id]).length, 1);
   });
 
+  it("changes alert identity when a schedule date or payment due date changes", () => {
+    const scheduleToday = getTodayScheduleAlerts({
+      now: new Date(2026, 7, 10, 9, 0),
+      events: [{ event_date: "2026-08-10", id: "event-1", status: "scheduled", title: "Meeting" }],
+    });
+    const scheduleTomorrow = getTodayScheduleAlerts({
+      now: new Date(2026, 7, 11, 9, 0),
+      events: [{ event_date: "2026-08-11", id: "event-1", status: "scheduled", title: "Meeting" }],
+    });
+    const paymentToday = getPaymentAlerts({ plan: { items: [] }, jose: paymentSummaries.jose }, [{ full_name: "Jose Costa", id: "jose" }]);
+    const paymentTomorrow = getPaymentAlerts({ jose: { ...paymentSummaries.jose, items: paymentSummaries.jose.items.map((item) => ({ ...item, due_date: "2026-08-16" })) } }, [{ full_name: "Jose Costa", id: "jose" }]);
+    assert.notEqual(scheduleToday[0].id, scheduleTomorrow[0].id);
+    assert.notEqual(paymentToday[0].id, paymentTomorrow[0].id);
+  });
+
   it("connects alert details, responsive shell state, and bilingual controls", () => {
     const dashboard = readFileSync(new URL("../src/components/admin/AdminDashboard.jsx", import.meta.url), "utf8");
     const shell = readFileSync(new URL("../src/components/admin/AdminShell.jsx", import.meta.url), "utf8");
@@ -104,6 +119,9 @@ describe("Admin Dashboard usability", () => {
     assert.match(topbar, /timorcrest_admin_acknowledged_alerts/);
     assert.match(topbar, /Mark as read/);
     assert.match(topbar, /No new alerts/);
+    assert.match(topbar, /alerts=\{unreadAlerts\}/);
+    assert.match(topbar, /crm-notification-popover__footer/);
+    assert.match(topbar, /setSelectedNotificationId\(null\)/);
     assert.match(sidebar, /data-label=\{t\(label\)\}/);
     assert.match(kpi, /className = \"\"/);
     assert.match(styles, /--crm-sidebar-collapsed-width/);

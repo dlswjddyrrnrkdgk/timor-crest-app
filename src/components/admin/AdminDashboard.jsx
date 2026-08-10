@@ -13,6 +13,7 @@ import KpiCard from "./KpiCard.jsx";
 import QuickActionCard from "./QuickActionCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import AdminIcon from "./AdminIcon.jsx";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 
 export default function AdminDashboard({ contractors, documents, language, paymentSummaries, stats, t, units }) {
   const [selectedAlertId, setSelectedAlertId] = useState(null);
@@ -34,7 +35,7 @@ export default function AdminDashboard({ contractors, documents, language, payme
         <KpiCard helper={t("Currently unassigned")} icon="building" label={t("Available Units")} tone="success" value={stats.availableUnits.toLocaleString()} />
         <KpiCard helper={t("Assigned or contracted")} icon="customers" label={t("Contracted Units")} tone="blue" value={stats.assignedUnits.toLocaleString()} />
         <KpiCard className="crm-kpi-card--amount" helper={t("Across payment schedules")} icon="payment" label={t("Outstanding Balance")} tone="warning" value={formatMoney(stats.outstandingBalance)} />
-        <KpiCard helper={`${stats.paidAmount.toLocaleString()} / ${stats.requiredAmount.toLocaleString()} USD`} icon="trend" label={t("Payment Progress")} tone="success" value={`${stats.paymentProgress}%`} />
+        <KpiCard helper={`${formatCurrencyAmount(stats.paidAmount)} / ${formatCurrencyAmount(stats.requiredAmount)}`} icon="trend" label={t("Payment Progress")} tone="success" value={`${stats.paymentProgress}%`} />
         <KpiCard helper={t("Average template progress")} icon="journey" label={t("Journey Progress")} tone="purple" value={`${stats.journeyProgress}%`} />
       </section>
 
@@ -115,8 +116,7 @@ function DocumentRow({ document, t }) {
 }
 
 function formatMoney(value, currency = "USD") {
-  const amount = Number(value ?? 0);
-  return `${Math.trunc(Number.isFinite(amount) ? amount : 0).toLocaleString()} ${currency}`;
+  return formatCurrencyAmount(value, currency);
 }
 
 function formatDate(value) {

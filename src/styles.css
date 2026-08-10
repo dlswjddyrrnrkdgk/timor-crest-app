@@ -1062,6 +1062,24 @@ button:disabled {
   font-size: 10px;
 }
 
+.crm-notification-popover__confirm {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--crm-primary);
+  border-radius: 6px;
+  color: var(--crm-primary);
+  background: #FFFFFF;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.crm-notification-popover__confirm:hover,
+.crm-notification-popover__confirm:focus-visible { color: #FFFFFF; background: var(--crm-primary); }
+.crm-notification-popover__read-state { white-space: nowrap; }
+
 .crm-notification-list { display: grid; }
 .crm-notification-item { min-width: 0; border-bottom: 1px solid #F0F2F6; }
 .crm-notification-item:last-child { border-bottom: 0; }
@@ -1095,6 +1113,9 @@ button:disabled {
   color: var(--crm-warning);
   background: #FFF1DF;
 }
+
+.crm-notification-item.is-schedule .crm-notification-item__icon { color: var(--crm-primary); background: #EAF2FF; }
+.crm-notification-item.is-schedule .crm-notification-item__amount { color: var(--crm-primary); }
 
 .crm-notification-item__main {
   display: grid;

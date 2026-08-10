@@ -5,6 +5,7 @@ import KpiCard from "./KpiCard.jsx";
 import AdminIcon from "./AdminIcon.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { calculateCustomerKpis, filterCustomers, getCustomerDocuments, getCustomerPaymentSnapshot, getCustomerStatusTone } from "../../services/adminCustomersModel.js";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 
 export default function CustomersPage({
   contractorForm,
@@ -371,9 +372,7 @@ function formatDate(value) {
 
 function formatMoney(value, currency, t) {
   if (value === null || value === undefined || value === "") return t("Not set");
-  const number = Number(value);
-  if (!Number.isFinite(number)) return t("Not set");
-  return `${Math.trunc(number).toLocaleString()} ${currency || "USD"}`;
+  return formatCurrencyAmount(value, currency || "USD");
 }
 
 function getInitials(value) {

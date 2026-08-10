@@ -67,6 +67,7 @@ export default function CustomerManagementPage() {
     setData({ ...emptyData, ...(result.data || {}) });
     setMessage(result.error || "");
     setStatus("ready");
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("timorcrest:customer-management-data-changed"));
     return result;
   }, []);
 

@@ -1,3 +1,5 @@
+import { buildCustomerManagementCalendarActivities } from "./adminCustomerManagementScheduleModel.js";
+
 export function calculateDashboardKpis({ contractors = [], units = [], paymentSummaries = {}, journeySteps = [] } = {}) {
   const assignedUnitIds = new Set(
     contractors
@@ -46,6 +48,56 @@ export function getPaymentAlerts(paymentSummaries = {}, contractors = [], limit 
       return right.unpaidAmount - left.unpaidAmount;
     })
     .slice(0, limit);
+}
+
+export function getTodayScheduleAlerts({ events = [], consultations = [], leads = [], contractors = [], now = new Date(), limit = 5 } = {}) {
+  const today = getLocalDateKey(now);
+  if (!today) return [];
+
+  const activities = buildCustomerManagementCalendarActivities({ events, consultations, leads, contractors })
+    .filter((activity) => activity.date === today && !["cancelled", "completed"].includes(String(activity.status || "").toLowerCase()))
+    .sort((left, right) => {
+      const leftTime = left.start_time || "99:99";
+      const rightTime = right.start_time || "99:99";
+      return leftTime.localeCompare(rightTime) || String(left.title || "").localeCompare(String(right.title || ""));
+    });
+
+  const visible = activities.slice(0, Math.max(0, limit));
+  const alerts = visible.map((activity) => ({
+    id: activity.id,
+    alertType: activity.source_type,
+    sourceType: activity.source_type,
+    title: activity.title,
+    customerName: activity.customer_name || "",
+    customerPhone: activity.customer_phone || "",
+    eventTitle: activity.title,
+    eventType: activity.type || "other",
+    startTime: activity.start_time || "",
+    endTime: activity.end_time || "",
+    location: activity.location || "",
+    summary: activity.summary || "",
+    nextAction: activity.next_action || "",
+    status: activity.status || "scheduled",
+    isScheduleAlert: true,
+  }));
+
+  if (activities.length > visible.length) {
+    alerts.push({
+      id: `schedule:more:${today}`,
+      alertType: "schedule_more",
+      count: activities.length - visible.length,
+      title: `+${activities.length - visible.length} more`,
+      isScheduleAlert: true,
+      isMore: true,
+    });
+  }
+
+  return alerts;
+}
+
+export function getUnreadDashboardAlerts(alerts = [], acknowledgedIds = []) {
+  const acknowledged = new Set(Array.isArray(acknowledgedIds) ? acknowledgedIds : []);
+  return (Array.isArray(alerts) ? alerts : []).filter((alert) => alert?.id && !acknowledged.has(alert.id));
 }
 
 export function getUnitStatusSummary(units = [], contractors = []) {
@@ -188,4 +240,13 @@ function normalizeAmount(value) {
 function normalizePercent(value) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) ? Math.min(Math.max(number, 0), 100) : 0;
+}
+
+function getLocalDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

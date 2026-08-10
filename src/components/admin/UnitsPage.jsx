@@ -10,6 +10,7 @@ import {
   getUnitFilterOptions,
 } from "../../services/adminUnitsModel.js";
 import { clampPage, getPaginationWindow } from "../../services/adminListModel.js";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 
 const PAGE_SIZE = 10;
 const STATUS_FILTERS = ["available", "assigned", "reserved", "hold", "unknown"];
@@ -168,7 +169,6 @@ export default function UnitsPage({
 
         <aside className="crm-units__aside">
           <InventorySummary kpis={kpis} t={t} />
-          <UnitMap onSelect={(row) => setSelectedInventoryId(row.id)} rows={filteredRows} selectedId={selectedRow?.id} t={t} />
           <UnitDetail onEdit={handleEdit} row={selectedRow} t={t} />
         </aside>
       </section>
@@ -221,13 +221,9 @@ function InventorySummary({ kpis, t }) {
   return <section className="crm-card crm-units__summary-card"><header className="crm-units__section-header"><h2>{t("Inventory Summary")}</h2></header><div className="crm-units__summary-list">{rows.map(([key, label, count]) => <div className="crm-units__summary-row" key={key}><span><i className={`is-${key}`} />{label}</span><strong>{count.toLocaleString()}</strong><small>{formatShare(count, kpis.totalUnits, t)}</small></div>)}<div className="crm-units__summary-total"><span>{t("Total Units")}</span><strong>{kpis.totalUnits.toLocaleString()}</strong></div></div></section>;
 }
 
-function UnitMap({ onSelect, rows, selectedId, t }) {
-  return <section className="crm-card crm-units__map-card"><header className="crm-units__section-header"><div><h2>{t("Unit Map")}</h2><span>{t("Unit Code")}</span></div><button className="crm-units__secondary-action" disabled type="button">{t("View Full Floor Plan")}</button></header><div className="crm-units__map-legend"><span><i className="is-available" />{t("Available")}</span><span><i className="is-assigned" />{t("Assigned")}</span><span><i className="is-reserved" />{t("Reserved")}</span><span><i className="is-hold" />{t("Hold")}</span></div>{rows.length ? <div className="crm-units__map-grid">{rows.map((row) => <button aria-label={`${row.unitCode || t("Empty")}, ${formatStatus(row.status.key, t)}`} className={`crm-units__map-cell is-${row.status.key} ${row.id === selectedId ? "is-selected" : ""}`} key={row.id} onClick={() => onSelect(row)} type="button"><strong>{row.unitCode || t("Empty")}</strong><small>{formatStatus(row.status.key, t)}</small></button>)}</div> : <EmptyState>{t("No units found.")}</EmptyState>}</section>;
-}
-
 function UnitDetail({ onEdit, row, t }) {
   if (!row) return <section className="crm-card crm-units__detail-card"><EmptyState>{t("No unit selected.")}</EmptyState></section>;
-  return <section className="crm-card crm-units__detail-card"><header><div><span className="crm-eyebrow">UNIT DETAIL</span><h2>{row.unitCode || t("Empty")}</h2></div><StatusBadge tone={row.status.tone}>{formatStatus(row.status.key, t)}</StatusBadge></header><dl className="crm-units__detail-grid"><div><dt>{t("Type")}</dt><dd>{row.type || t("Empty")}</dd></div><div><dt>{t("Floor")}</dt><dd>{row.floor || t("Empty")}</dd></div><div><dt>{t("Buyer")}</dt><dd>{row.buyerName || t("Empty")}</dd></div><div><dt>{t("Price")}</dt><dd>{formatMoney(row.price, row.raw.currency)}</dd></div><div><dt>{t("Paid")}</dt><dd>{formatPaymentMoney(row.payment, t)}</dd></div><div><dt>{t("Unpaid")}</dt><dd>{formatPaymentMoney(row.payment, t, "unpaid")}</dd></div><div><dt>{t("Created At")}</dt><dd>{formatDate(row.raw.created_at)}</dd></div></dl><button className="crm-units__primary-action crm-units__detail-action" onClick={() => onEdit(row)} type="button"><AdminIcon name="building" size={15} />{t("Edit Unit")}</button></section>;
+  return <section className="crm-card crm-units__detail-card"><header><div><span className="crm-eyebrow">UNIT DETAIL</span><h2>{row.unitCode || t("Empty")}</h2></div><StatusBadge tone={row.status.tone}>{formatStatus(row.status.key, t)}</StatusBadge></header><dl className="crm-units__detail-grid"><div><dt>{t("Type")}</dt><dd>{row.type || t("Empty")}</dd></div><div><dt>{t("Floor")}</dt><dd>{row.floor || t("Empty")}</dd></div><div><dt>{t("Assigned Contractor")}</dt><dd>{row.buyerName || t("Empty")}</dd></div><div><dt>{t("Price")}</dt><dd>{formatMoney(row.price, row.raw.currency)}</dd></div><div><dt>{t("Paid")}</dt><dd>{formatPaymentMoney(row.payment, t)}</dd></div><div><dt>{t("Unpaid")}</dt><dd>{formatPaymentMoney(row.payment, t, "unpaid")}</dd></div><div><dt>{t("Created At")}</dt><dd>{formatDate(row.raw.created_at)}</dd></div><div><dt>{t("Updated At")}</dt><dd>{formatDate(row.raw.updated_at)}</dd></div></dl><button className="crm-units__primary-action crm-units__detail-action" onClick={() => onEdit(row)} type="button"><AdminIcon name="building" size={15} />{t("Edit Unit")}</button></section>;
 }
 
 function formatStatus(value, t) {
@@ -244,9 +240,7 @@ function formatShare(value, total, t) {
 }
 
 function formatMoney(value, currency = "USD") {
-  const number = Number(value ?? 0);
-  if (!Number.isFinite(number)) return "—";
-  return `${currency === "USD" ? "$" : currency} ${Math.trunc(number).toLocaleString()}`;
+  return formatCurrencyAmount(value, currency, "en");
 }
 
 function formatPaymentMoney(payment, t, key = "paid") {

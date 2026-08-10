@@ -107,7 +107,9 @@ describe("Admin Units CRM model", () => {
     assert.match(serviceSource, /from\("units"\)\.delete\(\)/);
     assert.match(pageSource, /submitUnit/);
     assert.match(pageSource, /resetUnitForm/);
-    assert.match(pageSource, /<UnitMap/);
+    assert.doesNotMatch(pageSource, /<UnitMap/);
+    assert.match(pageSource, /<UnitDetail onEdit/);
+    assert.match(pageSource, /onClick=\{onSelect\}/);
     assert.match(pageSource, /getPaginationWindow/);
     assert.match(pageSource, /Previous pages/);
     assert.match(pageSource, /Next pages/);

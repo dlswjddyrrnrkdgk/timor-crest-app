@@ -4,6 +4,7 @@ import AdminIcon from "./AdminIcon.jsx";
 import EmptyState from "./EmptyState.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { getPaymentStepTitle } from "../../services/paymentModel.js";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 import {
   buildPaymentSummary,
   filterPaymentContractors,
@@ -344,13 +345,7 @@ function PaymentField({ label, name, onChange, suffix, ...props }) {
 }
 
 function formatMoney(value, currency = "USD") {
-  const amount = Number(value ?? 0);
-  const safeAmount = Number.isFinite(amount) ? amount : 0;
-  try {
-    return new Intl.NumberFormat("en-US", { currency: currency || "USD", maximumFractionDigits: 0, style: "currency" }).format(safeAmount);
-  } catch {
-    return `${currency || "USD"} ${safeAmount.toLocaleString("en-US")}`;
-  }
+  return formatCurrencyAmount(value, currency);
 }
 
 function getInitials(value) {

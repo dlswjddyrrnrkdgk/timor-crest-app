@@ -114,6 +114,146 @@ export function buildScheduleSummary(events = [], now = new Date()) {
   return { today, thisWeek, upcoming, completed, counts: { today: today.length, thisWeek: thisWeek.length, upcoming: upcoming.length, completed: completed.length, total: active.length } };
 }
 
+export function buildCustomerManagementCalendarActivities({ events = [], consultations = [], leads = [], contractors = [] } = {}) {
+  const leadById = new Map(safeRows(leads).map((lead) => [lead.id, lead]));
+  const contractorById = new Map(safeRows(contractors).map((contractor) => [contractor.id, contractor]));
+  const scheduleActivities = safeRows(events).map((event, index) => {
+    const date = toDateKey(event?.event_date);
+    if (!date) return null;
+    const lead = leadById.get(event?.lead_id);
+    const contractor = contractorById.get(event?.contractor_id);
+    const sourceId = safeTrim(event?.id) || `row-${index}`;
+    return {
+      id: `event:${sourceId}`,
+      source_type: "schedule",
+      source_id: sourceId,
+      activity_type: "schedule",
+      title: safeTrim(event?.title),
+      date,
+      event_date: date,
+      start_time: normalizeTime(event?.start_time),
+      end_time: normalizeTime(event?.end_time),
+      customer_name: lead?.full_name || contractor?.full_name || null,
+      customer_phone: lead?.phone || contractor?.phone || null,
+      type: normalizeEventType(event?.event_type),
+      event_type: normalizeEventType(event?.event_type),
+      status: normalizeScheduleStatus(event?.status),
+      summary: emptyStringToNull(event?.memo),
+      next_action: null,
+      location: emptyStringToNull(event?.location),
+      assigned_to: emptyStringToNull(event?.assigned_to),
+      lead_id: event?.lead_id ?? null,
+      contractor_id: event?.contractor_id ?? null,
+      created_at: event?.created_at ?? null,
+      updated_at: event?.updated_at ?? null,
+      is_read_only: false,
+    };
+  }).filter(Boolean);
+
+  const consultationActivities = safeRows(consultations).flatMap((note, index) => {
+    const lead = leadById.get(note?.lead_id);
+    const contractor = contractorById.get(note?.contractor_id);
+    const customerName = lead?.full_name || contractor?.full_name || null;
+    const customerPhone = lead?.phone || contractor?.phone || null;
+    const sourceId = safeTrim(note?.id) || `row-${index}`;
+    const activities = [];
+    const consultationDate = toDateKey(note?.consultation_date);
+    if (consultationDate) {
+      activities.push({
+        id: `consultation:${sourceId}:date`,
+        source_type: "consultation",
+        source_id: sourceId,
+        activity_type: "consultation_date",
+        title: `Consultation: ${customerName || "Unlinked"}`,
+        date: consultationDate,
+        event_date: consultationDate,
+        start_time: extractTime(note?.consultation_date),
+        end_time: null,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        type: "consultation",
+        event_type: "consultation",
+        status: "scheduled",
+        summary: emptyStringToNull(note?.summary),
+        next_action: emptyStringToNull(note?.next_action),
+        method: safeTrim(note?.method),
+        result: safeTrim(note?.result),
+        lead_id: note?.lead_id ?? null,
+        contractor_id: note?.contractor_id ?? null,
+        created_at: note?.created_at ?? null,
+        updated_at: note?.updated_at ?? null,
+        is_read_only: true,
+      });
+    }
+    const followUpDate = toDateKey(note?.next_follow_up_date);
+    if (followUpDate) {
+      activities.push({
+        id: `consultation:${sourceId}:follow-up`,
+        source_type: "consultation_follow_up",
+        source_id: sourceId,
+        activity_type: "next_follow_up",
+        title: `Follow-up: ${customerName || "Unlinked"}`,
+        date: followUpDate,
+        event_date: followUpDate,
+        start_time: null,
+        end_time: null,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        type: "follow_up_call",
+        event_type: "follow_up_call",
+        status: "scheduled",
+        summary: emptyStringToNull(note?.summary),
+        next_action: emptyStringToNull(note?.next_action),
+        method: safeTrim(note?.method),
+        result: safeTrim(note?.result),
+        lead_id: note?.lead_id ?? null,
+        contractor_id: note?.contractor_id ?? null,
+        created_at: note?.created_at ?? null,
+        updated_at: note?.updated_at ?? null,
+        is_read_only: true,
+      });
+    }
+    return activities;
+  });
+
+  return sortCalendarActivities([...scheduleActivities, ...consultationActivities]);
+}
+
+export function filterCustomerManagementCalendarActivities(activities = [], filters = {}) {
+  const query = safeTrim(filters.query).toLowerCase();
+  const eventType = safeTrim(filters.event_type).toLowerCase();
+  const status = safeTrim(filters.status).toLowerCase();
+  return safeRows(activities).filter((activity) => {
+    const searchText = [activity?.title, activity?.customer_name, activity?.customer_phone, activity?.location, activity?.assigned_to, activity?.summary, activity?.next_action]
+      .map((value) => safeTrim(value).toLowerCase())
+      .join(" ");
+    return (!query || searchText.includes(query))
+      && (!eventType || eventType === "all" || normalizeEventType(activity?.event_type) === eventType)
+      && (!status || status === "all" || normalizeScheduleStatus(activity?.status) === status);
+  });
+}
+
+export function sortCalendarActivities(activities = []) {
+  const sourceOrder = { schedule: 0, consultation: 1, consultation_follow_up: 2, lead: 3 };
+  return [...safeRows(activities)].sort((left, right) => {
+    const dateDifference = compareDateOnly(left?.date ?? left?.event_date, right?.date ?? right?.event_date);
+    if (dateDifference !== 0) return dateDifference;
+    const leftTime = normalizeTime(left?.start_time);
+    const rightTime = normalizeTime(right?.start_time);
+    if (!leftTime && rightTime) return 1;
+    if (leftTime && !rightTime) return -1;
+    if (leftTime !== rightTime) return leftTime.localeCompare(rightTime);
+    const sourceDifference = (sourceOrder[left?.source_type] ?? 9) - (sourceOrder[right?.source_type] ?? 9);
+    if (sourceDifference !== 0) return sourceDifference;
+    return safeTrim(left?.title).localeCompare(safeTrim(right?.title));
+  });
+}
+
+export function getCalendarActivitiesForDate(activities = [], date) {
+  const dateKey = toDateKey(date);
+  return dateKey ? sortCalendarActivities(activities).filter((activity) => toDateKey(activity?.date ?? activity?.event_date) === dateKey) : [];
+}
+
 export function buildCalendarMonth(year, month) {
   const safeYear = Number.isInteger(Number(year)) ? Number(year) : new Date().getFullYear();
   const safeMonth = Number.isInteger(Number(month)) ? Number(month) : new Date().getMonth();
@@ -127,7 +267,7 @@ export function buildCalendarMonth(year, month) {
 export function getCalendarDayDots(events = [], date) {
   const unique = new Map();
   for (const event of getEventsForDate(events, date)) {
-    const type = normalizeEventType(event?.event_type);
+    const type = safeTrim(event?.source_type) || "schedule";
     const status = normalizeScheduleStatus(event?.status);
     unique.set(`${type}-${status}`, { type, status });
   }
@@ -211,6 +351,13 @@ function normalizeTime(value) {
   const trimmed = safeTrim(value);
   if (!trimmed) return null;
   return /^\d{2}:\d{2}/.test(trimmed) ? trimmed.slice(0, 5) : trimmed;
+}
+
+function extractTime(value) {
+  const raw = safeTrim(value);
+  if (!raw) return null;
+  const match = /(?:T|\s)(\d{2}:\d{2})/.exec(raw);
+  return normalizeTime(match?.[1] ?? raw);
 }
 
 function isValidDateOnly(value) {

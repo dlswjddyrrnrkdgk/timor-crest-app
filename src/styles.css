@@ -3003,6 +3003,10 @@ button:disabled {
 .crm-cm-calendar-dots b.is-cancelled,
 .crm-cm-calendar-dots b.is-no_show { background: var(--crm-danger); }
 .crm-cm-calendar-dots b.is-postponed { background: var(--crm-warning); }
+.crm-cm-calendar-dots b.is-schedule { background: var(--crm-primary); }
+.crm-cm-calendar-dots b.is-consultation { background: var(--crm-success); }
+.crm-cm-calendar-dots b.is-consultation_follow_up { background: var(--crm-warning); }
+.crm-cm-calendar-dots b.is-lead { background: var(--crm-muted); }
 .crm-cm-schedule-section-heading { margin-bottom: 10px; }
 .crm-cm-schedule-section-heading h3 { color: var(--crm-text); font-size: 13px; margin: 3px 0 0; overflow-wrap: anywhere; }
 .crm-cm-schedule-section-heading > span { align-items: center; background: var(--crm-info-soft); border-radius: 999px; color: var(--crm-primary); display: inline-flex; font-size: 10px; font-weight: 800; min-height: 24px; min-width: 24px; padding: 0 7px; }
@@ -3020,6 +3024,15 @@ button:disabled {
 .crm-cm-schedule-day-row__dot.is-cancelled,
 .crm-cm-schedule-day-row__dot.is-no_show { background: var(--crm-danger); }
 .crm-cm-schedule-day-row__dot.is-postponed { background: var(--crm-warning); }
+.crm-cm-calendar-activity-row { align-items: start; }
+.crm-cm-calendar-activity-row__body { min-width: 0; }
+.crm-cm-calendar-activity-row__body strong,
+.crm-cm-calendar-activity-row__body small { display: block; min-width: 0; overflow-wrap: anywhere; }
+.crm-cm-calendar-activity-row__source { color: var(--crm-primary); display: block; font-size: 8px; font-weight: 800; letter-spacing: .06em; margin-bottom: 2px; text-transform: uppercase; }
+.crm-cm-calendar-activity-row__body small + small { margin-top: 3px; }
+.crm-cm-calendar-activity-row__side { align-items: flex-end; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.crm-cm-calendar-activity-row__managed-by,
+.crm-cm-calendar-activity-detail__managed { color: var(--crm-muted); font-size: 8px; line-height: 1.3; max-width: 86px; text-align: right; }
 .crm-cm-schedule-list { margin-top: 12px; }
 .crm-cm-schedule-list .crm-customer-management__table-wrap { margin: 0; }
 .crm-cm-schedule-list .crm-customer-management__table-wrap td strong,
@@ -3077,6 +3090,10 @@ button:disabled {
   .crm-cm-schedule-calendar__month-controls strong { min-width: 94px; }
   .crm-cm-schedule-day-row { grid-template-columns: 6px minmax(0, 1fr); }
   .crm-cm-schedule-day-row .crm-status-badge { grid-column: 2; justify-self: start; }
+  .crm-cm-calendar-activity-row { grid-template-columns: 6px minmax(0, 1fr); }
+  .crm-cm-calendar-activity-row__side { align-items: flex-start; grid-column: 2; max-width: 100%; }
+  .crm-cm-calendar-activity-row__managed-by,
+  .crm-cm-calendar-activity-detail__managed { max-width: 100%; overflow-wrap: anywhere; text-align: left; word-break: keep-all; }
 }
 
 .crm-reports {

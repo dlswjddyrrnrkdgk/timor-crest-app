@@ -25,7 +25,7 @@ export default function ScheduleCalendar({ events, language, month, onMonthChang
           const dateKey = `${calendar.year}-${String(calendar.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const dots = getCalendarDayDots(events, dateKey);
           const classes = ["crm-cm-calendar-day", dateKey === todayKey ? "is-today" : "", dateKey === selectedDate ? "is-selected" : "", dots.length ? "has-events" : ""].filter(Boolean).join(" ");
-          return <button aria-label={`${dateKey}${dots.length ? `, ${dots.length} ${t("Upcoming")}` : ""}`} className={classes} key={dateKey} onClick={() => onSelectDate(dateKey)} role="gridcell" type="button"><span>{day}</span>{dots.length ? <i className="crm-cm-calendar-dots" aria-hidden="true">{dots.map((dot) => <b className={`is-${dot.status}`} key={`${dot.type}-${dot.status}`} />)}</i> : null}</button>;
+          return <button aria-label={`${dateKey}${dots.length ? `, ${dots.length} ${t("Upcoming")}` : ""}`} className={classes} key={dateKey} onClick={() => onSelectDate(dateKey)} role="gridcell" type="button"><span>{day}</span>{dots.length ? <i className="crm-cm-calendar-dots" aria-hidden="true">{dots.map((dot) => <b className={`is-${dot.type} is-${dot.status}`} key={`${dot.type}-${dot.status}`} />)}</i> : null}</button>;
         })}
       </div>
     </div>

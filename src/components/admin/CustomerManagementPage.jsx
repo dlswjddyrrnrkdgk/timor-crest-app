@@ -180,7 +180,7 @@ export default function CustomerManagementPage() {
           {selectedConsultation ? <ConsultationDetailPanel consultation={selectedConsultation} language={language} lead={leadById.get(selectedConsultation.lead_id)} onDelete={openDeleteModal.bind(null, "consultation")} onEdit={openConsultationModal} t={t} /> : null}
         </ManagementPanel>
 
-        <ScheduleManagementPanel contractors={data.contractors} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} t={t} />
+        <ScheduleManagementPanel contractors={data.contractors} consultations={data.consultationNotes} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} t={t} />
 
         <ManagementPanel action={t("Import Data")} actionIcon="trend" icon="trend" iconLabel={t("Coming soon")} title={t("Statistics Management")}>
           <div className="crm-customer-management__stat-grid"><StatMetric label={t("Impressions")} value={formatNumber(summary.search.impressions, language)} /><StatMetric label={t("Clicks")} value={formatNumber(summary.search.clicks, language)} /><StatMetric label={t("CTR")} value={`${formatNumber(summary.search.ctr, language)}%`} /><StatMetric label={t("Average Position")} value={summary.search.averagePosition === null ? "—" : formatNumber(summary.search.averagePosition, language)} /></div>

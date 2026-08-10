@@ -9,16 +9,21 @@ import {
   calculateEventStats,
   calculateSearchStats,
   buildCalendarMonth,
+  buildCustomerManagementCalendarActivities,
   buildCrmEventPayload,
   buildScheduleSummary,
+  filterCustomerManagementCalendarActivities,
   filterCrmEvents,
   formatEventTimeRange,
   getEventStatusLabel,
   getEventTypeLabel,
+  getCalendarActivitiesForDate,
+  getCalendarDayDots,
   getEventsForDate,
   getThisWeekEvents,
   getTodayEvents,
   getUpcomingEvents,
+  sortCalendarActivities,
   sortCrmEvents,
   validateCrmEventForm,
   filterConsultationNotes,
@@ -198,6 +203,37 @@ describe("Customer Management model", () => {
     assert.equal(calendar.daysInMonth, 31);
     assert.equal(calendar.cells.length % 7, 0);
     assert.equal(calendar.cells.filter(Boolean).length, 31);
+  });
+
+  it("builds one calendar activity stream from schedules and consultations", () => {
+    const leads = [{ id: "lead-1", full_name: "Maria Updated", phone: "7999" }];
+    const activities = buildCustomerManagementCalendarActivities({
+      events: [{ id: "event-1", lead_id: "lead-1", title: "Unit tour", event_date: "2026-08-12", start_time: "10:00", event_type: "site_visit", status: "scheduled" }],
+      consultations: [{ id: "note-1", lead_id: "lead-1", consultation_date: "2026-08-10T14:00", next_follow_up_date: "2026-08-12", summary: "Discussed floor plan", next_action: "Send brochure", method: "phone", result: "high_interest" }],
+      leads,
+    });
+    assert.deepEqual(activities.map((activity) => activity.id), ["consultation:note-1:date", "event:event-1", "consultation:note-1:follow-up"]);
+    assert.equal(activities[0].customer_name, "Maria Updated");
+    assert.equal(activities[0].customer_phone, "7999");
+    assert.equal(activities[0].is_read_only, true);
+    assert.equal(activities[0].activity_type, "consultation_date");
+    assert.equal(activities[2].activity_type, "next_follow_up");
+    assert.equal(activities[2].next_action, "Send brochure");
+    assert.equal(getCalendarActivitiesForDate(activities, "2026-08-12").length, 2);
+    assert.equal(getCalendarDayDots(activities, "2026-08-12").length, 2);
+  });
+
+  it("filters and sorts calendar activities without losing read-only links", () => {
+    const activities = buildCustomerManagementCalendarActivities({
+      events: [{ id: "event-1", title: "Payment review", event_date: "2026-08-12", start_time: "11:00", status: "scheduled" }],
+      consultations: [{ id: "note-1", consultation_date: "2026-08-12", summary: "Call about payment", next_action: "Send payment plan" }],
+    });
+    assert.deepEqual(sortCalendarActivities(activities).map((activity) => activity.id), ["event:event-1", "consultation:note-1:date"]);
+    assert.equal(filterCustomerManagementCalendarActivities(activities, { query: "payment plan", event_type: "all", status: "all" }).length, 1);
+    assert.equal(filterCustomerManagementCalendarActivities(activities, { query: "", event_type: "follow_up_call", status: "all" }).length, 0);
+    const unlinked = buildCustomerManagementCalendarActivities({ consultations: [{ id: "note-2", consultation_date: "2026-08-13" }] })[0];
+    assert.equal(unlinked.customer_name, null);
+    assert.equal(unlinked.title, "Consultation: Unlinked");
   });
 
   it("declares the admin-only migration and new route wiring", () => {

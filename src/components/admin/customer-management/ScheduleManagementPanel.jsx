@@ -4,28 +4,28 @@ import EmptyState from "../EmptyState.jsx";
 import StatusBadge from "../StatusBadge.jsx";
 import { createCrmEvent, deleteCrmEvent, updateCrmEvent } from "../../../services/adminCustomerManagementService.js";
 import { getCalendarMonth, getEventStatusLabel, getEventTypeLabel, normalizeEventStatus, normalizeEventType } from "../../../services/adminCustomerManagementModel.js";
-import { buildScheduleSummary, CRM_EVENT_STATUS_OPTIONS, CRM_EVENT_TYPE_OPTIONS, filterCrmEvents, formatEventDate, formatEventDateKey, formatEventTimeRange, sortCrmEvents } from "../../../services/adminCustomerManagementScheduleModel.js";
+import { buildCustomerManagementCalendarActivities, buildScheduleSummary, CRM_EVENT_STATUS_OPTIONS, CRM_EVENT_TYPE_OPTIONS, filterCustomerManagementCalendarActivities, filterCrmEvents, formatEventDate, formatEventDateKey, formatEventTimeRange, getCalendarActivitiesForDate, sortCalendarActivities, sortCrmEvents } from "../../../services/adminCustomerManagementScheduleModel.js";
 import DeleteConfirmModal from "./DeleteConfirmModal.jsx";
 import ScheduleCalendar from "./ScheduleCalendar.jsx";
 import ScheduleDetailPanel from "./ScheduleDetailPanel.jsx";
 import ScheduleModal from "./ScheduleModal.jsx";
 
-export default function ScheduleManagementPanel({ contractors, events, language, leads, onRefresh, t }) {
+export default function ScheduleManagementPanel({ contractors, consultations, events, language, leads, onRefresh, t }) {
   const now = useMemo(() => new Date(), []);
   const [filters, setFilters] = useState({ query: "", event_type: "all", status: "all" });
   const [selectedDate, setSelectedDate] = useState(() => formatEventDateKey(now));
   const [visibleMonth, setVisibleMonth] = useState(() => getCalendarMonth(now));
-  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedActivityId, setSelectedActivityId] = useState("");
   const [modalEvent, setModalEvent] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [mutation, setMutation] = useState({ state: "idle", error: "" });
   const [feedback, setFeedback] = useState("");
   const filteredEvents = useMemo(() => sortCrmEvents(filterCrmEvents(events, leads, contractors, filters)), [contractors, events, filters, leads]);
+  const calendarActivities = useMemo(() => buildCustomerManagementCalendarActivities({ contractors, consultations, events, leads }), [contractors, consultations, events, leads]);
+  const visibleCalendarActivities = useMemo(() => sortCalendarActivities(filterCustomerManagementCalendarActivities(calendarActivities, filters)), [calendarActivities, filters]);
   const summary = useMemo(() => buildScheduleSummary(events, now), [events, now]);
-  const selectedEvent = events.find((event) => event.id === selectedEventId) || null;
-  const selectedLead = selectedEvent ? leads.find((lead) => lead.id === selectedEvent.lead_id) : null;
-  const selectedContractor = selectedEvent ? contractors.find((contractor) => contractor.id === selectedEvent.contractor_id) : null;
-  const selectedDateEvents = useMemo(() => filteredEvents.filter((event) => formatEventDateKey(event.event_date) === selectedDate), [filteredEvents, selectedDate]);
+  const selectedActivity = calendarActivities.find((activity) => activity.id === selectedActivityId) || null;
+  const selectedDateActivities = useMemo(() => getCalendarActivitiesForDate(visibleCalendarActivities, selectedDate), [selectedDate, visibleCalendarActivities]);
   const leadById = useMemo(() => new Map(leads.filter(Boolean).map((lead) => [lead.id, lead])), [leads]);
   const contractorById = useMemo(() => new Map(contractors.filter(Boolean).map((contractor) => [contractor.id, contractor])), [contractors]);
 
@@ -46,8 +46,12 @@ export default function ScheduleManagementPanel({ contractors, events, language,
   }
 
   function selectEvent(event) {
-    setSelectedEventId(event.id);
-    const dateKey = formatEventDateKey(event.event_date);
+    selectActivity(calendarActivities.find((activity) => activity.source_type === "schedule" && activity.source_id === event.id) || { id: `event:${event.id}`, event_date: event.event_date });
+  }
+
+  function selectActivity(activity) {
+    setSelectedActivityId(activity.id);
+    const dateKey = formatEventDateKey(activity.date || activity.event_date);
     setSelectedDate(dateKey);
     const [year, month] = dateKey.split("-").map(Number);
     if (year && month) setVisibleMonth({ year, month: month - 1 });
@@ -76,7 +80,8 @@ export default function ScheduleManagementPanel({ contractors, events, language,
       return result;
     }
     await onRefresh();
-    setSelectedEventId(result.data?.id || modalEvent?.id || "");
+    const scheduleId = result.data?.id || modalEvent?.id || "";
+    setSelectedActivityId(scheduleId ? `event:${scheduleId}` : "");
     setSelectedDate(formatEventDateKey(result.data?.event_date || form.event_date));
     setMutation({ state: "idle", error: "" });
     setModalEvent(null);
@@ -93,7 +98,7 @@ export default function ScheduleManagementPanel({ contractors, events, language,
       return;
     }
     await onRefresh();
-    if (selectedEventId === deleteTarget.id) setSelectedEventId("");
+    if (selectedActivityId === `event:${deleteTarget.id}`) setSelectedActivityId("");
     setMutation({ state: "idle", error: "" });
     setDeleteTarget(null);
     setFeedback(t("Schedule deleted successfully."));
@@ -107,11 +112,11 @@ export default function ScheduleManagementPanel({ contractors, events, language,
         <ScheduleSummary summary={summary} t={t} />
         <ScheduleFilters filters={filters} language={language} onClear={clearFilters} onChange={updateFilter} t={t} />
         <div className="crm-cm-schedule-workspace">
-          <ScheduleCalendar events={filteredEvents} language={language} month={visibleMonth} onMonthChange={changeMonth} onSelectDate={setSelectedDate} selectedDate={selectedDate} t={t} />
-          <section className="crm-cm-schedule-selected-day" aria-label={t("Selected Date")}><div className="crm-cm-schedule-section-heading"><div><span className="crm-eyebrow">{t("Selected Date")}</span><h3>{formatEventDate(selectedDate, language) || t("Not set")}</h3></div><span>{selectedDateEvents.length}</span></div>{selectedDateEvents.length ? <div className="crm-cm-schedule-day-list">{selectedDateEvents.map((event) => <ScheduleDayRow contractor={contractorById.get(event.contractor_id)} event={event} key={event.id} language={language} lead={leadById.get(event.lead_id)} onSelect={() => selectEvent(event)} t={t} />)}</div> : <EmptyState>{t("No schedules for this date.")}</EmptyState>}</section>
+          <ScheduleCalendar events={visibleCalendarActivities} language={language} month={visibleMonth} onMonthChange={changeMonth} onSelectDate={setSelectedDate} selectedDate={selectedDate} t={t} />
+          <section className="crm-cm-schedule-selected-day" aria-label={t("Selected Date")}><div className="crm-cm-schedule-section-heading"><div><span className="crm-eyebrow">{t("Selected Date")}</span><h3>{formatEventDate(selectedDate, language) || t("Not set")}</h3></div><span>{selectedDateActivities.length}</span></div>{selectedDateActivities.length ? <div className="crm-cm-schedule-day-list">{selectedDateActivities.map((activity) => <CalendarActivityRow activity={activity} key={activity.id} language={language} onDelete={activity.source_type === "schedule" ? () => openDelete(events.find((event) => event.id === activity.source_id)) : null} onEdit={activity.source_type === "schedule" ? () => openEdit(events.find((event) => event.id === activity.source_id)) : null} onSelect={() => selectActivity(activity)} selected={activity.id === selectedActivityId} t={t} />)}</div> : <EmptyState>{filters.query || filters.event_type !== "all" || filters.status !== "all" ? t("No matching schedules.") : t("No schedules for this date.")}</EmptyState>}</section>
         </div>
-        <section className="crm-cm-schedule-list" aria-label={t("All Schedules")}><div className="crm-cm-schedule-section-heading"><div><span className="crm-eyebrow">{t("All Schedules")}</span><h3>{filteredEvents.length} {t("Schedules")}</h3></div></div>{filteredEvents.length ? <><div className="crm-customer-management__table-wrap crm-cm-schedule-table"><table><thead><tr>{[t("Event Date"), t("Time"), t("Event Title"), t("Customer"), t("Event Type"), t("Assigned To"), t("Status"), t("Actions")].map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{filteredEvents.map((event) => <ScheduleRow contractor={contractorById.get(event.contractor_id)} event={event} key={event.id} language={language} lead={leadById.get(event.lead_id)} onDelete={() => openDelete(event)} onEdit={() => openEdit(event)} onSelect={() => selectEvent(event)} selected={event.id === selectedEventId} t={t} />)}</tbody></table></div><div className="crm-cm-schedule-mobile-list">{filteredEvents.map((event) => <ScheduleMobileRow contractor={contractorById.get(event.contractor_id)} event={event} key={`mobile-${event.id}`} language={language} lead={leadById.get(event.lead_id)} onDelete={() => openDelete(event)} onEdit={() => openEdit(event)} onSelect={() => selectEvent(event)} selected={event.id === selectedEventId} t={t} />)}</div></> : <EmptyState>{filters.query || filters.event_type !== "all" || filters.status !== "all" ? t("No matching schedules.") : t("No schedules yet.")}</EmptyState>}</section>
-        {selectedEvent ? <ScheduleDetailPanel contractor={selectedContractor} event={selectedEvent} language={language} lead={selectedLead} onDelete={openDelete} onEdit={openEdit} t={t} /> : null}
+        <section className="crm-cm-schedule-list" aria-label={t("All Schedules")}><div className="crm-cm-schedule-section-heading"><div><span className="crm-eyebrow">{t("All Schedules")}</span><h3>{filteredEvents.length} {t("Schedules")}</h3></div></div>{filteredEvents.length ? <><div className="crm-customer-management__table-wrap crm-cm-schedule-table"><table><thead><tr>{[t("Event Date"), t("Time"), t("Event Title"), t("Customer"), t("Event Type"), t("Assigned To"), t("Status"), t("Actions")].map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{filteredEvents.map((event) => <ScheduleRow contractor={contractorById.get(event.contractor_id)} event={event} key={event.id} language={language} lead={leadById.get(event.lead_id)} onDelete={() => openDelete(event)} onEdit={() => openEdit(event)} onSelect={() => selectEvent(event)} selected={`event:${event.id}` === selectedActivityId} t={t} />)}</tbody></table></div><div className="crm-cm-schedule-mobile-list">{filteredEvents.map((event) => <ScheduleMobileRow contractor={contractorById.get(event.contractor_id)} event={event} key={`mobile-${event.id}`} language={language} lead={leadById.get(event.lead_id)} onDelete={() => openDelete(event)} onEdit={() => openEdit(event)} onSelect={() => selectEvent(event)} selected={`event:${event.id}` === selectedActivityId} t={t} />)}</div></> : <EmptyState>{filters.query || filters.event_type !== "all" || filters.status !== "all" ? t("No matching schedules.") : t("No schedules yet.")}</EmptyState>}</section>
+        {selectedActivity ? <ScheduleDetailPanel activity={selectedActivity} language={language} onDelete={selectedActivity.source_type === "schedule" ? () => openDelete(events.find((event) => event.id === selectedActivity.source_id)) : null} onEdit={selectedActivity.source_type === "schedule" ? () => openEdit(events.find((event) => event.id === selectedActivity.source_id)) : null} t={t} /> : null}
       </div>
       {modalEvent ? <ScheduleModal contractors={contractors} event={modalEvent.id ? modalEvent : null} language={language} leads={leads} onClose={() => setModalEvent(null)} onSave={saveSchedule} saving={mutation.state === "saving"} t={t} /> : null}
       {deleteTarget ? <DeleteConfirmModal busy={mutation.state === "deleting"} closeLabel={t("Cancel")} error={mutation.error} message={t("Delete this schedule?")} onClose={() => { setDeleteTarget(null); setMutation({ state: "idle", error: "" }); }} onConfirm={confirmDelete} title={t("Delete Schedule")} titleId="crm-schedule-delete-title" warning={t("This action cannot be undone.")} /> : null}
@@ -133,6 +138,24 @@ function FilterSelect({ label, labeler, onChange, options, placeholder, value })
 
 function ScheduleDayRow({ contractor, event, language, lead, onSelect, t }) {
   return <button className="crm-cm-schedule-day-row" onClick={onSelect} type="button"><span className={`crm-cm-schedule-day-row__dot is-${normalizeEventStatus(event.status)}`} /><span><strong>{event.title || t("Not set")}</strong><small>{formatEventTimeRange(event.start_time, event.end_time, language)} - {lead?.full_name || contractor?.full_name || t("Unlinked")}</small></span><StatusBadge tone={statusTone(event.status)}>{getEventStatusLabel(event.status, language)}</StatusBadge></button>;
+}
+
+function CalendarActivityRow({ activity, language, onDelete, onEdit, onSelect, selected, t }) {
+  const readOnly = activity.is_read_only;
+  return <article aria-selected={selected} className={`crm-cm-schedule-day-row crm-cm-calendar-activity-row${selected ? " is-selected" : ""}`} onClick={onSelect} onKeyDown={(keyboardEvent) => { if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") { keyboardEvent.preventDefault(); onSelect(); } }} tabIndex={0}><span className={`crm-cm-schedule-day-row__dot is-${activity.source_type}`} /><span className="crm-cm-calendar-activity-row__body"><span className="crm-cm-calendar-activity-row__source">{activitySourceLabel(activity, t)}</span><strong>{activityTitle(activity, t)}</strong><small>{formatEventTimeRange(activity.start_time, activity.end_time, language)}{activity.customer_phone ? ` - ${activity.customer_phone}` : ""}</small>{activity.summary ? <small>{activity.summary}</small> : null}{activity.next_action ? <small>{t("Next Action")}: {activity.next_action}</small> : null}</span><span className="crm-cm-calendar-activity-row__side"><StatusBadge tone={readOnly ? "neutral" : statusTone(activity.status)}>{readOnly ? t("Read only") : getEventStatusLabel(activity.status, language)}</StatusBadge>{readOnly ? <small className="crm-cm-calendar-activity-row__managed-by">{t("Managed in Consultation")}</small> : <span className="crm-cm-row-actions"><button aria-label={`${t("Edit")} ${activity.title || t("Schedule")}`} className="crm-cm-row-action" onClick={(clickEvent) => { clickEvent.stopPropagation(); onEdit?.(); }} title={t("Edit")} type="button"><AdminIcon name="edit" size={13} /></button><button aria-label={`${t("Delete")} ${activity.title || t("Schedule")}`} className="crm-cm-row-action crm-cm-row-action--danger" onClick={(clickEvent) => { clickEvent.stopPropagation(); onDelete?.(); }} title={t("Delete")} type="button"><AdminIcon name="trash" size={13} /></button></span>}</span></article>;
+}
+
+function activitySourceLabel(activity, t) {
+  if (activity.source_type === "consultation") return t("Consultation");
+  if (activity.source_type === "consultation_follow_up") return t("Follow-up");
+  if (activity.source_type === "lead") return t("Lead");
+  return t("Schedule");
+}
+
+function activityTitle(activity, t) {
+  if (activity.source_type === "consultation") return `${t("Consultation")}: ${activity.customer_name || t("Unlinked")}`;
+  if (activity.source_type === "consultation_follow_up") return `${t("Follow-up")}: ${activity.customer_name || t("Unlinked")}`;
+  return activity.title || t("Not set");
 }
 
 function ScheduleMobileRow({ contractor, event, language, lead, onDelete, onEdit, onSelect, selected, t }) {

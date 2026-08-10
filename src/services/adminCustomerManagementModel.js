@@ -155,3 +155,4 @@ function toDate(value) {
 }
 
 export * from "./adminCustomerManagementCrudModel.js";
+export * from "./adminCustomerManagementScheduleModel.js";

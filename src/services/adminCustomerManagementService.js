@@ -3,8 +3,10 @@ import { SUPABASE_CONFIG_MESSAGE } from "./authService.js";
 import { getAdminContractors } from "./contractorService.js";
 import {
   buildConsultationPayload,
+  buildCrmEventPayload,
   buildSalesLeadPayload,
   validateConsultationForm,
+  validateCrmEventForm,
   validateSalesLeadForm,
 } from "./adminCustomerManagementModel.js";
 
@@ -81,8 +83,44 @@ export async function deleteConsultationNote(id) {
 
 export async function listCrmEvents() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
-  const { data, error } = await supabase.from("crm_events").select(CRM_EVENTS_SELECT).order("event_date", { ascending: true });
+  const { data, error } = await supabase.from("crm_events").select(CRM_EVENTS_SELECT).order("event_date", { ascending: true }).order("start_time", { ascending: true, nullsFirst: false }).order("created_at", { ascending: true });
   return respond(data, error);
+}
+
+export async function createCrmEvent(input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  const validation = validateCrmEventForm(input);
+  if (!validation.valid) return fail(`Schedule validation failed: ${validation.errors.join(", ")}`);
+
+  const { data, error } = await supabase.from("crm_events").insert(buildCrmEventPayload(input)).select(CRM_EVENTS_SELECT).single();
+  return respond(data, error);
+}
+
+export async function updateCrmEvent(id, input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!id) return fail("Schedule id is required.");
+  const validation = validateCrmEventForm(input);
+  if (!validation.valid) return fail(`Schedule validation failed: ${validation.errors.join(", ")}`);
+
+  const { data, error } = await supabase.from("crm_events").update(buildCrmEventPayload(input)).eq("id", id).select(CRM_EVENTS_SELECT).single();
+  return respond(data, error);
+}
+
+export async function deleteCrmEvent(id) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!id) return fail("Schedule id is required.");
+
+  const { error } = await supabase.from("crm_events").delete().eq("id", id);
+  return error ? fail(error.message) : respond(true, null);
+}
+
+export async function getCrmEventLeadOptions() {
+  return listSalesLeads();
+}
+
+export async function getCrmEventContractorOptions() {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  return getAdminContractors();
 }
 
 export async function listSearchPerformanceSnapshots() {

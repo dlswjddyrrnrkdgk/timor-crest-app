@@ -156,3 +156,27 @@ function toDate(value) {
 
 export * from "./adminCustomerManagementCrudModel.js";
 export * from "./adminCustomerManagementScheduleModel.js";
+export {
+  SEARCH_DATE_RANGE_OPTIONS,
+  SEARCH_SOURCE_OPTIONS,
+  buildImportPreviewRows,
+  buildSearchPerformanceBulkPayloads,
+  buildSearchPerformancePayload,
+  buildSearchTrendData,
+  calculateCtr,
+  filterByDateRange,
+  filterSearchPerformanceSnapshots,
+  formatInteger,
+  formatPercent,
+  formatPosition,
+  formatSearchPerformanceDate,
+  getSearchSourceLabel,
+  getTopPages,
+  normalizeImportHeader,
+  normalizeSearchSource,
+  parseImportNumber,
+  parseImportPercent,
+  parseSearchPerformanceImportText,
+  sortSearchPerformanceSnapshots,
+  validateSearchPerformanceForm,
+} from "./adminCustomerManagementSearchStatsModel.js";

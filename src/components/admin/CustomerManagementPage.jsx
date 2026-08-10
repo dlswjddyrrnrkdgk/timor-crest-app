@@ -33,6 +33,7 @@ import ConsultationModal from "./customer-management/ConsultationModal.jsx";
 import DeleteConfirmModal from "./customer-management/DeleteConfirmModal.jsx";
 import SalesLeadModal from "./customer-management/SalesLeadModal.jsx";
 import ScheduleManagementPanel from "./customer-management/ScheduleManagementPanel.jsx";
+import SearchStatsManagementPanel from "./customer-management/SearchStatsManagementPanel.jsx";
 
 const LEAD_STATUS_OPTIONS = ["new", "scheduled", "consulted", "high_potential", "converted", "on_hold", "cancelled"];
 const LEAD_SOURCE_OPTIONS = ["google_search", "google_ads", "instagram", "facebook", "referral", "walk_in", "phone", "whatsapp", "website", "other"];
@@ -182,11 +183,7 @@ export default function CustomerManagementPage() {
 
         <ScheduleManagementPanel contractors={data.contractors} consultations={data.consultationNotes} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} t={t} />
 
-        <ManagementPanel action={t("Import Data")} actionIcon="trend" icon="trend" iconLabel={t("Coming soon")} title={t("Statistics Management")}>
-          <div className="crm-customer-management__stat-grid"><StatMetric label={t("Impressions")} value={formatNumber(summary.search.impressions, language)} /><StatMetric label={t("Clicks")} value={formatNumber(summary.search.clicks, language)} /><StatMetric label={t("CTR")} value={`${formatNumber(summary.search.ctr, language)}%`} /><StatMetric label={t("Average Position")} value={summary.search.averagePosition === null ? "—" : formatNumber(summary.search.averagePosition, language)} /></div>
-          {summary.search.topQueries.length ? <div className="crm-customer-management__queries"><strong>{t("Top Search Queries")}</strong>{summary.search.topQueries.map((query, index) => <div key={query.query}><span>{index + 1}. {query.query}</span><b>{formatNumber(query.impressions, language)}</b></div>)}</div> : <EmptyState>{t("No search performance data yet.")}</EmptyState>}
-          <p className="crm-customer-management__manual-note">{t("Google Search Console integration is not connected yet.")}</p>
-        </ManagementPanel>
+        <SearchStatsManagementPanel language={language} onRefresh={refreshData} rows={data.searchSnapshots} t={t} />
       </section>
 
       {modal?.type === "lead" ? <SalesLeadModal key={`lead-${modal.record?.id || "new"}`} language={language} lead={modal.record} onClose={() => setModal(null)} onSave={saveLead} saving={mutation.scope === "lead" && mutation.state === "saving"} t={t} /> : null}
@@ -224,10 +221,6 @@ function ConsultationRow({ consultation, language, lead, onDelete, onEdit, onSel
 
 function RowActions({ onDelete, onEdit, t }) {
   return <span className="crm-cm-row-actions"><button aria-label={t("Edit")} className="crm-cm-row-action" onClick={(event) => { event.stopPropagation(); onEdit(); }} type="button"><AdminIcon name="edit" size={13} />{t("Edit")}</button><button aria-label={t("Delete")} className="crm-cm-row-action crm-cm-row-action--danger" onClick={(event) => { event.stopPropagation(); onDelete(); }} type="button"><AdminIcon name="trash" size={13} />{t("Delete")}</button></span>;
-}
-
-function StatMetric({ label, value }) {
-  return <div className="crm-customer-management__stat"><span>{label}</span><strong>{value}</strong></div>;
 }
 
 function uniqueOptions(rows, field, normalizer, fallback) {

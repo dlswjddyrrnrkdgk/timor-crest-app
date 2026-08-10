@@ -5,9 +5,11 @@ import {
   buildConsultationPayload,
   buildCrmEventPayload,
   buildSalesLeadPayload,
+  buildSearchPerformancePayload,
   validateConsultationForm,
   validateCrmEventForm,
   validateSalesLeadForm,
+  validateSearchPerformanceForm,
 } from "./adminCustomerManagementModel.js";
 
 const SALES_LEADS_SELECT = "id, lead_date, full_name, phone, email, source, interested_unit, assigned_to, status, memo, created_at, updated_at";
@@ -125,7 +127,41 @@ export async function getCrmEventContractorOptions() {
 
 export async function listSearchPerformanceSnapshots() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
-  const { data, error } = await supabase.from("search_performance_snapshots").select(SEARCH_SNAPSHOTS_SELECT).order("report_date", { ascending: false });
+  const { data, error } = await supabase.from("search_performance_snapshots").select(SEARCH_SNAPSHOTS_SELECT).order("report_date", { ascending: false }).order("created_at", { ascending: false });
+  return respond(data, error);
+}
+
+export async function createSearchPerformanceSnapshot(input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  const validation = validateSearchPerformanceForm(input);
+  if (!validation.valid) return fail(`Search data validation failed: ${validation.errors.join(", ")}`);
+  const { data, error } = await supabase.from("search_performance_snapshots").insert(buildSearchPerformancePayload(input)).select(SEARCH_SNAPSHOTS_SELECT).single();
+  return respond(data, error);
+}
+
+export async function updateSearchPerformanceSnapshot(id, input) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!id) return fail("Search performance id is required.");
+  const validation = validateSearchPerformanceForm(input);
+  if (!validation.valid) return fail(`Search data validation failed: ${validation.errors.join(", ")}`);
+  const { data, error } = await supabase.from("search_performance_snapshots").update(buildSearchPerformancePayload(input)).eq("id", id).select(SEARCH_SNAPSHOTS_SELECT).single();
+  return respond(data, error);
+}
+
+export async function deleteSearchPerformanceSnapshot(id) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!id) return fail("Search performance id is required.");
+  const { error } = await supabase.from("search_performance_snapshots").delete().eq("id", id);
+  return error ? fail(error.message) : respond(true, null);
+}
+
+export async function bulkCreateSearchPerformanceSnapshots(inputs) {
+  if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  const payloads = Array.isArray(inputs) ? inputs.map(buildSearchPerformancePayload) : [];
+  if (!payloads.length) return fail("No import rows found.");
+  const invalid = payloads.find((payload) => !validateSearchPerformanceForm(payload).valid);
+  if (invalid) return fail("Some rows have errors.");
+  const { data, error } = await supabase.from("search_performance_snapshots").insert(payloads).select(SEARCH_SNAPSHOTS_SELECT);
   return respond(data, error);
 }
 

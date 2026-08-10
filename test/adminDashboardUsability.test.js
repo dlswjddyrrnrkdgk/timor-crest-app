@@ -5,6 +5,8 @@ import { translations } from "../src/i18n/translations.js";
 import {
   buildDashboardAlertDetailRows,
   buildDashboardAlertReason,
+  getTodayScheduleAlerts,
+  getUnreadDashboardAlerts,
   getPaymentAlerts,
 } from "../src/services/adminDashboardModel.js";
 
@@ -42,6 +44,38 @@ describe("Admin Dashboard usability", () => {
     assert.match(buildDashboardAlertReason({ alertType: "unit_assignment" }, "kr"), /배정된 세대/);
     assert.match(buildDashboardAlertReason(null, "en"), /requires attention/);
     assert.deepEqual(buildDashboardAlertDetailRows({ alertType: "unit_assignment", customerName: "Sarah Lee" }, "en").map((row) => row.value), ["Sarah Lee", "Unassigned"]);
+  });
+
+  it("builds concise today schedule alerts and excludes cancelled activities", () => {
+    const alerts = getTodayScheduleAlerts({
+      now: new Date(2026, 7, 10, 9, 0),
+      events: [
+        { event_date: "2026-08-10", event_type: "consultation", id: "event-1", start_time: "14:00", status: "scheduled", title: "Office consultation" },
+        { event_date: "2026-08-10", event_type: "meeting", id: "event-2", status: "cancelled", title: "Cancelled meeting" },
+      ],
+      consultations: [{ consultation_date: "2026-08-10T15:00:00+09:00", id: "note-1", lead_id: "lead-1", next_follow_up_date: "2026-08-12" }],
+      leads: [{ full_name: "Maria", id: "lead-1" }],
+      limit: 5,
+    });
+    assert.equal(alerts.length, 2);
+    assert.equal(alerts[0].sourceType, "schedule");
+    assert.equal(alerts[1].sourceType, "consultation");
+    assert.equal(getUnreadDashboardAlerts(alerts, [alerts[0].id]).length, 1);
+  });
+
+  it("changes alert identity when a schedule date or payment due date changes", () => {
+    const scheduleToday = getTodayScheduleAlerts({
+      now: new Date(2026, 7, 10, 9, 0),
+      events: [{ event_date: "2026-08-10", id: "event-1", status: "scheduled", title: "Meeting" }],
+    });
+    const scheduleTomorrow = getTodayScheduleAlerts({
+      now: new Date(2026, 7, 11, 9, 0),
+      events: [{ event_date: "2026-08-11", id: "event-1", status: "scheduled", title: "Meeting" }],
+    });
+    const paymentToday = getPaymentAlerts({ plan: { items: [] }, jose: paymentSummaries.jose }, [{ full_name: "Jose Costa", id: "jose" }]);
+    const paymentTomorrow = getPaymentAlerts({ jose: { ...paymentSummaries.jose, items: paymentSummaries.jose.items.map((item) => ({ ...item, due_date: "2026-08-16" })) } }, [{ full_name: "Jose Costa", id: "jose" }]);
+    assert.notEqual(scheduleToday[0].id, scheduleTomorrow[0].id);
+    assert.notEqual(paymentToday[0].id, paymentTomorrow[0].id);
   });
 
   it("connects alert details, responsive shell state, and bilingual controls", () => {
@@ -82,6 +116,12 @@ describe("Admin Dashboard usability", () => {
     assert.match(topbar, /toggleNotifications/);
     assert.match(topbar, /aria-haspopup="dialog"/);
     assert.match(topbar, /buildDashboardAlertReason/);
+    assert.match(topbar, /timorcrest_admin_acknowledged_alerts/);
+    assert.match(topbar, /Mark as read/);
+    assert.match(topbar, /No new alerts/);
+    assert.match(topbar, /alerts=\{unreadAlerts\}/);
+    assert.match(topbar, /crm-notification-popover__footer/);
+    assert.match(topbar, /setSelectedNotificationId\(null\)/);
     assert.match(sidebar, /data-label=\{t\(label\)\}/);
     assert.match(kpi, /className = \"\"/);
     assert.match(styles, /--crm-sidebar-collapsed-width/);

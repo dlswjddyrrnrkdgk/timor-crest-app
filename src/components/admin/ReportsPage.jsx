@@ -13,6 +13,7 @@ import {
   REPORT_DATE_RANGES,
 } from "../../services/adminReportsModel.js";
 import { getJourneyStepDescription, getJourneyStepTitle } from "../../services/journeyModel.js";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 
 const RANGE_LABELS = {
   all: "All Time",
@@ -253,7 +254,7 @@ function formatCategory(value, t) {
 }
 
 function formatCurrency(value, language) {
-  return new Intl.NumberFormat(language === "kr" ? "ko-KR" : "en-US", { currency: "USD", maximumFractionDigits: 0, style: "currency" }).format(Number(value ?? 0));
+  return formatCurrencyAmount(value, "USD", language);
 }
 
 function formatDate(value, language) {

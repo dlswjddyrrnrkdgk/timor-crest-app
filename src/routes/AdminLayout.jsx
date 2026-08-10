@@ -64,8 +64,10 @@ import {
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES, formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { sortContractors, sortUnits } from "../services/adminListModel.js";
-import { calculateDashboardKpis, getPaymentAlerts } from "../services/adminDashboardModel.js";
+import { calculateDashboardKpis, getPaymentAlerts, getTodayScheduleAlerts } from "../services/adminDashboardModel.js";
+import { listConsultationNotes, listCrmEvents, listSalesLeads } from "../services/adminCustomerManagementService.js";
 import { signOut } from "../services/authService.js";
+import { formatCurrencyAmount } from "../services/formatters.js";
 
 const UNIT_PAGE_SIZE = 10;
 
@@ -135,6 +137,7 @@ export default function AdminLayout() {
   const [documentForm, setDocumentForm] = useState(emptyDocumentForm);
   const [documentFile, setDocumentFile] = useState(null);
   const [documentMessage, setDocumentMessage] = useAutoDismissMessage("", 10000);
+  const [customerManagementAlertsData, setCustomerManagementAlertsData] = useState({ consultations: [], events: [], leads: [] });
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useAutoDismissMessage("", 10000);
 
@@ -189,6 +192,15 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
+    function handleCustomerManagementDataChanged() {
+      loadCustomerManagementAlerts();
+    }
+
+    window.addEventListener("timorcrest:customer-management-data-changed", handleCustomerManagementDataChanged);
+    return () => window.removeEventListener("timorcrest:customer-management-data-changed", handleCustomerManagementDataChanged);
+  }, []);
+
+  useEffect(() => {
     setUnitPage((current) => Math.min(current, Math.max(1, Math.ceil(sortedUnits.length / UNIT_PAGE_SIZE))));
   }, [sortedUnits.length]);
 
@@ -201,12 +213,15 @@ export default function AdminLayout() {
     setMessage("");
     setJourneyMessage("");
     setDocumentMessage("");
-    const [unitResult, contractorResult, planResult, journeyResult, documentResult] = await Promise.all([
+    const [unitResult, contractorResult, planResult, journeyResult, documentResult, leadsResult, consultationsResult, eventsResult] = await Promise.all([
       getUnits(),
       getAdminContractors(),
       getAdminPaymentPlans(),
       getJourneySteps(),
       getAdminDocuments(),
+      listSalesLeads(),
+      listConsultationNotes(),
+      listCrmEvents(),
     ]);
     if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
@@ -227,8 +242,22 @@ export default function AdminLayout() {
     setJourneyMessage(nextJourneyMessage);
     setDocuments(documentResult.data || []);
     setDocumentMessage(documentResult.error || "");
+    setCustomerManagementAlertsData({
+      consultations: consultationsResult.data || [],
+      events: eventsResult.data || [],
+      leads: leadsResult.data || [],
+    });
     await loadPaymentSummaries(planResult.data || []);
     setStatus("ready");
+  }
+
+  async function loadCustomerManagementAlerts() {
+    const [leadsResult, consultationsResult, eventsResult] = await Promise.all([listSalesLeads(), listConsultationNotes(), listCrmEvents()]);
+    setCustomerManagementAlertsData({
+      consultations: consultationsResult.data || [],
+      events: eventsResult.data || [],
+      leads: leadsResult.data || [],
+    });
   }
 
   async function loadPaymentSummaries(plans) {
@@ -801,7 +830,10 @@ export default function AdminLayout() {
   const activeUnits = units.filter((unit) => unit.status === "active").length;
   const journeyOverallProgress = calculateJourneyOverallProgress(journeySteps);
   const dashboardStats = calculateDashboardKpis({ contractors, units, paymentSummaries, journeySteps });
-  const dashboardAlerts = getPaymentAlerts(paymentSummaries, contractors);
+  const dashboardAlerts = [
+    ...getPaymentAlerts(paymentSummaries, contractors),
+    ...getTodayScheduleAlerts({ ...customerManagementAlertsData, contractors }),
+  ];
 
   const shell = {
     activeContractors,
@@ -1727,7 +1759,7 @@ function formatDisplayStatus(status, t) {
 }
 
 function formatMoney(value, currency = "USD") {
-  return `${Math.trunc(Number(value ?? 0)).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return formatCurrencyAmount(value, currency, "kr");
 }
 
 function formatDate(value) {

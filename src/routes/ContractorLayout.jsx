@@ -12,6 +12,7 @@ import { createMyDocumentSignedUrl, getMyDocumentSummary } from "../services/doc
 import { formatFileSize } from "../services/documentModel.js";
 import useAutoDismissMessage from "../hooks/useAutoDismissMessage.js";
 import { signOut } from "../services/authService.js";
+import { formatCurrencyAmount } from "../services/formatters.js";
 
 const contractorNav = [
   ["", "홈", "M4 11.5 12 5l8 6.5V20h-6v-6h-4v6H4z"],
@@ -570,7 +571,7 @@ function formatDisplayStatus(status, t) {
 
 function formatMoney(value, currency, t) {
   if (value === null || value === undefined || value === "") return t("미등록");
-  return `${Math.trunc(Number(value)).toLocaleString("ko-KR")} ${currency || "USD"}`;
+  return formatCurrencyAmount(value, currency || "USD", "kr");
 }
 
 function formatPaymentMethod(value, t) {

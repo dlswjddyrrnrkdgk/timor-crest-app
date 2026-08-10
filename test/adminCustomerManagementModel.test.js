@@ -41,6 +41,7 @@ import {
 } from "../src/services/adminCustomerManagementModel.js";
 
 const now = new Date("2026-08-09T12:00:00Z");
+const customerManagementPageSource = readFileSync(new URL("../src/components/admin/CustomerManagementPage.jsx", import.meta.url), "utf8");
 
 describe("Customer Management model", () => {
   it("returns safe zero values for empty data", () => {
@@ -248,5 +249,14 @@ describe("Customer Management model", () => {
     assert.match(migration, /for select to authenticated using \(public\.is_admin\(\)\)/);
     assert.match(route, /path="customer-management"/);
     assert.match(sidebar, /Customer Management/);
+  });
+
+  it("toggles lead and consultation details when the same row is selected again", () => {
+    assert.match(customerManagementPageSource, /function toggleLeadSelection\(leadId\)/);
+    assert.match(customerManagementPageSource, /current === leadId \? \"\" : leadId/);
+    assert.match(customerManagementPageSource, /function toggleConsultationSelection\(consultationId\)/);
+    assert.match(customerManagementPageSource, /current === consultationId \? \"\" : consultationId/);
+    assert.match(customerManagementPageSource, /onSelect=\{\(\) => toggleLeadSelection\(lead\.id\)\}/);
+    assert.match(customerManagementPageSource, /onSelect=\{\(\) => toggleConsultationSelection\(note\.id\)\}/);
   });
 });

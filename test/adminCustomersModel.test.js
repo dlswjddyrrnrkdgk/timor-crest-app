@@ -131,6 +131,11 @@ describe("Admin Customers CRM model", () => {
     assert.match(customersPageSource, /placeholder={t\("Search customers\.\.\."\)}/);
     assert.match(stylesSource, /\.crm-customers__workspace/);
     assert.match(stylesSource, /\.crm-customers__table/);
+    assert.match(customersPageSource, /current === customer\.id \? \"\" : customer\.id/);
+    assert.match(stylesSource, /\.crm-customers__detail-card \{ grid-column: 1;/);
+    assert.match(stylesSource, /\.crm-customers__list-card \{ grid-column: 2;/);
+    assert.match(stylesSource, /\.crm-customers__list-card \{ grid-column: auto; grid-row: auto; order: 1;/);
+    assert.match(stylesSource, /\.crm-customers__detail-card \{ grid-column: auto; grid-row: auto; order: 2;/);
   });
 
   it("provides the Customers CRM labels in both languages", () => {

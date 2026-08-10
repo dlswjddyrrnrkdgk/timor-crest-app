@@ -5,6 +5,7 @@ import KpiCard from "./KpiCard.jsx";
 import AdminIcon from "./AdminIcon.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { calculateCustomerKpis, filterCustomers, getCustomerDocuments, getCustomerPaymentSnapshot, getCustomerStatusTone } from "../../services/adminCustomersModel.js";
+import { formatCurrencyAmount } from "../../services/formatters.js";
 
 export default function CustomersPage({
   contractorForm,
@@ -54,11 +55,11 @@ export default function CustomersPage({
       return;
     }
 
-    setSelectedCustomerId((current) => (current && sortedContractors.some((customer) => customer.id === current) ? current : filteredCustomers[0]?.id || ""));
+    setSelectedCustomerId((current) => (current && filteredCustomers.some((customer) => customer.id === current) ? current : ""));
   }, [filteredCustomers, selectedContractorId, sortedContractors]);
 
   function handleSelect(customer) {
-    setSelectedCustomerId(customer.id);
+    setSelectedCustomerId((current) => current === customer.id ? "" : customer.id);
   }
 
   function handleEdit(customer) {
@@ -371,9 +372,7 @@ function formatDate(value) {
 
 function formatMoney(value, currency, t) {
   if (value === null || value === undefined || value === "") return t("Not set");
-  const number = Number(value);
-  if (!Number.isFinite(number)) return t("Not set");
-  return `${Math.trunc(number).toLocaleString()} ${currency || "USD"}`;
+  return formatCurrencyAmount(value, currency || "USD");
 }
 
 function getInitials(value) {

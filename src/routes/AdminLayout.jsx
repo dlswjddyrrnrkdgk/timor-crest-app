@@ -941,6 +941,7 @@ export default function AdminLayout() {
 
 function AdminHome({
   contractors,
+  customerManagementData,
   dashboardStats,
   documents,
   language,
@@ -948,7 +949,7 @@ function AdminHome({
   t,
   units,
 }) {
-  return <AdminDashboard contractors={contractors} documents={documents} language={language} paymentSummaries={paymentSummaries} stats={dashboardStats} t={t} units={units} />;
+  return <AdminDashboard contractors={contractors} customerManagementData={customerManagementData} documents={documents} language={language} paymentSummaries={paymentSummaries} stats={dashboardStats} t={t} units={units} />;
 }
 
 function ContractorsPage({

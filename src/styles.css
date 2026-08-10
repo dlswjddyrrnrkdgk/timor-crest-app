@@ -1640,6 +1640,60 @@ button:disabled {
   padding: 16px;
 }
 
+.crm-office-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.crm-office-shortcut {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 142px;
+  padding: 13px;
+  border: 1px solid var(--crm-border);
+  border-radius: 9px;
+  color: var(--crm-text);
+  background: #FBFCFE;
+  text-decoration: none;
+  transition: border-color 160ms var(--ease-standard), box-shadow 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+}
+
+.crm-office-shortcut:hover,
+.crm-office-shortcut:focus-visible {
+  border-color: #A9C7F3;
+  box-shadow: 0 6px 14px rgba(33, 104, 213, 0.08);
+  transform: translateY(-1px);
+}
+
+.crm-office-shortcut__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--crm-primary);
+  background: #EAF2FF;
+}
+
+.crm-office-shortcut__body,
+.crm-office-shortcut__stats {
+  display: grid;
+  min-width: 0;
+}
+
+.crm-office-shortcut__body { gap: 8px; }
+.crm-office-shortcut__body > strong { font-size: 13px; }
+.crm-office-shortcut__body > small { color: var(--crm-primary); font-size: 10px; font-weight: 800; }
+.crm-office-shortcut__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 10px; }
+.crm-office-shortcut__stats > span { display: grid; gap: 1px; min-width: 0; }
+.crm-office-shortcut__stats b { color: var(--crm-text); font-size: 16px; line-height: 1; }
+.crm-office-shortcut__stats small { overflow-wrap: anywhere; color: var(--crm-muted); font-size: 9px; line-height: 1.25; }
+
 .crm-quick-action {
   display: grid;
   position: relative;
@@ -2347,6 +2401,7 @@ button:disabled {
   .crm-dashboard-grid--middle { grid-template-columns: 1fr; }
   .crm-dashboard-grid--middle .crm-dashboard-card:last-child { grid-column: auto; }
   .crm-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crm-office-shortcuts { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 500px) {
@@ -3427,6 +3482,43 @@ button:disabled {
   margin-bottom: var(--space-4);
 }
 
+.crm-reports__kpis--overview {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card {
+  min-height: 112px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 7px;
+  padding: 11px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__icon {
+  width: 30px;
+  height: 30px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__label {
+  font-size: 10px;
+  line-height: var(--crm-report-line-height-tight);
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__value {
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card--amount .crm-kpi-card__value {
+  font-size: 14px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__helper {
+  display: none;
+}
+
 .crm-reports__kpis .crm-kpi-card,
 .crm-reports__card,
 .crm-reports__metric,
@@ -3730,6 +3822,7 @@ button:disabled {
 
 @media (max-width: 1320px) {
   .crm-reports__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .crm-reports__kpis--overview { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
@@ -3739,6 +3832,7 @@ button:disabled {
   .crm-reports__card--wide { grid-column: auto; }
   .crm-reports__brief-grid,
   .crm-reports__health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crm-reports__kpis--overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -3761,6 +3855,7 @@ button:disabled {
   .crm-reports__metric-grid,
   .crm-reports__metric-grid--three,
   .crm-reports__journey-summary { grid-template-columns: 1fr; }
+  .crm-reports__kpis--overview { grid-template-columns: 1fr; }
   .crm-reports__controls { align-items: stretch; flex-direction: column; }
   .crm-reports__filter { width: 100%; }
   .crm-reports__controls .crm-button { flex: initial; width: 100%; }

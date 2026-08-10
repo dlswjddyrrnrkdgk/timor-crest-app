@@ -268,13 +268,22 @@ describe("Admin Reports CRM model", () => {
     const sidebar = readFileSync(new URL("../src/components/admin/AdminSidebar.jsx", import.meta.url), "utf8");
     const page = readFileSync(new URL("../src/components/admin/ReportsPage.jsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
-    for (const key of ["Reports", "Analyze sales, unit inventory, payments, documents, and project progress.", "Export Excel", "Unit Payment Export", "This Excel file includes all units, assigned buyers, and installment payment details in one sheet.", "Print", "Date Range", "Sales Overview", "Unit Inventory Report", "Payment Collection Report", "Documents Report", "Journey Progress Report", "Outstanding Balance", "Collection Rate", "No report data."]) {
+    for (const key of ["Reports Center", "View sales, payments, office tasks, and project status in one place.", "Executive Summary", "Today Office Brief", "Office Health Snapshot", "Customer Management", "Schedule Management", "Export Excel", "Unit Payment Excel Export", "Export unit-by-unit payment status including installment details.", "Print", "Date Range", "Outstanding Balance", "No report data."]) {
       assert.ok(translations.en[key], `Missing EN translation: ${key}`);
       assert.ok(translations.kr[key], `Missing KR translation: ${key}`);
     }
     assert.match(layout, /<Route path="reports" element={<ReportsPage \{\.\.\.shell\} \/>} \/>/);
     assert.match(sidebar, /\["\/admin\/reports", "Reports", "trend"\]/);
     assert.doesNotMatch(page, /buildReportsCsv|Export CSV|\.csv/);
+    assert.doesNotMatch(page, /crm-reports__section-grid/);
+    assert.doesNotMatch(page, /title=\{t\("Sales Overview"\)\}/);
+    assert.doesNotMatch(page, /title=\{t\("Unit Inventory Report"\)\}/);
+    assert.doesNotMatch(page, /title=\{t\("Payment Collection Report"\)\}/);
+    assert.doesNotMatch(page, /title=\{t\("Documents Report"\)\}/);
+    assert.doesNotMatch(page, /title=\{t\("Journey Progress Report"\)\}/);
+    assert.match(page, /crm-reports__kpis--overview/);
+    assert.match(page, /crm-reports__brief-grid/);
+    assert.match(page, /crm-reports__health-grid/);
     assert.match(page, /buildExcelTableHtml/);
     assert.match(page, /\.xls/);
     assert.match(page, /crm-reports__export-preview/);

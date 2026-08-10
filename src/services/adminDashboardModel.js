@@ -95,6 +95,26 @@ export function getTodayScheduleAlerts({ events = [], consultations = [], leads 
   return alerts;
 }
 
+export function buildDashboardOfficeSummary({ consultations = [], events = [], leads = [], now = new Date() } = {}) {
+  const today = getLocalDateKey(now);
+  const month = today.slice(0, 7);
+  const leadRows = Array.isArray(leads) ? leads : [];
+  const consultationRows = Array.isArray(consultations) ? consultations : [];
+  const eventRows = Array.isArray(events) ? events : [];
+  const todayLeads = leadRows.filter((lead) => getLocalDateKey(lead?.lead_date || lead?.created_at) === today).length;
+  const monthLeads = leadRows.filter((lead) => getLocalDateKey(lead?.lead_date || lead?.created_at).startsWith(month)).length;
+  const highPotential = leadRows.filter((lead) => String(lead?.status || "").toLowerCase() === "high_potential").length;
+  const followUpsNeeded = consultationRows.filter((note) => note?.next_follow_up_date && note.next_follow_up_date >= today).length;
+  const todayConsultations = consultationRows.filter((note) => getLocalDateKey(note?.consultation_date) === today).length;
+  const todaySchedules = eventRows.filter((event) => getLocalDateKey(event?.event_date) === today && String(event?.status || "").toLowerCase() !== "cancelled").length;
+  const todayFollowUps = consultationRows.filter((note) => note?.next_follow_up_date === today).length;
+
+  return {
+    customers: { todayLeads, monthLeads, highPotential, followUpsNeeded },
+    schedules: { todaySchedules, todayConsultations, todayFollowUps },
+  };
+}
+
 export function getUnreadDashboardAlerts(alerts = [], acknowledgedIds = []) {
   const acknowledged = new Set(Array.isArray(acknowledgedIds) ? acknowledgedIds : []);
   return (Array.isArray(alerts) ? alerts : []).filter((alert) => alert?.id && !acknowledged.has(alert.id));

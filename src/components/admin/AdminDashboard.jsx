@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import {
   buildDashboardAlertDetailRows,
   buildDashboardAlertReason,
+  buildDashboardOfficeSummary,
   getPaymentAlerts,
   getRecentCustomers,
   getRecentDocuments,
@@ -10,17 +11,17 @@ import {
 } from "../../services/adminDashboardModel.js";
 import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
-import QuickActionCard from "./QuickActionCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import AdminIcon from "./AdminIcon.jsx";
 import { formatCurrencyAmount } from "../../services/formatters.js";
 
-export default function AdminDashboard({ contractors, documents, language, paymentSummaries, stats, t, units }) {
+export default function AdminDashboard({ contractors, customerManagementData = {}, documents, language, paymentSummaries, stats, t, units }) {
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const recentCustomers = getRecentCustomers(contractors);
   const paymentAlerts = getPaymentAlerts(paymentSummaries, contractors);
   const unitSummary = getUnitStatusSummary(units, contractors);
   const recentDocuments = getRecentDocuments(documents);
+  const officeSummary = buildDashboardOfficeSummary({ ...customerManagementData });
 
   return (
     <div className="crm-dashboard">
@@ -55,13 +56,19 @@ export default function AdminDashboard({ contractors, documents, language, payme
         <DashboardCard action={t("View All")} actionTo="/admin/documents" title={t("Recent Documents")}>
           {recentDocuments.length ? <div className="crm-document-list">{recentDocuments.map((document) => <DocumentRow document={document} key={document.id} t={t} />)}</div> : <EmptyState>{t("No recent documents.")}</EmptyState>}
         </DashboardCard>
-        <DashboardCard title={t("Quick Actions")}>
-          <div className="crm-quick-actions">
-            <QuickActionCard description={t("Create a customer record")} icon="customers" label={t("Add Customer")} to="/admin/contractors" />
-            <QuickActionCard description={t("Review inventory") } icon="building" label={t("Manage Units")} to="/admin/units" />
-            <QuickActionCard description={t("Update payment schedules")} icon="payment" label={t("Manage Payments")} to="/admin/payments" />
-            <QuickActionCard description={t("Add a private document")} icon="upload" label={t("Upload Document")} to="/admin/documents" />
-            <QuickActionCard description={t("Update project milestones")} icon="journey" label={t("Manage Journey")} to="/admin/journey" />
+        <DashboardCard title={t("Office Shortcuts")}>
+          <div className="crm-office-shortcuts">
+            <OfficeShortcutCard icon="customers" label={t("Customer Management")} t={t} to="/admin/customer-management">
+              <ShortcutStat label={t("New Leads Today")} value={officeSummary.customers.todayLeads} />
+              <ShortcutStat label={t("New Leads This Month")} value={officeSummary.customers.monthLeads} />
+              <ShortcutStat label={t("High Potential Leads")} value={officeSummary.customers.highPotential} />
+              <ShortcutStat label={t("Follow-ups Needed")} value={officeSummary.customers.followUpsNeeded} />
+            </OfficeShortcutCard>
+            <OfficeShortcutCard icon="calendar" label={t("Schedule Management")} t={t} to="/admin/customer-management">
+              <ShortcutStat label={t("Today Schedules")} value={officeSummary.schedules.todaySchedules} />
+              <ShortcutStat label={t("Today Consultations")} value={officeSummary.schedules.todayConsultations} />
+              <ShortcutStat label={t("Today Follow-ups")} value={officeSummary.schedules.todayFollowUps} />
+            </OfficeShortcutCard>
           </div>
         </DashboardCard>
       </section>
@@ -72,6 +79,14 @@ export default function AdminDashboard({ contractors, documents, language, payme
 
 function DashboardCard({ action, actionTo, children, title }) {
   return <section className="crm-card crm-dashboard-card"><header className="crm-card__header"><h2>{title}</h2>{actionTo ? <NavLink to={actionTo}>{action}<AdminIcon name="chevron" size={14} /></NavLink> : null}</header>{children}</section>;
+}
+
+function OfficeShortcutCard({ children, icon, label, t, to }) {
+  return <NavLink className="crm-office-shortcut" to={to}><span className="crm-office-shortcut__icon"><AdminIcon name={icon} size={17} /></span><span className="crm-office-shortcut__body"><strong>{label}</strong><span className="crm-office-shortcut__stats">{children}</span><small>{t("Open workspace")}</small></span><AdminIcon name="chevron" size={14} /></NavLink>;
+}
+
+function ShortcutStat({ label, value }) {
+  return <span><b>{Number(value ?? 0).toLocaleString()}</b><small>{label}</small></span>;
 }
 
 function CustomerRow({ customer, t }) {

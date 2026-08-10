@@ -248,7 +248,7 @@ describe("Customer Management model", () => {
     assert.match(migration, /enable row level security/);
     assert.match(migration, /for select to authenticated using \(public\.is_admin\(\)\)/);
     assert.match(route, /path="customer-management"/);
-    assert.match(sidebar, /Customer Management/);
+    assert.match(sidebar, /Customer\/Schedule/);
   });
 
   it("toggles lead and consultation details when the same row is selected again", () => {

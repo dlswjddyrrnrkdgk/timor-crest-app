@@ -3,7 +3,8 @@ import { getPaymentStepTitle } from "./paymentModel.js";
 const PAYMENT_STATUS_KEYS = ["paid", "partial", "pending", "noAmount"];
 const EXPORT_PAYMENT_STEP_COUNT = 8;
 
-export const REPORT_DATE_RANGES = ["all", "7", "30", "month", "year"];
+export const REPORT_DATE_RANGES = ["all", "today", "this_week", "7", "30", "month", "year"];
+export const REPORT_OVERVIEW_PERIODS = ["all", "today", "this_week", "this_month", "this_year"];
 
 export function buildReportsSummary({
   contractors = [],
@@ -454,6 +455,194 @@ export function normalizeProgress(value) {
   return Number.isFinite(number) ? Math.min(Math.max(Math.round(number), 0), 100) : 0;
 }
 
+export function filterReportsDataByPeriod(data = {}, period = "all", now = new Date()) {
+  const normalizedPeriod = REPORT_OVERVIEW_PERIODS.includes(period) ? period : "all";
+  const matches = (value) => matchesOverviewPeriod(value, normalizedPeriod, now);
+  const filterRows = (rows = [], getDate = (row) => row) => (Array.isArray(rows) ? rows : []).filter((row) => matches(getDate(row)));
+  const filterPaymentRows = (rows = []) => (Array.isArray(rows) ? rows : []).filter((row) => {
+    const date = getLocalDateKey(row?.updated_at || row?.created_at || row?.due_date);
+    return normalizedPeriod === "all" || (date && matches(date));
+  });
+
+  return {
+    ...data,
+    contractors: filterRows(data.contractors, (row) => row?.created_at),
+    documents: filterRows(data.documents, (row) => row?.uploaded_at || row?.created_at),
+    paymentItems: filterPaymentRows(data.paymentItems),
+    leads: filterRows(data.leads, (row) => row?.lead_date || row?.created_at),
+    consultations: filterRows(data.consultations, (row) => row?.consultation_date || row?.created_at),
+    events: filterRows(data.events, (row) => row?.event_date || row?.created_at),
+    searchSnapshots: filterRows(data.searchSnapshots, (row) => row?.report_date || row?.created_at),
+  };
+}
+
+export function calculateTotalContractValue(units = [], paymentPlans = []) {
+  return calculateContractValue(Array.isArray(units) ? units : [], Array.isArray(paymentPlans) ? paymentPlans : []);
+}
+
+export function calculateTotalPaid(paymentItems = [], paymentSummaries = {}) {
+  const rows = Array.isArray(paymentItems) ? paymentItems : flattenPaymentSummaries(paymentSummaries);
+  return rows.reduce((sum, row) => sum + normalizeAmount(row?.paid_amount ?? row?.paidAmount), 0);
+}
+
+export function calculateTotalOutstanding(totalContractValue, totalPaid) {
+  return Math.max(normalizeAmount(totalContractValue) - normalizeAmount(totalPaid), 0);
+}
+
+export function getTodayConsultations(consultations = [], leads = [], contractors = [], today = new Date(), limit = 5) {
+  const leadById = new Map((Array.isArray(leads) ? leads : []).map((lead) => [lead?.id, lead]));
+  const contractorById = new Map((Array.isArray(contractors) ? contractors : []).map((contractor) => [contractor?.id, contractor]));
+  return (Array.isArray(consultations) ? consultations : [])
+    .filter((consultation) => getLocalDateKey(consultation?.consultation_date) === getLocalDateKey(today))
+    .sort(compareDateTime)
+    .map((consultation) => {
+      const customer = getLinkedCustomer(consultation, leadById, contractorById);
+      return {
+        ...consultation,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        time: formatLocalTime(consultation?.consultation_date),
+      };
+    })
+    .slice(0, Math.max(0, limit));
+}
+
+export function getTodaySchedules(events = [], leads = [], contractors = [], today = new Date(), limit = 5) {
+  const leadById = new Map((Array.isArray(leads) ? leads : []).map((lead) => [lead?.id, lead]));
+  const contractorById = new Map((Array.isArray(contractors) ? contractors : []).map((contractor) => [contractor?.id, contractor]));
+  return (Array.isArray(events) ? events : [])
+    .filter((event) => getLocalDateKey(event?.event_date) === getLocalDateKey(today) && normalizeStatus(event?.status) !== "cancelled")
+    .sort(compareEventTime)
+    .map((event) => {
+      const customer = getLinkedCustomer(event, leadById, contractorById);
+      return {
+        ...event,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        time: formatEventTime(event?.start_time, event?.end_time),
+      };
+    })
+    .slice(0, Math.max(0, limit));
+}
+
+export function getTodayFollowUps(consultations = [], leads = [], contractors = [], today = new Date(), limit = 5) {
+  const leadById = new Map((Array.isArray(leads) ? leads : []).map((lead) => [lead?.id, lead]));
+  const contractorById = new Map((Array.isArray(contractors) ? contractors : []).map((contractor) => [contractor?.id, contractor]));
+  return (Array.isArray(consultations) ? consultations : [])
+    .filter((consultation) => consultation?.next_follow_up_date === getLocalDateKey(today))
+    .sort((left, right) => String(left?.next_action || "").localeCompare(String(right?.next_action || "")))
+    .map((consultation) => {
+      const customer = getLinkedCustomer(consultation, leadById, contractorById);
+      return {
+        ...consultation,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+      };
+    })
+    .slice(0, Math.max(0, limit));
+}
+
+export function buildReportsExecutiveSummary(data = {}, period = "all", now = new Date()) {
+  const sourcePaymentItems = Array.isArray(data.paymentItems) ? data.paymentItems : flattenPaymentSummaries(data.paymentSummaries);
+  const filtered = filterReportsDataByPeriod({ ...data, paymentItems: sourcePaymentItems }, period, now);
+  const units = Array.isArray(data.units) ? data.units : [];
+  const allContractors = Array.isArray(data.contractors) ? data.contractors : [];
+  const paymentItems = filtered.paymentItems;
+  const unitReport = calculateUnitReport(units, allContractors);
+  const paymentPlans = data.paymentPlans?.length ? data.paymentPlans : getPlansFromSummaries(data.paymentSummaries);
+  const totalContractValue = calculateTotalContractValue(units, paymentPlans);
+  const totalPaid = calculateTotalPaid(paymentItems, data.paymentSummaries);
+  const brief = buildTodayOfficeBrief(data, now);
+  const soldOrAssignedUnits = unitReport.assigned + unitReport.reserved;
+
+  return {
+    totalUnits: unitReport.total,
+    soldOrAssignedUnits,
+    availableUnits: unitReport.available,
+    salesRate: percentOf(soldOrAssignedUnits, unitReport.total),
+    totalContractValue,
+    totalPaid,
+    totalOutstanding: calculateTotalOutstanding(totalContractValue, totalPaid),
+    todayOfficeTasks: brief.taskCount,
+    period,
+  };
+}
+
+export function buildTodayOfficeBrief(data = {}, today = new Date()) {
+  const leads = Array.isArray(data.leads) ? data.leads : data.salesLeads || [];
+  const consultations = Array.isArray(data.consultations) ? data.consultations : data.consultationNotes || [];
+  const events = Array.isArray(data.events) ? data.events : data.crmEvents || [];
+  const contractors = Array.isArray(data.contractors) ? data.contractors : [];
+  const todayConsultations = getTodayConsultations(consultations, leads, contractors, today, 5);
+  const todaySchedules = getTodaySchedules(events, leads, contractors, today, 5);
+  const todayFollowUps = getTodayFollowUps(consultations, leads, contractors, today, 5);
+  const attention = buildOfficeAttentionItems(data, 5);
+  const todayKey = getLocalDateKey(today);
+  const consultationCount = consultations.filter((row) => getLocalDateKey(row?.consultation_date) === todayKey).length;
+  const scheduleCount = events.filter((row) => getLocalDateKey(row?.event_date) === todayKey && normalizeStatus(row?.status) !== "cancelled").length;
+  const followUpCount = consultations.filter((row) => row?.next_follow_up_date === todayKey).length;
+
+  return {
+    consultations: todayConsultations,
+    schedules: todaySchedules,
+    followUps: todayFollowUps,
+    attention,
+    counts: { consultations: consultationCount, schedules: scheduleCount, followUps: followUpCount },
+    taskCount: consultationCount + scheduleCount + followUpCount,
+  };
+}
+
+export function buildOfficeAttentionItems(data = {}, limit = 5) {
+  const rows = buildUnitPaymentExportRows(data, "en")
+    .filter((row) => normalizeAmount(row?.outstandingBalance) > 0)
+    .sort((left, right) => right.outstandingBalance - left.outstandingBalance)
+    .slice(0, Math.max(0, limit));
+  return rows.map((row) => ({
+    id: row.unitId || row.contractorId || row.no,
+    unitCode: row.unitCode,
+    customerName: row.buyerName,
+    amount: normalizeAmount(row.outstandingBalance),
+    collectionRate: row.collectionRate,
+  }));
+}
+
+export function buildOfficeHealthSnapshot(data = {}, now = new Date()) {
+  const units = Array.isArray(data.units) ? data.units : [];
+  const contractors = Array.isArray(data.contractors) ? data.contractors : [];
+  const paymentItems = Array.isArray(data.paymentItems) && data.paymentItems.length ? data.paymentItems : flattenPaymentSummaries(data.paymentSummaries);
+  const paymentReport = calculatePaymentReport(paymentItems, contractors);
+  const unitReport = calculateUnitReport(units, contractors);
+  const leads = Array.isArray(data.leads) ? data.leads : data.salesLeads || [];
+  const consultations = Array.isArray(data.consultations) ? data.consultations : data.consultationNotes || [];
+  const documents = Array.isArray(data.documents) ? data.documents : [];
+  const currentMonth = getLocalDateKey(now).slice(0, 7);
+  const documentCustomers = new Set(documents.map((document) => document?.contractor_id).filter(Boolean));
+
+  return {
+    payment: {
+      collectionRate: paymentReport.collectionRate,
+      outstanding: paymentReport.outstanding,
+      unpaidSteps: paymentReport.rows.filter((row) => row.unpaidAmount > 0).length,
+    },
+    inventory: {
+      availableUnits: unitReport.available,
+      salesRate: percentOf(unitReport.assigned + unitReport.reserved, unitReport.total),
+      reservedOrHold: unitReport.reserved + unitReport.hold,
+    },
+    pipeline: {
+      newLeads: leads.filter((lead) => String(lead?.lead_date || "").slice(0, 7) === currentMonth).length,
+      consultations: consultations.filter((note) => getLocalDateKey(note?.consultation_date).slice(0, 7) === currentMonth).length,
+      highPotential: leads.filter((lead) => normalizeStatus(lead?.status) === "high_potential").length,
+      converted: leads.filter((lead) => normalizeStatus(lead?.status) === "converted").length,
+    },
+    documents: {
+      total: documents.length,
+      customersWithDocuments: documentCustomers.size,
+      customersWithoutDocuments: Math.max(contractors.length - documentCustomers.size, 0),
+    },
+  };
+}
+
 function calculateContractValue(units = [], paymentPlans = []) {
   const unitPrices = units.map((unit) => firstNumeric(unit?.total_price, unit?.price));
   if (unitPrices.some((value) => value !== null)) return unitPrices.reduce((sum, value) => sum + (value ?? 0), 0);
@@ -513,6 +702,12 @@ function matchesRange(row, range, now) {
 
 function getRangeStart(range, now) {
   const date = new Date(now);
+  if (range === "today") return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  if (range === "this_week") {
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    start.setDate(start.getDate() - start.getDay());
+    return start.getTime();
+  }
   if (range === "7" || range === "30") {
     date.setDate(date.getDate() - Number(range));
     return date.getTime();
@@ -520,4 +715,66 @@ function getRangeStart(range, now) {
   if (range === "month") return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
   if (range === "year") return new Date(date.getFullYear(), 0, 1).getTime();
   return Number.NEGATIVE_INFINITY;
+}
+
+function matchesOverviewPeriod(value, period, now) {
+  if (period === "all") return true;
+  const key = getLocalDateKey(value);
+  if (!key) return true;
+  const todayKey = getLocalDateKey(now);
+  if (period === "today") return key === todayKey;
+  const date = new Date(`${key}T00:00:00`);
+  const current = new Date(`${todayKey}T00:00:00`);
+  if (period === "this_month") return date.getFullYear() === current.getFullYear() && date.getMonth() === current.getMonth();
+  if (period === "this_year") return date.getFullYear() === current.getFullYear();
+  if (period === "this_week") {
+    const day = current.getDay();
+    const weekStart = new Date(current);
+    weekStart.setDate(current.getDate() - day);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return date >= weekStart && date <= weekEnd;
+  }
+  return true;
+}
+
+function getLocalDateKey(value) {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "" : [value.getFullYear(), String(value.getMonth() + 1).padStart(2, "0"), String(value.getDate()).padStart(2, "0")].join("-");
+  }
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? "" : getLocalDateKey(date);
+}
+
+function formatLocalTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return [String(date.getHours()).padStart(2, "0"), String(date.getMinutes()).padStart(2, "0")].join(":");
+}
+
+function formatEventTime(startTime, endTime) {
+  const start = String(startTime ?? "").slice(0, 5);
+  const end = String(endTime ?? "").slice(0, 5);
+  if (start && end) return `${start} - ${end}`;
+  return start || end || "";
+}
+
+function getLinkedCustomer(row, leadById, contractorById) {
+  const lead = row?.lead_id ? leadById.get(row.lead_id) : null;
+  const contractor = row?.contractor_id ? contractorById.get(row.contractor_id) : null;
+  return {
+    name: lead?.full_name || contractor?.full_name || "",
+    phone: lead?.phone || contractor?.phone || "",
+  };
+}
+
+function compareDateTime(left, right) {
+  return Date.parse(left?.consultation_date || "") - Date.parse(right?.consultation_date || "");
+}
+
+function compareEventTime(left, right) {
+  return String(left?.start_time || "99:99").localeCompare(String(right?.start_time || "99:99"));
 }

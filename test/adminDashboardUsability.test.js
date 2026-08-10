@@ -5,6 +5,7 @@ import { translations } from "../src/i18n/translations.js";
 import {
   buildDashboardAlertDetailRows,
   buildDashboardAlertReason,
+  buildDashboardOfficeSummary,
   getTodayScheduleAlerts,
   getUnreadDashboardAlerts,
   getPaymentAlerts,
@@ -78,6 +79,26 @@ describe("Admin Dashboard usability", () => {
     assert.notEqual(paymentToday[0].id, paymentTomorrow[0].id);
   });
 
+  it("builds customer and schedule shortcut summaries from CRM rows", () => {
+    const summary = buildDashboardOfficeSummary({
+      now: new Date("2026-08-09T12:00:00Z"),
+      leads: [
+        { lead_date: "2026-08-09", status: "high_potential" },
+        { lead_date: "2026-08-01", status: "new" },
+      ],
+      consultations: [
+        { consultation_date: "2026-08-09T09:00:00Z", next_follow_up_date: "2026-08-09" },
+        { consultation_date: "2026-08-01T09:00:00Z", next_follow_up_date: "2026-08-12" },
+      ],
+      events: [
+        { event_date: "2026-08-09", status: "scheduled" },
+        { event_date: "2026-08-09", status: "cancelled" },
+      ],
+    });
+    assert.deepEqual(summary.customers, { todayLeads: 1, monthLeads: 2, highPotential: 1, followUpsNeeded: 2 });
+    assert.deepEqual(summary.schedules, { todaySchedules: 1, todayConsultations: 1, todayFollowUps: 1 });
+  });
+
   it("connects alert details, responsive shell state, and bilingual controls", () => {
     const dashboard = readFileSync(new URL("../src/components/admin/AdminDashboard.jsx", import.meta.url), "utf8");
     const shell = readFileSync(new URL("../src/components/admin/AdminShell.jsx", import.meta.url), "utf8");
@@ -108,6 +129,10 @@ describe("Admin Dashboard usability", () => {
     assert.match(dashboard, /aria-expanded=\{expanded\}/);
     assert.match(dashboard, /buildDashboardAlertReason/);
     assert.match(dashboard, /crm-alert-detail/);
+    assert.match(dashboard, /crm-office-shortcuts/);
+    assert.match(dashboard, /Customer Management/);
+    assert.match(dashboard, /Schedule Management/);
+    assert.match(dashboard, /\/admin\/customer-management/);
     assert.match(shell, /is-sidebar-collapsed/);
     assert.match(shell, /timorcrest_admin_sidebar_collapsed/);
     assert.match(shell, /dashboardAlerts/);

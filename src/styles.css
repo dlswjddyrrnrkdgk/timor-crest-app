@@ -690,6 +690,8 @@ button:disabled {
   --crm-report-font-md: 13px;
   --crm-report-font-lg: 16px;
   --crm-report-font-xl: 20px;
+  --crm-report-line-height: 1.4;
+  --crm-report-line-height-tight: 1.3;
   --crm-settings-card-padding: var(--space-5);
   --crm-settings-gap: var(--space-4);
   --crm-settings-control-gap: var(--space-2);
@@ -1638,6 +1640,60 @@ button:disabled {
   padding: 16px;
 }
 
+.crm-office-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.crm-office-shortcut {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 14px;
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 142px;
+  padding: 13px;
+  border: 1px solid var(--crm-border);
+  border-radius: 9px;
+  color: var(--crm-text);
+  background: #FBFCFE;
+  text-decoration: none;
+  transition: border-color 160ms var(--ease-standard), box-shadow 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+}
+
+.crm-office-shortcut:hover,
+.crm-office-shortcut:focus-visible {
+  border-color: #A9C7F3;
+  box-shadow: 0 6px 14px rgba(33, 104, 213, 0.08);
+  transform: translateY(-1px);
+}
+
+.crm-office-shortcut__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--crm-primary);
+  background: #EAF2FF;
+}
+
+.crm-office-shortcut__body,
+.crm-office-shortcut__stats {
+  display: grid;
+  min-width: 0;
+}
+
+.crm-office-shortcut__body { gap: 8px; }
+.crm-office-shortcut__body > strong { font-size: 13px; }
+.crm-office-shortcut__body > small { color: var(--crm-primary); font-size: 10px; font-weight: 800; }
+.crm-office-shortcut__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 10px; }
+.crm-office-shortcut__stats > span { display: grid; gap: 1px; min-width: 0; }
+.crm-office-shortcut__stats b { color: var(--crm-text); font-size: 16px; line-height: 1; }
+.crm-office-shortcut__stats small { overflow-wrap: anywhere; color: var(--crm-muted); font-size: 9px; line-height: 1.25; }
+
 .crm-quick-action {
   display: grid;
   position: relative;
@@ -2345,6 +2401,7 @@ button:disabled {
   .crm-dashboard-grid--middle { grid-template-columns: 1fr; }
   .crm-dashboard-grid--middle .crm-dashboard-card:last-child { grid-column: auto; }
   .crm-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crm-office-shortcuts { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 500px) {
@@ -3281,11 +3338,185 @@ button:disabled {
   margin: 0 0 var(--space-3);
 }
 
+.crm-reports__data-warning {
+  padding: var(--space-3) var(--space-4);
+  border: var(--crm-report-border-width) solid #F1D39A;
+  border-radius: var(--crm-report-radius);
+  color: #8B5E16;
+  background: #FFF9ED;
+}
+
+.crm-reports__overview-section {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  min-width: 0;
+}
+
+.crm-reports__overview-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.crm-reports__overview-heading h2 {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-lg);
+  line-height: var(--crm-report-line-height-tight);
+  margin: var(--space-1) 0 0;
+}
+
+.crm-reports__overview-period,
+.crm-reports__overview-date {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-sm);
+  white-space: nowrap;
+}
+
+.crm-reports__brief-grid,
+.crm-reports__health-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.crm-reports__brief-card,
+.crm-reports__health-card {
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.crm-reports__brief-card .crm-reports__section-header {
+  margin-bottom: var(--space-3);
+}
+
+.crm-reports__brief-card .crm-reports__section-header h3,
+.crm-reports__health-card h3 {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-md);
+  line-height: var(--crm-report-line-height-tight);
+  margin: 0;
+}
+
+.crm-reports__brief-list {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.crm-reports__office-item {
+  border-bottom: var(--crm-report-border-width) solid var(--crm-border-soft);
+  min-width: 0;
+  padding: var(--space-2) 0;
+}
+
+.crm-reports__office-item:first-child { padding-top: 0; }
+.crm-reports__office-item:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.crm-reports__office-item-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.crm-reports__office-item-copy strong,
+.crm-reports__office-item-copy span,
+.crm-reports__office-item-copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.crm-reports__office-item-copy strong {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-sm);
+}
+
+.crm-reports__office-item-copy small {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+}
+
+.crm-reports__office-item-copy span {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+  line-height: var(--crm-report-line-height);
+}
+
+.crm-reports__office-item--danger .crm-reports__office-item-copy strong,
+.crm-reports__office-item--danger .crm-reports__office-item-copy span { color: var(--crm-danger); }
+
+.crm-reports__health-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.crm-reports__health-card-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.crm-reports__health-card-heading strong {
+  color: var(--crm-text);
+  font-size: var(--crm-report-font-lg);
+  white-space: nowrap;
+}
+
+.crm-reports__health-card p {
+  color: var(--crm-muted);
+  font-size: var(--crm-report-font-xs);
+  line-height: var(--crm-report-line-height);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .crm-reports__kpis {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-bottom: var(--space-4);
+}
+
+.crm-reports__kpis--overview {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card {
+  min-height: 112px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 7px;
+  padding: 11px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__icon {
+  width: 30px;
+  height: 30px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__label {
+  font-size: 10px;
+  line-height: var(--crm-report-line-height-tight);
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__value {
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card--amount .crm-kpi-card__value {
+  font-size: 14px;
+}
+
+.crm-reports__kpis--overview .crm-kpi-card__helper {
+  display: none;
 }
 
 .crm-reports__kpis .crm-kpi-card,
@@ -3591,6 +3822,7 @@ button:disabled {
 
 @media (max-width: 1320px) {
   .crm-reports__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .crm-reports__kpis--overview { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
@@ -3598,6 +3830,9 @@ button:disabled {
   .crm-reports__controls { justify-content: flex-start; width: 100%; }
   .crm-reports__section-grid { grid-template-columns: 1fr; }
   .crm-reports__card--wide { grid-column: auto; }
+  .crm-reports__brief-grid,
+  .crm-reports__health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crm-reports__kpis--overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -3612,6 +3847,7 @@ button:disabled {
   .crm-reports__journey-meter { grid-column: 2; }
   .crm-reports__journey-row .crm-status-badge { grid-column: 2; justify-self: start; }
   .crm-reports__controls .crm-button { flex: 1; min-width: var(--crm-report-button-min-width); }
+  .crm-reports__overview-heading { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 420px) {
@@ -3619,9 +3855,12 @@ button:disabled {
   .crm-reports__metric-grid,
   .crm-reports__metric-grid--three,
   .crm-reports__journey-summary { grid-template-columns: 1fr; }
+  .crm-reports__kpis--overview { grid-template-columns: 1fr; }
   .crm-reports__controls { align-items: stretch; flex-direction: column; }
   .crm-reports__filter { width: 100%; }
   .crm-reports__controls .crm-button { flex: initial; width: 100%; }
+  .crm-reports__brief-grid,
+  .crm-reports__health-grid { grid-template-columns: 1fr; }
 }
 
 @media print {

@@ -4,6 +4,7 @@ import { SUPABASE_CONFIG_MESSAGE } from "./authService.js";
 const CONTRACTOR_SELECT = `
   id,
   profile_id,
+  project_id,
   unit_id,
   full_name,
   email,
@@ -18,6 +19,7 @@ const CONTRACTOR_SELECT = `
   created_at,
   unit:units (
     id,
+    project_id,
     unit_code,
     unit_name,
     property_type,
@@ -28,7 +30,7 @@ const CONTRACTOR_SELECT = `
   )
 `;
 
-const UNIT_SELECT = "id, unit_code, unit_name, property_type, total_price, currency, status, created_at";
+const UNIT_SELECT = "id, project_id, unit_code, unit_name, property_type, total_price, currency, status, created_at";
 
 export async function getAdminContractors() {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
@@ -162,6 +164,7 @@ function normalizeUnit(input) {
   const unitCode = requiredString(input.unit_code);
 
   return {
+    project_id: optionalString(input.project_id),
     unit_code: unitCode,
     unit_name: optionalString(input.unit_name) || unitCode,
     property_type: optionalString(input.property_type),
@@ -174,6 +177,7 @@ function normalizeUnit(input) {
 function normalizeContractor(input) {
   const payload = {
     profile_id: optionalString(input.profile_id),
+    project_id: optionalString(input.project_id),
     unit_id: optionalString(input.unit_id),
     full_name: requiredString(input.full_name),
     email: optionalString(input.email),

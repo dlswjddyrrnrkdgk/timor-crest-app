@@ -9,12 +9,15 @@ import {
   resolveSelectedProjectId,
   sortProjects,
 } from "../src/services/projectModel.js";
+import { filterRowsByProject } from "../src/services/projectDataModel.js";
 import { translations } from "../src/i18n/translations.js";
 
 const topbarSource = readFileSync(new URL("../src/components/admin/AdminTopbar.jsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
 const contextSource = readFileSync(new URL("../src/context/ProjectContext.jsx", import.meta.url), "utf8");
 const migrationSource = readFileSync(new URL("../supabase/migrations/0009_projects_foundation.sql", import.meta.url), "utf8");
+const coreMigrationSource = readFileSync(new URL("../supabase/migrations/0010_project_core_data.sql", import.meta.url), "utf8");
+const adminLayoutSource = readFileSync(new URL("../src/routes/AdminLayout.jsx", import.meta.url), "utf8");
 
 describe("Project foundation model", () => {
   it("normalizes project fields and safely falls back for missing values", () => {
@@ -74,5 +77,34 @@ describe("Project foundation model", () => {
     assert.match(migrationSource, /public\.is_admin\(\)/);
     assert.match(migrationSource, /on conflict \(slug\) do update/);
     assert.doesNotMatch(migrationSource, /project_id/);
+  });
+
+  it("seeds Ocean and scopes migrated core data by selected project", () => {
+    assert.match(coreMigrationSource, /'Timor Crest Ocean'/);
+    assert.match(coreMigrationSource, /'timor-crest-ocean'/);
+    assert.match(coreMigrationSource, /'Timor Crest Ocean development project'/);
+    assert.match(coreMigrationSource, /is_default,\s*created_at/);
+    assert.match(coreMigrationSource, /'active',\s*false,\s*now\(\),\s*now\(\)/);
+    assert.match(coreMigrationSource, /alter table public\.units\s+add column project_id/);
+    assert.match(coreMigrationSource, /alter table public\.contractors\s+add column project_id/);
+    assert.match(coreMigrationSource, /alter table public\.payment_plans\s+add column project_id/);
+    assert.equal((coreMigrationSource.match(/slug = 'timor-crest'/g) || []).length, 3);
+    assert.match(coreMigrationSource, /alter column project_id set not null/);
+
+    assert.deepEqual(
+      filterRowsByProject(
+        [
+          { id: "crest-unit", project_id: "crest" },
+          { id: "ocean-unit", project_id: "ocean" },
+        ],
+        "ocean",
+      ).map((row) => row.id),
+      ["ocean-unit"],
+    );
+    assert.deepEqual(filterRowsByProject([{ id: "legacy-unit" }], "ocean"), [{ id: "legacy-unit" }]);
+
+    assert.match(adminLayoutSource, /filterRowsByProject/);
+    assert.match(adminLayoutSource, /project_id: selectedProjectId/);
+    assert.match(adminLayoutSource, /createPaymentPlan\([\s\S]*selectedProjectId/);
   });
 });

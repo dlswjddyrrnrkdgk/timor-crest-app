@@ -254,6 +254,13 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: sidebar open/compact, route active, loading/error notice.
 - **Accessibility**: landmark navigation, labeled search, visible focus rings.
 
+#### Project Selector
+- **Structure**: compact labeled native select in the AdminTopbar action group, with the selected project status shown as supporting metadata.
+- **States**: loading, selected, fallback, and project list error.
+- **Persistence**: selected project id is stored in `timorcrest_selected_project_id` for the admin device.
+- **Accessibility**: the native select exposes the translated `Select Project` label; fallback state is conveyed by title text and border tone.
+- **Constraint**: phase 1 changes context and display only; existing CRM records are not filtered until project ids are migrated.
+
 #### KpiCard
 - **Structure**: icon, label, value, supporting trend or helper copy.
 - **Variants**: count, currency, percentage.

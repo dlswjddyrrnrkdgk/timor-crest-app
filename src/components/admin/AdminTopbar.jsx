@@ -4,6 +4,7 @@ import AdminIcon from "./AdminIcon.jsx";
 import { buildDashboardAlertDetailRows, buildDashboardAlertReason, getUnreadDashboardAlerts } from "../../services/adminDashboardModel.js";
 import { formatCurrencyAmount } from "../../services/formatters.js";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
+import { useProject } from "../../context/ProjectContext.jsx";
 
 export default function AdminTopbar({ dashboardAlerts = [], isMobileViewport, onLogout, onToggleSidebar, sidebarCollapsed, sidebarOpen, t }) {
   const { language } = useLanguage();
@@ -63,6 +64,7 @@ export default function AdminTopbar({ dashboardAlerts = [], isMobileViewport, on
         <input aria-label={t("Search customers, units, contracts...")} placeholder={t("Search customers, units, contracts...")} type="search" />
       </label>
       <div className="crm-topbar__actions">
+        <ProjectSelector t={t} />
         <div className="crm-notification-root" ref={notificationRootRef}>
           <button aria-controls="crm-notification-popover" aria-expanded={notificationsOpen} aria-haspopup="dialog" aria-label={t("Notifications")} className="crm-icon-button crm-notification-button" onClick={toggleNotifications} type="button">
             <AdminIcon name="bell" size={19} />
@@ -79,6 +81,38 @@ export default function AdminTopbar({ dashboardAlerts = [], isMobileViewport, on
       </div>
     </header>
   );
+}
+
+function ProjectSelector({ t }) {
+  const {
+    isProjectsLoading,
+    projects,
+    projectsError,
+    selectedProject,
+    selectedProjectId,
+    setSelectedProjectId,
+  } = useProject();
+  const statusLabel = selectedProject?.status ? t(capitalizeStatus(selectedProject.status)) : t("Not available");
+  const fallbackHint = projectsError ? t("Using default project fallback.") : t("Project Selector");
+
+  return (
+    <label className={`crm-project-selector${projectsError ? " is-fallback" : ""}`} title={fallbackHint}>
+      <span className="crm-project-selector__label">{t("Project")}</span>
+      <select
+        aria-label={t("Select Project")}
+        disabled={isProjectsLoading || !projects.length}
+        onChange={(event) => setSelectedProjectId(event.target.value)}
+        value={selectedProjectId}
+      >
+        {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+      </select>
+      <small>{statusLabel}{selectedProject?.is_default ? ` · ${t("Default Project")}` : ""}</small>
+    </label>
+  );
+}
+
+function capitalizeStatus(status) {
+  return String(status || "").replace(/(^|_)([a-z])/g, (_, prefix, character) => `${prefix}${character.toUpperCase()}`);
 }
 
 function NotificationPopover({ alerts, language, onMarkRead, selectedId, setSelectedId, t, unreadCount }) {

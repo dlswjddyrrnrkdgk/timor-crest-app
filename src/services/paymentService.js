@@ -8,6 +8,7 @@ import {
 
 const PAYMENT_PLAN_SELECT = `
   id,
+  project_id,
   contractor_id,
   unit_id,
   total_price,
@@ -61,13 +62,14 @@ export async function getPaymentPlanByContractor(contractorId) {
   return respond(data, error);
 }
 
-export async function createPaymentPlan(contractorId, unitId, totalPrice, currency = "USD") {
+export async function createPaymentPlan(contractorId, unitId, totalPrice, currency = "USD", projectId = null) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
   const { data, error } = await supabase
     .from("payment_plans")
     .insert({
       contractor_id: contractorId,
+      project_id: projectId || null,
       unit_id: unitId || null,
       total_price: normalizeNumber(totalPrice),
       currency: normalizeText(currency) || "USD",

@@ -14,6 +14,7 @@ import ReportsPage from "../components/admin/ReportsPage.jsx";
 import SettingsPage from "../components/admin/SettingsPage.jsx";
 import CustomerManagementPage from "../components/admin/CustomerManagementPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
+import { useProject } from "../context/ProjectContext.jsx";
 import {
   createContractor,
   createContractorWithAuth,
@@ -68,6 +69,7 @@ import { calculateDashboardKpis, getPaymentAlerts, getTodayScheduleAlerts } from
 import { listConsultationNotes, listCrmEvents, listSalesLeads, listSearchPerformanceSnapshots } from "../services/adminCustomerManagementService.js";
 import { signOut } from "../services/authService.js";
 import { formatCurrencyAmount } from "../services/formatters.js";
+import { filterRowsByProject } from "../services/projectDataModel.js";
 
 const UNIT_PAGE_SIZE = 10;
 
@@ -113,6 +115,7 @@ const emptyDocumentForm = {
 export default function AdminLayout() {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const { selectedProjectId } = useProject();
   const paymentDetailRef = useRef(null);
   const documentFileInputRef = useRef(null);
   const [units, setUnits] = useState([]);
@@ -188,8 +191,15 @@ export default function AdminLayout() {
   const hasPaymentItemChanges = paymentItemChanges.length > 0;
 
   useEffect(() => {
+    resetUnitForm();
+    resetContractorForm();
+    setSelectedDocumentContractorId("");
+    setPaymentPlan(null);
+    setPaymentOriginalItems([]);
+    setPaymentItems([]);
+    setPaymentSummaries({});
     loadDashboard();
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     function handleCustomerManagementDataChanged() {
@@ -229,6 +239,9 @@ export default function AdminLayout() {
       setMessage(unitResult.error || contractorResult.error || planResult.error);
       return;
     }
+    const scopedUnits = filterRowsByProject(unitResult.data, selectedProjectId);
+    const scopedContractors = filterRowsByProject(contractorResult.data, selectedProjectId);
+    const scopedPaymentPlans = filterRowsByProject(planResult.data, selectedProjectId);
     let nextJourneySteps = journeyResult.data || [];
     let nextJourneyMessage = journeyResult.error || "";
     if (!journeyResult.error && nextJourneySteps.length < 8) {
@@ -236,8 +249,8 @@ export default function AdminLayout() {
       nextJourneySteps = ensuredResult.data || nextJourneySteps;
       nextJourneyMessage = ensuredResult.error || "";
     }
-    setUnits(unitResult.data || []);
-    setContractors(contractorResult.data || []);
+    setUnits(scopedUnits);
+    setContractors(scopedContractors);
     setJourneyOriginalSteps(nextJourneySteps);
     setJourneySteps(nextJourneySteps);
     setJourneyMessage(nextJourneyMessage);
@@ -250,7 +263,7 @@ export default function AdminLayout() {
       searchSnapshots: searchResult.data || [],
       error: [leadsResult.error, consultationsResult.error, eventsResult.error, searchResult.error].filter(Boolean).join(" "),
     });
-    await loadPaymentSummaries(planResult.data || []);
+    await loadPaymentSummaries(scopedPaymentPlans);
     setStatus("ready");
   }
 
@@ -382,7 +395,8 @@ export default function AdminLayout() {
     event.preventDefault();
     setStatus("saving");
     setMessage("");
-    const result = selectedUnitId ? await updateUnit(selectedUnitId, unitForm) : await createUnit(unitForm);
+    const scopedUnitForm = { ...unitForm, project_id: selectedProjectId };
+    const result = selectedUnitId ? await updateUnit(selectedUnitId, scopedUnitForm) : await createUnit(scopedUnitForm);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
@@ -414,11 +428,12 @@ export default function AdminLayout() {
     event.preventDefault();
     setStatus("saving");
     setMessage("");
+    const scopedContractorForm = { ...contractorForm, project_id: selectedProjectId };
     const result = selectedContractorId
-      ? await updateContractor(selectedContractorId, contractorForm)
+      ? await updateContractor(selectedContractorId, scopedContractorForm)
       : manualContractorMode
-        ? await createContractor(contractorForm)
-        : await createContractorWithAuth(contractorForm);
+        ? await createContractor(scopedContractorForm)
+        : await createContractorWithAuth(scopedContractorForm);
     if (result.error) {
       setStatus("ready");
       setMessage(result.error);
@@ -534,6 +549,7 @@ export default function AdminLayout() {
       selectedContractor.unit_id,
       unit.total_price || 0,
       unit.currency || "USD",
+      selectedProjectId,
     );
     if (result.error) {
       setStatus("ready");
@@ -624,7 +640,7 @@ export default function AdminLayout() {
   async function refreshPaymentState(contractor) {
     await loadPaymentForContractor(contractor);
     const planResult = await getAdminPaymentPlans();
-    if (!planResult.error) await loadPaymentSummaries(planResult.data || []);
+    if (!planResult.error) await loadPaymentSummaries(filterRowsByProject(planResult.data, selectedProjectId));
     setStatus("ready");
   }
 

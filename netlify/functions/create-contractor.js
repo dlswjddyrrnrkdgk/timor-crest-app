@@ -8,6 +8,7 @@ const JSON_HEADERS = {
 const CONTRACTOR_SELECT = `
   id,
   profile_id,
+  project_id,
   unit_id,
   full_name,
   email,
@@ -18,6 +19,7 @@ const CONTRACTOR_SELECT = `
   created_at,
   unit:units (
     id,
+    project_id,
     unit_code,
     unit_name,
     property_type,
@@ -96,6 +98,7 @@ export async function handler(event) {
 
     const contractorPayload = {
       profile_id: created.userId,
+      project_id: input.project_id,
       unit_id: input.unit_id,
       full_name: input.full_name,
       email: input.email,
@@ -165,6 +168,7 @@ function parsePayload(body) {
     email: requiredText(input.email).toLowerCase(),
     full_name: requiredText(input.full_name),
     passport_no: optionalText(input.passport_no),
+    project_id: optionalUuid(input.project_id),
     phone: optionalText(input.phone),
     status: optionalText(input.status) || "active",
     temporary_password: requiredText(input.temporary_password || input.password),

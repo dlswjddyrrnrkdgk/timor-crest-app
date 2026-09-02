@@ -4,6 +4,7 @@ import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
+import { useProject } from "../../context/ProjectContext.jsx";
 import {
   createConsultationNote,
   createSalesLead,
@@ -42,6 +43,7 @@ const CONSULTATION_RESULT_OPTIONS = ["needs_follow_up", "sent_materials", "revie
 
 export default function CustomerManagementPage() {
   const { language, t } = useLanguage();
+  const { selectedProject, selectedProjectId } = useProject();
   const [data, setData] = useState(emptyData);
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
@@ -71,15 +73,18 @@ export default function CustomerManagementPage() {
 
   const refreshData = useCallback(async (nextStatus = "ready") => {
     setStatus(nextStatus);
-    const result = await loadCustomerManagementDashboard();
+    const result = await loadCustomerManagementDashboard(selectedProjectId);
     setData({ ...emptyData, ...(result.data || {}) });
     setMessage(result.error || "");
     setStatus("ready");
     if (typeof window !== "undefined") window.dispatchEvent(new Event("timorcrest:customer-management-data-changed"));
     return result;
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => {
+    setData(emptyData);
+    setSelectedLeadId("");
+    setSelectedConsultationId("");
     refreshData("loading");
   }, [refreshData]);
 
@@ -116,7 +121,7 @@ export default function CustomerManagementPage() {
 
   async function saveLead(form) {
     setMutation({ scope: "lead", state: "saving", error: "" });
-    const result = modal?.record ? await updateSalesLead(modal.record.id, form) : await createSalesLead(form);
+    const result = modal?.record ? await updateSalesLead(modal.record.id, form, selectedProjectId) : await createSalesLead(form, selectedProjectId);
     if (result.error) {
       setMutation({ scope: "lead", state: "error", error: result.error });
       return result;
@@ -131,7 +136,7 @@ export default function CustomerManagementPage() {
 
   async function saveConsultation(form) {
     setMutation({ scope: "consultation", state: "saving", error: "" });
-    const result = modal?.record ? await updateConsultationNote(modal.record.id, form) : await createConsultationNote(form);
+    const result = modal?.record ? await updateConsultationNote(modal.record.id, form, selectedProjectId) : await createConsultationNote(form, selectedProjectId);
     if (result.error) {
       setMutation({ scope: "consultation", state: "error", error: result.error });
       return result;
@@ -148,7 +153,7 @@ export default function CustomerManagementPage() {
     if (!deleteTarget) return;
     const { record, type } = deleteTarget;
     setMutation({ scope: type, state: "deleting", error: "" });
-    const result = type === "lead" ? await deleteSalesLead(record.id) : await deleteConsultationNote(record.id);
+    const result = type === "lead" ? await deleteSalesLead(record.id, selectedProjectId) : await deleteConsultationNote(record.id, selectedProjectId);
     if (result.error) {
       setMutation({ scope: type, state: "error", error: result.error });
       return;
@@ -165,7 +170,7 @@ export default function CustomerManagementPage() {
   return (
     <main className="crm-page crm-customer-management">
       <header className="crm-page-heading crm-customer-management__heading">
-        <div><p className="crm-eyebrow">{t("Workspace")}</p><h1>{t("Customer Management")}</h1><p>{t("Manage sales leads, consultations, schedules, and search visibility.")}</p></div>
+        <div><p className="crm-eyebrow">{t("Workspace")}</p><h1>{t("Customer Management")}</h1><p>{t("Manage sales leads, consultations, schedules, and search visibility.")}</p><span className="crm-project-scope-note">{t("Current Project")}: {selectedProject?.name || t("Not available")} · {t("Showing project-specific data.")}</span></div>
         <StatusBadge tone="info">{t("Manual data only")}</StatusBadge>
       </header>
 
@@ -198,9 +203,9 @@ export default function CustomerManagementPage() {
           {selectedConsultation ? <ConsultationDetailPanel consultation={selectedConsultation} language={language} lead={leadById.get(selectedConsultation.lead_id)} onDelete={openDeleteModal.bind(null, "consultation")} onEdit={openConsultationModal} t={t} /> : null}
         </ManagementPanel>
 
-        <ScheduleManagementPanel contractors={data.contractors} consultations={data.consultationNotes} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} t={t} />
+        <ScheduleManagementPanel contractors={data.contractors} consultations={data.consultationNotes} events={data.crmEvents} language={language} leads={data.salesLeads} onRefresh={refreshData} projectId={selectedProjectId} t={t} />
 
-        <SearchStatsManagementPanel language={language} onRefresh={refreshData} rows={data.searchSnapshots} t={t} />
+        <SearchStatsManagementPanel language={language} onRefresh={refreshData} projectId={selectedProjectId} rows={data.searchSnapshots} t={t} />
       </section>
 
       {modal?.type === "lead" ? <SalesLeadModal key={`lead-${modal.record?.id || "new"}`} language={language} lead={modal.record} onClose={() => setModal(null)} onSave={saveLead} saving={mutation.scope === "lead" && mutation.state === "saving"} t={t} /> : null}

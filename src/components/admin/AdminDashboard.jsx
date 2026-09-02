@@ -14,8 +14,10 @@ import KpiCard from "./KpiCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import AdminIcon from "./AdminIcon.jsx";
 import { formatCurrencyAmount } from "../../services/formatters.js";
+import { useProject } from "../../context/ProjectContext.jsx";
 
 export default function AdminDashboard({ contractors, customerManagementData = {}, documents, language, paymentSummaries, stats, t, units }) {
+  const { selectedProject } = useProject();
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const recentCustomers = getRecentCustomers(contractors);
   const paymentAlerts = getPaymentAlerts(paymentSummaries, contractors);
@@ -26,7 +28,7 @@ export default function AdminDashboard({ contractors, customerManagementData = {
   return (
     <div className="crm-dashboard">
       <div className="crm-page-heading">
-        <div><span className="crm-eyebrow">TIMOR CREST CRM</span><h1>{t("Dashboard")}</h1><p>{t("Welcome back, Admin. Here is what's happening with your sales today.")}</p></div>
+        <div><span className="crm-eyebrow">TIMOR CREST CRM</span><h1>{t("Dashboard")}</h1><p>{t("Welcome back, Admin. Here is what's happening with your sales today.")}</p><span className="crm-project-scope-note">{t("Current Project")}: {selectedProject?.name || t("Not available")} · {t("Showing project-specific data.")}</span></div>
         <button className="crm-date-button" type="button"><AdminIcon name="calendar" size={17} />{new Intl.DateTimeFormat(language === "kr" ? "ko-KR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date())}<span>⌄</span></button>
       </div>
 

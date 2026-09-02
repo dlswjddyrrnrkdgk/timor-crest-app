@@ -38,25 +38,28 @@ const PAYMENT_PLAN_SELECT = `
 
 const PAYMENT_ITEM_SELECT = "id, payment_plan_id, step_no, title, payment_ratio, required_amount, paid_amount, due_date, paid_date, status, note";
 
-export async function getAdminPaymentPlans() {
+export async function getAdminPaymentPlans(projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!projectId || String(projectId).startsWith("local-")) return respond([], null);
 
   const { data, error } = await supabase
     .from("payment_plans")
     .select(PAYMENT_PLAN_SELECT)
+    .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   return respond(data, error);
 }
 
-export async function getPaymentPlanByContractor(contractorId) {
+export async function getPaymentPlanByContractor(contractorId, projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
-  if (!contractorId) return respond(null, null);
+  if (!contractorId || !projectId || String(projectId).startsWith("local-")) return respond(null, null);
 
   const { data, error } = await supabase
     .from("payment_plans")
     .select(PAYMENT_PLAN_SELECT)
     .eq("contractor_id", contractorId)
+    .eq("project_id", projectId)
     .maybeSingle();
 
   return respond(data, error);
@@ -166,6 +169,7 @@ export async function getMyPaymentSummary() {
     .from("contractors")
     .select(`
       id,
+      project_id,
       full_name,
       email,
       phone,
@@ -183,7 +187,7 @@ export async function getMyPaymentSummary() {
   if (contractorError) return fail(contractorError.message);
   if (!contractor) return respond(null, null);
 
-  const planResult = await getPaymentPlanByContractor(contractor.id);
+  const planResult = await getPaymentPlanByContractor(contractor.id, contractor.project_id);
   if (planResult.error) return fail(planResult.error);
   if (!planResult.data) return respond({ contractor, unit: contractor.unit, plan: null, items: [], totals: calculatePaymentTotals(null, []) }, null);
 

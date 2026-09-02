@@ -4,6 +4,7 @@ import EmptyState from "./EmptyState.jsx";
 import KpiCard from "./KpiCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { DOCUMENT_CATEGORIES, DOCUMENT_STATUSES } from "../../services/documentModel.js";
+import { useProject } from "../../context/ProjectContext.jsx";
 import {
   calculateDocumentKpis,
   filterDocuments,
@@ -61,6 +62,7 @@ export default function DocumentsPage({
   t,
   updateDocumentFormField,
 }) {
+  const { selectedProject } = useProject();
   const [category, setCategory] = useState("all");
   const [customerScope, setCustomerScope] = useState("all");
   const [fileType, setFileType] = useState("all");
@@ -106,6 +108,7 @@ export default function DocumentsPage({
           <span className="crm-eyebrow">TIMOR CREST CRM</span>
           <h1>{t("Documents")}</h1>
           <p>{t("Manage customer documents, contracts, receipts, and project files.")}</p>
+          <span className="crm-project-scope-note">{t("Current Project")}: {selectedProject?.name || t("Not available")} · {t("Showing project-specific data.")}</span>
         </div>
         <button className="crm-documents__primary-action" onClick={() => setShowUpload((current) => !current)} type="button">
           <AdminIcon name="upload" size={16} />

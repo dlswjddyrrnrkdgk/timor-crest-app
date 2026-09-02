@@ -32,12 +32,14 @@ const CONTRACTOR_SELECT = `
 
 const UNIT_SELECT = "id, project_id, unit_code, unit_name, property_type, total_price, currency, status, created_at";
 
-export async function getAdminContractors() {
+export async function getAdminContractors(projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!projectId || String(projectId).startsWith("local-")) return respond([], null);
 
   const { data, error } = await supabase
     .from("contractors")
     .select(CONTRACTOR_SELECT)
+    .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   return respond(data, error);
@@ -116,10 +118,11 @@ export async function deleteContractor(id) {
   return error ? fail(error.message) : respond(true, null);
 }
 
-export async function getUnits() {
+export async function getUnits(projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!projectId || String(projectId).startsWith("local-")) return respond([], null);
 
-  const { data, error } = await supabase.from("units").select(UNIT_SELECT).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("units").select(UNIT_SELECT).eq("project_id", projectId).order("created_at", { ascending: false });
   return respond(data, error);
 }
 

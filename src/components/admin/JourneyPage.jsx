@@ -10,6 +10,7 @@ import {
   getJourneyStageStatus,
   getJourneyStageTitle,
 } from "../../services/adminJourneyModel.js";
+import { useProject } from "../../context/ProjectContext.jsx";
 
 const QUICK_PROGRESS_VALUES = [0, 25, 50, 75, 100];
 
@@ -25,6 +26,7 @@ export default function JourneyPage({
   t,
   updateJourneyDraftStep,
 }) {
+  const { selectedProject } = useProject();
   const steps = useMemo(
     () => [...(Array.isArray(journeySteps) ? journeySteps : [])].sort((first, second) => Number(first.step_no || 0) - Number(second.step_no || 0)),
     [journeySteps],
@@ -61,6 +63,7 @@ export default function JourneyPage({
           <span className="crm-eyebrow">PROJECT JOURNEY</span>
           <h1>{t("Journey")}</h1>
           <p>{t("Manage the shared project journey and construction progress.")}</p>
+          <span className="crm-project-scope-note">{t("Current Project")}: {selectedProject?.name || t("Not available")} · {t("Showing project-specific data.")}</span>
         </div>
         {steps.length < 8 ? (
           <button className="crm-button crm-button--secondary" disabled={isSaving} onClick={ensureJourneyDefaults} type="button">

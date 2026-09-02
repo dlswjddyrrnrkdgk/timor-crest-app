@@ -10,7 +10,7 @@ import ScheduleCalendar from "./ScheduleCalendar.jsx";
 import ScheduleDetailPanel from "./ScheduleDetailPanel.jsx";
 import ScheduleModal from "./ScheduleModal.jsx";
 
-export default function ScheduleManagementPanel({ contractors, consultations, events, language, leads, onRefresh, t }) {
+export default function ScheduleManagementPanel({ contractors, consultations, events, language, leads, onRefresh, projectId, t }) {
   const now = useMemo(() => new Date(), []);
   const [filters, setFilters] = useState({ query: "", event_type: "all", status: "all" });
   const [selectedDate, setSelectedDate] = useState(() => formatEventDateKey(now));
@@ -74,7 +74,7 @@ export default function ScheduleManagementPanel({ contractors, consultations, ev
 
   async function saveSchedule(form) {
     setMutation({ state: "saving", error: "" });
-    const result = await (modalEvent?.id ? updateCrmEvent(modalEvent.id, form) : createCrmEvent(form));
+    const result = await (modalEvent?.id ? updateCrmEvent(modalEvent.id, form, projectId) : createCrmEvent(form, projectId));
     if (result.error) {
       setMutation({ state: "error", error: result.error });
       return result;
@@ -92,7 +92,7 @@ export default function ScheduleManagementPanel({ contractors, consultations, ev
   async function confirmDelete() {
     if (!deleteTarget) return;
     setMutation({ state: "deleting", error: "" });
-    const result = await deleteCrmEvent(deleteTarget.id);
+    const result = await deleteCrmEvent(deleteTarget.id, projectId);
     if (result.error) {
       setMutation({ state: "error", error: result.error });
       return;

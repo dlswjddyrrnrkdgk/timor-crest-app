@@ -43,11 +43,11 @@ export default function ContractorLayout() {
     setMessage("");
     setJourneyMessage("");
     setDocumentMessage("");
-    const [contractResult, paymentResult, journeyResult, documentResult] = await Promise.all([
-      getMyContractorSummary(),
+    const contractResult = await getMyContractorSummary();
+    const [paymentResult, journeyResult, documentResult] = await Promise.all([
       getMyPaymentSummary(),
-      getJourneySteps(),
-      getMyDocumentSummary(),
+      getJourneySteps(contractResult.data?.project_id),
+      getMyDocumentSummary(contractResult.data?.project_id),
     ]);
     if (contractResult.error || paymentResult.error) {
       setMessage(contractResult.error || paymentResult.error);

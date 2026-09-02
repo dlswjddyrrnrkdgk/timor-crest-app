@@ -50,7 +50,7 @@ export function getPaymentAlerts(paymentSummaries = {}, contractors = [], limit 
     .slice(0, limit);
 }
 
-export function getTodayScheduleAlerts({ events = [], consultations = [], leads = [], contractors = [], now = new Date(), limit = 5 } = {}) {
+export function getTodayScheduleAlerts({ events = [], consultations = [], leads = [], contractors = [], now = new Date(), limit = 5, projectId = "" } = {}) {
   const today = getLocalDateKey(now);
   if (!today) return [];
 
@@ -64,7 +64,7 @@ export function getTodayScheduleAlerts({ events = [], consultations = [], leads 
 
   const visible = activities.slice(0, Math.max(0, limit));
   const alerts = visible.map((activity) => ({
-    id: `${activity.id}:${activity.date}`,
+    id: `${projectId || "project"}:${activity.id}:${activity.date}`,
     alertType: activity.source_type,
     sourceType: activity.source_type,
     title: activity.title,
@@ -83,7 +83,7 @@ export function getTodayScheduleAlerts({ events = [], consultations = [], leads 
 
   if (activities.length > visible.length) {
     alerts.push({
-      id: `schedule:more:${today}`,
+      id: `${projectId || "project"}:schedule:more:${today}`,
       alertType: "schedule_more",
       count: activities.length - visible.length,
       title: `+${activities.length - visible.length} more`,

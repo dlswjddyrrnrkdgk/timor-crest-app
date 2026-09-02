@@ -24,12 +24,12 @@ describe("Journey progress save synchronization", () => {
 
   it("saves all changed Journey steps with payloads that include progress_percent", () => {
     assert.match(journeyServiceSource, /\.update\(buildJourneyStepUpdatePayload\(values\)\)/);
-    assert.match(adminLayoutSource, /Promise\.all\(changes\.map\(\(change\) => updateJourneyStep\(change\.id, change\.values\)\)\)/);
+    assert.match(adminLayoutSource, /Promise\.all\(changes\.map\(\(change\) => updateJourneyStep\(change\.id, change\.values, selectedProjectId\)\)\)/);
     assert.doesNotMatch(journeyServiceSource, /if\s*\(\s*progress_percent\s*\)/);
   });
 
   it("uses Supabase Journey rows and preserves zero progress in Contractor display", () => {
-    assert.match(contractorLayoutSource, /getJourneySteps\(\)/);
+    assert.match(contractorLayoutSource, /getJourneySteps\(contractResult\.data\?\.project_id\)/);
     assert.match(contractorLayoutSource, /value=\{currentStep\.progress_percent\}/);
     assert.match(contractorLayoutSource, /value=\{item\.progress_percent\}/);
     assert.match(animatedProgressSource, /Number\(value \?\? 0\)/);

@@ -28,7 +28,7 @@ import {
   buildSearchTrendData,
 } from "../../../services/adminCustomerManagementSearchStatsModel.js";
 
-export default function SearchStatsManagementPanel({ language, onRefresh, rows, t }) {
+export default function SearchStatsManagementPanel({ language, onRefresh, projectId, rows, t }) {
   const [filters, setFilters] = useState({ query: "", source: "all", dateRange: "all" });
   const [selectedId, setSelectedId] = useState("");
   const [modal, setModal] = useState(null);
@@ -54,7 +54,7 @@ export default function SearchStatsManagementPanel({ language, onRefresh, rows, 
 
   async function saveSearchData(form) {
     setMutation({ state: "saving", error: "" });
-    const result = modal?.record ? await updateSearchPerformanceSnapshot(modal.record.id, form) : await createSearchPerformanceSnapshot(form);
+    const result = modal?.record ? await updateSearchPerformanceSnapshot(modal.record.id, form, projectId) : await createSearchPerformanceSnapshot(form, projectId);
     if (result.error) {
       setMutation({ state: "error", error: result.error });
       return result;
@@ -69,7 +69,7 @@ export default function SearchStatsManagementPanel({ language, onRefresh, rows, 
 
   async function importSearchData(payloads) {
     setMutation({ state: "importing", error: "" });
-    const result = await bulkCreateSearchPerformanceSnapshots(payloads);
+    const result = await bulkCreateSearchPerformanceSnapshots(payloads, projectId);
     if (result.error) {
       setMutation({ state: "error", error: result.error });
       return result;
@@ -84,7 +84,7 @@ export default function SearchStatsManagementPanel({ language, onRefresh, rows, 
   async function confirmDelete() {
     if (!deleteTarget) return;
     setMutation({ state: "deleting", error: "" });
-    const result = await deleteSearchPerformanceSnapshot(deleteTarget.id);
+    const result = await deleteSearchPerformanceSnapshot(deleteTarget.id, projectId);
     if (result.error) {
       setMutation({ state: "error", error: result.error });
       return;

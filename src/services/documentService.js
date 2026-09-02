@@ -9,6 +9,7 @@ import {
 
 const DOCUMENT_SELECT = `
   id,
+  project_id,
   contractor_id,
   unit_id,
   title,
@@ -43,34 +44,38 @@ const DOCUMENT_SELECT = `
   )
 `;
 
-export async function getAdminDocuments() {
+export async function getAdminDocuments(projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!projectId || String(projectId).startsWith("local-")) return respond([], null);
 
   const { data, error } = await supabase
     .from("document_files")
     .select(DOCUMENT_SELECT)
+    .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   return respond(data, error);
 }
 
-export async function getDocumentsByContractor(contractorId) {
+export async function getDocumentsByContractor(contractorId, projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
-  if (!contractorId) return respond([], null);
+  if (!contractorId || !projectId || String(projectId).startsWith("local-")) return respond([], null);
 
   const { data, error } = await supabase
     .from("document_files")
     .select(DOCUMENT_SELECT)
     .eq("contractor_id", contractorId)
+    .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
   return respond(data, error);
 }
 
-export async function uploadDocument({ category, contractorId, file, note, title, unitId }) {
+export async function uploadDocument({ category, contractorId, file, note, projectId, title, unitId }) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
   if (!contractorId) return fail("문서를 연결할 계약자를 선택해 주세요.");
+  if (!projectId || String(projectId).startsWith("local-")) return fail("프로젝트를 선택해 주세요.");
   const validationError = validateDocumentFile(file);
   if (validationError) return fail(validationError);
 
@@ -91,6 +96,7 @@ export async function uploadDocument({ category, contractorId, file, note, title
 
   const payload = {
     id: documentId,
+    project_id: projectId,
     contractor_id: contractorId,
     unit_id: optionalText(unitId),
     title: normalizedTitle,
@@ -126,8 +132,9 @@ export async function uploadDocument({ category, contractorId, file, note, title
   return respond(data, null);
 }
 
-export async function updateDocumentMetadata(documentId, values) {
+export async function updateDocumentMetadata(documentId, values, projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!documentId || !projectId || String(projectId).startsWith("local-")) return fail("문서와 프로젝트를 확인해 주세요.");
 
   const { data, error } = await supabase
     .from("document_files")
@@ -138,19 +145,22 @@ export async function updateDocumentMetadata(documentId, values) {
       note: optionalText(values.note),
     })
     .eq("id", documentId)
+    .eq("project_id", projectId)
     .select(DOCUMENT_SELECT)
     .single();
 
   return respond(data, error);
 }
 
-export async function deleteDocument(documentId) {
+export async function deleteDocument(documentId, projectId) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
+  if (!documentId || !projectId || String(projectId).startsWith("local-")) return fail("문서와 프로젝트를 확인해 주세요.");
 
   const { data: document, error: lookupError } = await supabase
     .from("document_files")
     .select("file_path")
     .eq("id", documentId)
+    .eq("project_id", projectId)
     .single();
 
   if (lookupError) return fail(lookupError.message);
@@ -158,7 +168,7 @@ export async function deleteDocument(documentId) {
   const removeResult = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.file_path]);
   if (removeResult.error) return fail(removeResult.error.message);
 
-  const { error } = await supabase.from("document_files").delete().eq("id", documentId);
+  const { error } = await supabase.from("document_files").delete().eq("id", documentId).eq("project_id", projectId);
   return error ? fail(error.message) : respond(true, null);
 }
 
@@ -182,20 +192,23 @@ export async function createDocumentDownloadUrl(filePath, fileName) {
   return respond(data?.signedUrl || null, error);
 }
 
-export async function getMyDocuments() {
+export async function getMyDocuments(projectId = null) {
   if (!isSupabaseConfigured) return fail(SUPABASE_CONFIG_MESSAGE);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("document_files")
     .select(DOCUMENT_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false });
+  if (projectId && !String(projectId).startsWith("local-")) query = query.eq("project_id", projectId);
+
+  const { data, error } = await query;
 
   return respond(data, error);
 }
 
-export async function getMyDocumentSummary() {
-  const result = await getMyDocuments();
+export async function getMyDocumentSummary(projectId = null) {
+  const result = await getMyDocuments(projectId);
   if (result.error) return result;
 
   const documents = result.data || [];

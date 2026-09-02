@@ -9,7 +9,7 @@ const menuItems = [
   ["/admin/documents", "Documents", "document"],
   ["/admin/journey", "Journey", "journey"],
   ["/admin/customer-management", "Customer/Schedule", "customers"],
-  ["/admin/reports", "Reports", "trend"],
+  ["/admin/accounting", "Accounting", "payment"],
   ["/admin/settings", "Settings", "settings"],
 ];
 

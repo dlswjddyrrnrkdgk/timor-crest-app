@@ -1,4 +1,4 @@
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AnimatedProgress from "../components/AnimatedProgress.jsx";
 import CollapsiblePanel from "../components/CollapsiblePanel.jsx";
@@ -10,7 +10,7 @@ import DocumentsCrmPage from "../components/admin/DocumentsPage.jsx";
 import UnitsInventoryPage from "../components/admin/UnitsPage.jsx";
 import PaymentsCrmPage from "../components/admin/PaymentsPage.jsx";
 import JourneyCrmPage from "../components/admin/JourneyPage.jsx";
-import ReportsPage from "../components/admin/ReportsPage.jsx";
+import AccountingPage from "../components/admin/AccountingPage.jsx";
 import SettingsPage from "../components/admin/SettingsPage.jsx";
 import CustomerManagementPage from "../components/admin/CustomerManagementPage.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -208,7 +208,7 @@ export default function AdminLayout() {
 
     window.addEventListener("timorcrest:customer-management-data-changed", handleCustomerManagementDataChanged);
     return () => window.removeEventListener("timorcrest:customer-management-data-changed", handleCustomerManagementDataChanged);
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => {
     setUnitPage((current) => Math.min(current, Math.max(1, Math.ceil(sortedUnits.length / UNIT_PAGE_SIZE))));
@@ -224,15 +224,15 @@ export default function AdminLayout() {
     setJourneyMessage("");
     setDocumentMessage("");
     const [unitResult, contractorResult, planResult, journeyResult, documentResult, leadsResult, consultationsResult, eventsResult, searchResult] = await Promise.all([
-      getUnits(),
-      getAdminContractors(),
-      getAdminPaymentPlans(),
-      getJourneySteps(),
-      getAdminDocuments(),
-      listSalesLeads(),
-      listConsultationNotes(),
-      listCrmEvents(),
-      listSearchPerformanceSnapshots(),
+      getUnits(selectedProjectId),
+      getAdminContractors(selectedProjectId),
+      getAdminPaymentPlans(selectedProjectId),
+      getJourneySteps(selectedProjectId),
+      getAdminDocuments(selectedProjectId),
+      listSalesLeads(selectedProjectId),
+      listConsultationNotes(selectedProjectId),
+      listCrmEvents(selectedProjectId),
+      listSearchPerformanceSnapshots(selectedProjectId),
     ]);
     if (unitResult.error || contractorResult.error || planResult.error) {
       setStatus("ready");
@@ -245,7 +245,7 @@ export default function AdminLayout() {
     let nextJourneySteps = journeyResult.data || [];
     let nextJourneyMessage = journeyResult.error || "";
     if (!journeyResult.error && nextJourneySteps.length < 8) {
-      const ensuredResult = await ensureDefaultJourneySteps();
+      const ensuredResult = await ensureDefaultJourneySteps(selectedProjectId);
       nextJourneySteps = ensuredResult.data || nextJourneySteps;
       nextJourneyMessage = ensuredResult.error || "";
     }
@@ -268,7 +268,12 @@ export default function AdminLayout() {
   }
 
   async function loadCustomerManagementAlerts() {
-    const [leadsResult, consultationsResult, eventsResult, searchResult] = await Promise.all([listSalesLeads(), listConsultationNotes(), listCrmEvents(), listSearchPerformanceSnapshots()]);
+    const [leadsResult, consultationsResult, eventsResult, searchResult] = await Promise.all([
+      listSalesLeads(selectedProjectId),
+      listConsultationNotes(selectedProjectId),
+      listCrmEvents(selectedProjectId),
+      listSearchPerformanceSnapshots(selectedProjectId),
+    ]);
     setCustomerManagementAlertsData({
       consultations: consultationsResult.data || [],
       events: eventsResult.data || [],
@@ -302,7 +307,7 @@ export default function AdminLayout() {
     setPaymentMethodForm(buildPaymentMethodForm(contractor));
     if (!contractor?.id) return;
 
-    const planResult = await getPaymentPlanByContractor(contractor.id);
+    const planResult = await getPaymentPlanByContractor(contractor.id, selectedProjectId);
     if (planResult.error) {
       setMessage(planResult.error);
       return;
@@ -460,7 +465,7 @@ export default function AdminLayout() {
     setStatus("saving");
     setMessage("");
 
-    const documentResult = await getDocumentsByContractor(contractor.id);
+    const documentResult = await getDocumentsByContractor(contractor.id, selectedProjectId);
     if (documentResult.error) {
       setStatus("ready");
       setMessage(`${t("계약자 문서 확인에 실패했습니다")}: ${documentResult.error}`);
@@ -468,7 +473,7 @@ export default function AdminLayout() {
     }
 
     for (const document of documentResult.data || []) {
-      const deletedDocument = await deleteDocument(document.id);
+      const deletedDocument = await deleteDocument(document.id, selectedProjectId);
       if (deletedDocument.error) {
         setStatus("ready");
         setMessage(`${t("계약자 문서 Storage cleanup에 실패했습니다")}: ${deletedDocument.error}`);
@@ -639,7 +644,7 @@ export default function AdminLayout() {
 
   async function refreshPaymentState(contractor) {
     await loadPaymentForContractor(contractor);
-    const planResult = await getAdminPaymentPlans();
+    const planResult = await getAdminPaymentPlans(selectedProjectId);
     if (!planResult.error) await loadPaymentSummaries(filterRowsByProject(planResult.data, selectedProjectId));
     setStatus("ready");
   }
@@ -664,7 +669,7 @@ export default function AdminLayout() {
     setStatus("saving");
     setMessage("");
     setJourneyMessage("");
-    const results = await Promise.all(changes.map((change) => updateJourneyStep(change.id, change.values)));
+    const results = await Promise.all(changes.map((change) => updateJourneyStep(change.id, change.values, selectedProjectId)));
     const failedResult = results.find((result) => result.error);
     if (failedResult) {
       setStatus("ready");
@@ -683,7 +688,7 @@ export default function AdminLayout() {
     setStatus("saving");
     setMessage("");
     setJourneyMessage("");
-    const result = await ensureDefaultJourneySteps();
+    const result = await ensureDefaultJourneySteps(selectedProjectId);
     if (result.error) {
       setStatus("ready");
       setJourneyMessage(result.error);
@@ -745,6 +750,7 @@ export default function AdminLayout() {
         ...formValues,
         contractorId: selectedDocumentContractor.id,
         unitId: selectedDocumentContractor.unit_id,
+        projectId: selectedProjectId,
         file: documentFile,
       });
 
@@ -767,7 +773,7 @@ export default function AdminLayout() {
   }
 
   async function reloadDocuments() {
-    const result = await getAdminDocuments();
+    const result = await getAdminDocuments(selectedProjectId);
     if (result.error) {
       setDocumentMessage(result.error);
       return;
@@ -776,7 +782,7 @@ export default function AdminLayout() {
   }
 
   async function reloadDocumentsForContractor(contractorId) {
-    const result = await getDocumentsByContractor(contractorId);
+    const result = await getDocumentsByContractor(contractorId, selectedProjectId);
     if (result.error) {
       setDocumentMessage(result.error);
       return false;
@@ -791,7 +797,7 @@ export default function AdminLayout() {
   async function submitDocumentMetadata(documentId, values) {
     setStatus("saving");
     setDocumentMessage("");
-    const result = await updateDocumentMetadata(documentId, values);
+    const result = await updateDocumentMetadata(documentId, values, selectedProjectId);
     if (result.error) {
       setStatus("ready");
       setDocumentMessage(result.error);
@@ -829,7 +835,7 @@ export default function AdminLayout() {
 
     setStatus("saving");
     setDocumentMessage("");
-    const result = await deleteDocument(document.id);
+    const result = await deleteDocument(document.id, selectedProjectId);
     if (result.error) {
       setStatus("ready");
       setDocumentMessage(result.error);
@@ -853,7 +859,7 @@ export default function AdminLayout() {
   const dashboardStats = calculateDashboardKpis({ contractors, units, paymentSummaries, journeySteps });
   const dashboardAlerts = [
     ...getPaymentAlerts(paymentSummaries, contractors),
-    ...getTodayScheduleAlerts({ ...customerManagementAlertsData, contractors }),
+    ...getTodayScheduleAlerts({ ...customerManagementAlertsData, contractors, projectId: selectedProjectId }),
   ];
 
   const shell = {
@@ -948,7 +954,8 @@ export default function AdminLayout() {
         <Route path="journey" element={<JourneyCrmPage {...shell} />} />
         <Route path="customer-management" element={<CustomerManagementPage />} />
         <Route path="documents" element={<DocumentsCrmPage {...shell} />} />
-        <Route path="reports" element={<ReportsPage {...shell} />} />
+        <Route path="accounting" element={<AccountingPage {...shell} />} />
+        <Route path="reports" element={<Navigate replace to="/admin/accounting" />} />
         <Route path="settings" element={<SettingsPage {...shell} />} />
       </Routes>
     </AdminShell>

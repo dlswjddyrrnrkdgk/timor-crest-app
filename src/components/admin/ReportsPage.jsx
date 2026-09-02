@@ -14,6 +14,7 @@ import {
   flattenPaymentSummaries,
 } from "../../services/adminReportsModel.js";
 import { formatCurrencyAmount } from "../../services/formatters.js";
+import { useProject } from "../../context/ProjectContext.jsx";
 
 const OVERVIEW_PERIOD_LABELS = {
   all: "All Time",
@@ -24,6 +25,7 @@ const OVERVIEW_PERIOD_LABELS = {
 };
 
 export default function ReportsPage({ contractors = [], customerManagementData = {}, documents = [], journeySteps = [], language = "en", paymentSummaries = {}, t, units = [] }) {
+  const { selectedProject } = useProject();
   const [overviewPeriod, setOverviewPeriod] = useState("all");
   const [exportMessage, setExportMessage] = useState("");
   const nowRef = useRef(new Date());
@@ -84,6 +86,7 @@ export default function ReportsPage({ contractors = [], customerManagementData =
           <span className="crm-eyebrow">{t("Analytics")}</span>
           <h1>{t("Reports Center")}</h1>
           <p>{t("View sales, payments, office tasks, and project status in one place.")}</p>
+          <span className="crm-project-scope-note">{t("Current Project")}: {selectedProject?.name || t("Not available")} · {t("Showing project-specific data.")}</span>
         </div>
         <div className="crm-reports__controls">
           <label className="crm-reports__filter">

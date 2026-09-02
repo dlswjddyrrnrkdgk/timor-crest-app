@@ -237,6 +237,7 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 | CRM/primary | --crm-primary | #2168D5 | Primary actions and links |
 | CRM/success | --crm-success | #23A27A | Paid and assigned states |
 | CRM/warning | --crm-warning | #F29A2E | Due-soon and reserved states |
+| CRM/warning-soft | --crm-warning-soft | #FFF9ED | Tax-reference and review backgrounds |
 | CRM/danger | --crm-danger | #D94C58 | Outstanding and error states |
 
 ### CRM layout
@@ -346,6 +347,15 @@ The Admin route is a separate desktop-first surface. It keeps the purchaser mobi
 - **States**: zero units, missing payment plan/items, zero amounts, partial payments, completed payments, and language-specific headers.
 - **Safety**: the `.xls` download uses UTF-8 HTML with escaped text and formula-injection protection. It contains only current Supabase-derived unit, buyer, and payment fields; keys, tokens, storage paths, and session data never enter the export.
 - **Constraint**: no CSV fallback, mock rows, extra worksheets, schema changes, or new spreadsheet/chart dependency.
+
+#### Accounting Cashbook
+- **Structure**: project-scoped heading and period controls, preserved Unit Payment Excel Export card, eight-metric accounting summary, filterable single-entry cashbook, optional transaction detail aside, tax-reference notice, and shared modal actions.
+- **Variants**: empty project, loading/error, income, expense, filtered results, selected row, create/edit modal, delete confirmation, and Excel export feedback.
+- **States**: income uses success semantics, expense uses danger semantics, selected rows use the CRM primary inset, and negative running balances remain visible rather than clamped.
+- **Data boundary**: every query and mutation requires the active `selectedProjectId`; update and delete operations also scope by `project_id`; payment plans are not synchronized into the cashbook in phase 1.
+- **Accessibility**: native labeled controls, keyboard-selectable rows, text direction badges, focus-trapped modal, focus return, and icon actions with translated accessible names.
+- **Scroll ownership**: `crm-main` owns vertical page scroll; only the dense desktop ledger table owns horizontal overflow; mobile replaces the table with stacked transaction cards and the detail aside follows the ledger.
+- **Safety**: tax categories are internal review references only. The notice explicitly requires confirmation by a Timor-Leste accountant or tax advisor before filing.
 
 #### Admin Settings Workspace
 - **Structure**: page heading followed by a two-column read-only settings layout. The left column owns Account & Access, App Preferences, and Portal Information; the right column owns Security & Environment, Data Management shortcuts, System Information, and the Danger Zone notice.

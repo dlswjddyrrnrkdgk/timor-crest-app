@@ -263,17 +263,18 @@ describe("Admin Reports CRM model", () => {
     assert.match(buildExcelTableHtml({}, rows, "kr"), /세대 코드/);
   });
 
-  it("connects the protected reports route, sidebar, page, styles, and bilingual labels", () => {
+  it("preserves the Excel report helper while Accounting owns the admin route", () => {
     const layout = readFileSync(new URL("../src/routes/AdminLayout.jsx", import.meta.url), "utf8");
     const sidebar = readFileSync(new URL("../src/components/admin/AdminSidebar.jsx", import.meta.url), "utf8");
-    const page = readFileSync(new URL("../src/components/admin/ReportsPage.jsx", import.meta.url), "utf8");
+    const page = readFileSync(new URL("../src/components/admin/AccountingPage.jsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
     for (const key of ["Reports Center", "View sales, payments, office tasks, and project status in one place.", "Executive Summary", "Today Office Brief", "Office Health Snapshot", "Customer Management", "Schedule Management", "Export Excel", "Unit Payment Excel Export", "Export unit-by-unit payment status including installment details.", "Print", "Date Range", "Outstanding Balance", "No report data."]) {
       assert.ok(translations.en[key], `Missing EN translation: ${key}`);
       assert.ok(translations.kr[key], `Missing KR translation: ${key}`);
     }
-    assert.match(layout, /<Route path="reports" element={<ReportsPage \{\.\.\.shell\} \/>} \/>/);
-    assert.match(sidebar, /\["\/admin\/reports", "Reports", "trend"\]/);
+    assert.match(layout, /<Route path="accounting" element={<AccountingPage \{\.\.\.shell\} \/>} \/>/);
+    assert.match(layout, /<Route path="reports" element={<Navigate replace to="\/admin\/accounting" \/>} \/>/);
+    assert.match(sidebar, /\["\/admin\/accounting", "Accounting", "payment"\]/);
     assert.doesNotMatch(page, /buildReportsCsv|Export CSV|\.csv/);
     assert.doesNotMatch(page, /crm-reports__section-grid/);
     assert.doesNotMatch(page, /title=\{t\("Sales Overview"\)\}/);
@@ -281,13 +282,13 @@ describe("Admin Reports CRM model", () => {
     assert.doesNotMatch(page, /title=\{t\("Payment Collection Report"\)\}/);
     assert.doesNotMatch(page, /title=\{t\("Documents Report"\)\}/);
     assert.doesNotMatch(page, /title=\{t\("Journey Progress Report"\)\}/);
-    assert.match(page, /crm-reports__kpis--overview/);
-    assert.match(page, /crm-reports__brief-grid/);
-    assert.match(page, /crm-reports__health-grid/);
+    assert.match(page, /crm-accounting__kpis/);
+    assert.match(page, /crm-accounting__ledger-layout/);
+    assert.match(page, /crm-accounting__tax-notice/);
     assert.match(page, /buildExcelTableHtml/);
     assert.match(page, /\.xls/);
     assert.match(page, /crm-reports__export-preview/);
-    assert.match(page, /window\.print/);
+    assert.match(page, /listAccountingTransactions/);
     assert.match(styles, /\.crm-reports__section-grid/);
     assert.match(styles, /\.crm-reports__export-preview/);
   });

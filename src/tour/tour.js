@@ -24,15 +24,16 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fb4c4);
-const view = { fov: 75, eye: 1.4 };
-const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 2000);
+// Fixed viewing settings (not adjustable by visitors).
+const FOV = 90;
+const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 2000);
 camera.rotation.order = 'YXZ';
 
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  camera.fov = (w / h < 1 ? Math.max(view.fov, 85) : view.fov);
+  camera.fov = FOV;
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -206,7 +207,7 @@ pct.textContent = '준비 완료'; bar.style.width = '100%'; go.classList.add('r
 const BLOCK = data.boxes.filter(b => b.k === 'block');
 const FLOORS = data.boxes.filter(b => b.k === 'floor');
 const R = 0.17, STEP = 0.32;
-let EYE = data.eye || 1.4; view.eye = EYE;
+const EYE = 1.4; // fixed eye height (m)
 const player = new THREE.Vector3(...data.spawn.p);
 let yaw = data.spawn.yaw, pitch = 0, feet = player.y - EYE;
 
@@ -364,15 +365,25 @@ data.options.forEach(op => {
   });
   optList.appendChild(g);
 });
-const eyeR = document.getElementById('eyeR'), fovR = document.getElementById('fovR');
-eyeR.value = EYE; document.getElementById('eyeV').textContent = EYE.toFixed(2) + ' m';
-eyeR.oninput = () => { EYE = view.eye = +eyeR.value; document.getElementById('eyeV').textContent = EYE.toFixed(2) + ' m'; };
-fovR.oninput = () => { view.fov = +fovR.value; document.getElementById('fovV').textContent = view.fov + '°'; resize(); };
 function updateTotal() {
   let s = 0; data.options.forEach(op => s += op.choices[sel[op.id]].price || 0);
   totalEl.textContent = '₩' + s.toLocaleString('ko-KR');
 }
-document.getElementById('optToggle').onclick = () => document.getElementById('opts').classList.toggle('open');
+/* ---------- panel toggles (options / floor plan) ---------- */
+function bindToggle(btnId, hideClass, on) {
+  const btn = document.getElementById(btnId);
+  const set = (v) => {
+    on = v;
+    document.body.classList.toggle(hideClass, !on);
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', String(on));
+  };
+  btn.onclick = () => set(!on);
+  set(on);
+}
+const smallScreen = matchMedia('(max-width:900px)').matches;
+bindToggle('optToggle', 'hide-opts', !smallScreen);
+bindToggle('mapToggle', 'hide-map', true);
 
 /* ---------- minimap ---------- */
 const map = document.getElementById('map'), mc = map.getContext('2d');

@@ -4786,3 +4786,12 @@ button:disabled {
   .crm-settings__checklist li .crm-status-badge { grid-column: 2; justify-self: start; }
   .crm-settings__danger { align-items: flex-start; }
 }
+
+/* 3D unit tour entry on the login screen */
+.tour-card { margin-top: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--surface-secondary); }
+.tour-card h2 { margin: 4px 0 6px; font-size: 17px; }
+.tour-card p { margin: 0 0 var(--space-3); color: var(--text-secondary); font-size: 13px; }
+.tour-card__list { display: grid; gap: 8px; }
+.tour-card__item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-elevated); color: inherit; text-decoration: none; box-shadow: var(--shadow-default); }
+.tour-card__item small { grid-column: 1; color: var(--text-secondary); font-size: 12px; }
+.tour-card__item span { grid-column: 2; grid-row: 1 / span 2; font-size: 18px; }

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="description" content="TIMOR CREST unit 3D walkthrough">
+<title>TIMOR CREST · 3D 둘러보기</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap">
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="cross"></div>
+
+<a id="back" class="panel" href="/login">← 포털</a>
+<div id="brand" class="panel"><b>TIMOR CREST</b><span>E-Type · 3D 둘러보기</span></div>
+<div id="room" class="panel">—</div>
+<div id="views" class="panel"></div>
+<div id="mapwrap" class="panel"><div class="cap"><span>평면도</span><span>클릭하여 이동</span></div><canvas id="map" width="460" height="460"></canvas></div>
+<button id="optToggle" class="panel">인테리어 옵션</button>
+
+<aside id="opts" class="panel">
+  <h2>인테리어 옵션</h2>
+  <div class="sub">선택 즉시 공간에 반영됩니다 <span class="tag">예시 가격</span></div>
+  <div id="optList"></div>
+  <div class="grp"><div class="t"><span>보기 설정</span><span id="viewVal"></span></div>
+    <label class="rg"><span>눈높이</span><input type="range" id="eyeR" min="1.2" max="1.75" step="0.01" value="1.4"><b id="eyeV">1.40 m</b></label>
+    <label class="rg"><span>시야각</span><input type="range" id="fovR" min="45" max="90" step="1" value="75"><b id="fovV">75°</b></label>
+  </div>
+  <div class="tot"><span style="font-size:12.5px;color:var(--ink-dim)">선택 옵션 합계</span><span class="v" id="total">₩0</span></div>
+  <div class="note">표시된 가격은 화면 구성용 예시값이며 실제 분양·옵션 가격과 다릅니다. 확정 가격은 추후 반영됩니다. 일부 가구는 연출용으로 실제보다 약간 작게 표현되었습니다.</div>
+</aside>
+
+<div id="disc">일부 가구는 공간 연출을 위해 실제보다 약간 작게 표현되었습니다</div>
+<div id="hint" class="panel"><kbd>W A S D</kbd> 이동 · 마우스 시점 · <kbd>Shift</kbd> 빠르게 · <kbd>Esc</kbd> 커서 해제</div>
+<div id="joy"><i></i></div>
+
+<div id="start">
+  <div class="box">
+    <h1>TIMOR CREST</h1>
+    <div class="t2">E-Type 세대 둘러보기</div>
+    <div id="bar"><i></i></div>
+    <div id="pct">공간을 불러오는 중… 0%</div>
+    <button id="go">둘러보기 시작</button>
+    <div class="keys" id="keys">
+      <span><kbd>W A S D</kbd></span><span>이동</span>
+      <span><kbd>마우스</kbd></span><span>시점 회전</span>
+      <span><kbd>Shift</kbd></span><span>빠르게 걷기</span>
+      <span><kbd>Esc</kbd></span><span>커서 해제 · 옵션 선택</span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/tour/tour.js"></script>
+</body>
+</html>

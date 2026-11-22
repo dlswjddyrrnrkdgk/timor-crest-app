@@ -10,6 +10,9 @@ import {
 import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 
+// Unit types that have a published 3D walkthrough (assets live under VITE_TOUR_ASSET_BASE/<slug>/).
+const UNIT_TOURS = [{ slug: "e-type", label: "E-Type", summary: "방 3 · 욕실 2 · 테라스" }];
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,6 +98,20 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="security-note">{t("계정은 관리자 초대 또는 수동 등록으로만 발급됩니다.")}</p>
+      <section className="tour-card" aria-label={t("세대 타입 3D 둘러보기")}>
+        <span className="eyebrow">3D WALKTHROUGH</span>
+        <h2>{t("세대 타입 3D 둘러보기")}</h2>
+        <p>{t("실제 세대를 걷듯이 둘러보고 인테리어 옵션을 비교해 보세요.")}</p>
+        <div className="tour-card__list">
+          {UNIT_TOURS.map((tour) => (
+            <a className="tour-card__item" href={`/tour/${tour.slug}`} key={tour.slug}>
+              <strong>{tour.label}</strong>
+              <small>{t(tour.summary)}</small>
+              <span aria-hidden="true">→</span>
+            </a>
+          ))}
+        </div>
+      </section>
     </LoginFrame>
   );
 }

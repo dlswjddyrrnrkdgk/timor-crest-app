@@ -4,6 +4,9 @@ export const SUPPORTED_LANGUAGES = ["en", "kr"];
 
 export const translations = {
   en: {
+    "세대 타입 3D 둘러보기": "3D unit tours",
+    "실제 세대를 걷듯이 둘러보고 인테리어 옵션을 비교해 보세요.": "Walk through each unit type and compare interior options.",
+    "방 3 · 욕실 2 · 테라스": "3 bed · 2 bath · terrace",
     Units: "Units",
     "Manage unit inventory, availability, and assigned buyers.": "Manage unit inventory, availability, and assigned buyers.",
     "New Unit": "New Unit",

@@ -8,6 +8,11 @@ import './tour.css';
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
 const BASE = `${ASSET_ROOT}/${TYPE}/v2/`;
+const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
+document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
+for (const [id, text] of [['brandType', `${TYPE_LABEL} · 3D 둘러보기`], ['startTitle', `${TYPE_LABEL} 세대 둘러보기`]]) {
+  const el = document.getElementById(id); if (el) el.textContent = text;
+}
 const url = (p) => (/^https?:/.test(p) ? p : BASE + p);
 
 const isTouch = matchMedia('(pointer:coarse)').matches;
@@ -91,6 +96,8 @@ put('satin', ['MAT_RI_CARCASS_DARK', 'MAT_RI_TRIM_WHITE', 'MAT_DOOR_LIGHT_GREY',
 put('blackglass', ['MAT_RI_APPLIANCE_GLASS', 'MAT_RI_TV_BLACK', 'BlackGlass']);
 put('steel', ['MAT_RI_STEEL_BRUSHED']); put('bronze', ['MAT_RI_BRONZE_DARK']); put('brass', ['MAT_RI_BRASS']);
 put('darkmetal', ['MI_MetalChromeScratched01', 'M_amalfi_darck_menal']);
+// per-unit material classes shipped with the scene (e.g. G-type MAT_G_* names)
+for (const [c, names] of Object.entries(data.matcls || {})) put(c, names);
 
 const probe = { min: { value: new THREE.Vector3(-1e4, -1e4, -1e4) }, max: { value: new THREE.Vector3(1e4, 1e4, 1e4) }, pos: { value: new THREE.Vector3() } };
 const BOX_CHUNK = THREE.ShaderChunk.envmap_physical_pars_fragment.replace(
@@ -113,13 +120,14 @@ vec3 tcBoxProject(vec3 r) {
 }
 const reflective = [];   // materials that receive the current room probe
 function makeMat(name, baked) {
-  const c = CLS[MATCLS[name]];
+  const key = MATCLS[name] ? name : name.replace(/\.\d{3}$/, '');
+  const c = CLS[MATCLS[key]];
   if (!c) return new THREE.MeshBasicMaterial({ map: baked });
   const m = new THREE.MeshStandardMaterial({
     color: c.metal ? c.color : 0x000000, metalness: c.metal ? 1 : 0, roughness: IS_MOBILE ? Math.max(c.r, 0.08) : c.r,
     emissive: 0xffffff, emissiveMap: baked, emissiveIntensity: c.emis ?? 1, envMapIntensity: c.env
   });
-  m.userData.cls = MATCLS[name]; boxProject(m); reflective.push(m); return m;
+  m.userData.cls = MATCLS[key]; boxProject(m); reflective.push(m); return m;
 }
 
 const jobs = data.groups.map(async g => {
@@ -458,7 +466,7 @@ renderer.setAnimationLoop(() => {
   }
   camera.position.set(player.x, player.y + Math.sin(bob) * 0.012, player.z);
   camera.rotation.set(pitch, yaw, 0);
-  const rn = roomName(); if (rn !== lastRoom) { lastRoom = rn; roomEl.textContent = rn || 'E-Type'; }
+  const rn = roomName(); if (rn !== lastRoom) { lastRoom = rn; roomEl.textContent = rn || TYPE_LABEL; }
   const rid = roomId(); if (rid) setProbe(probeFor(rid));
   drawMap();
   renderer.render(scene, camera);

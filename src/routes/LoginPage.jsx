@@ -11,7 +11,10 @@ import LanguageToggle from "../components/LanguageToggle.jsx";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 
 // Unit types that have a published 3D walkthrough (assets live under VITE_TOUR_ASSET_BASE/<slug>/).
-const UNIT_TOURS = [{ slug: "e-type", label: "E-Type", summary: "방 3 · 욕실 2 · 테라스" }];
+const UNIT_TOURS = [
+  { slug: "e-type", label: "E-Type", summary: "방 3 · 욕실 2 · 테라스" },
+  { slug: "g-type", label: "G-Type", summary: "방 3 · 알파룸 · 욕실 2 · 테라스" },
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();

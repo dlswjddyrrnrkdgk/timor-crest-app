@@ -8,7 +8,7 @@ import './tour.css';
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
 // Assets are cached as immutable, so every asset update must ship under a new version folder.
-const ASSET_VERSION = { 'g-type': 'v3' };
+const ASSET_VERSION = { 'g-type': 'v4' };
 const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
 const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
 document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
@@ -86,7 +86,9 @@ const CLS = {
   polished: { r: 0.12, env: 1.0 }, stone: { r: 0.26, env: 0.9 }, lacquer: { r: 0.30, env: 0.8 },
   wood: { r: 0.42, env: 0.6 }, satin: { r: 0.55, env: 0.45 }, blackglass: { r: 0.03, env: 1.0 },
   steel: { metal: 1, color: 0x9d9a95, r: 0.32, env: 0.85, emis: 0.30 }, bronze: { metal: 1, color: 0x6b5442, r: 0.36, env: 1.0, emis: 0.55 },
-  brass: { metal: 1, color: 0xd9ad6b, r: 0.24, env: 1.0, emis: 0.35 }, darkmetal: { metal: 1, color: 0x5a4c40, r: 0.32, env: 1.0, emis: 0.55 }
+  brass: { metal: 1, color: 0xd9ad6b, r: 0.24, env: 1.0, emis: 0.35 }, darkmetal: { metal: 1, color: 0x5a4c40, r: 0.32, env: 1.0, emis: 0.55 },
+  // mirrors: pure reflection of the room probe (a baked mirror is only a flat stand-in colour and reads as a hole)
+  mirror: { metal: 1, color: 0xf2f4f4, r: 0.02, env: 1.0, emis: 0 }
 };
 const MATCLS = {};
 const put = (c, names) => names.forEach(n => MATCLS[n] = c);

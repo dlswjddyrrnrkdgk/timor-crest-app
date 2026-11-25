@@ -31,7 +31,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fb4c4);
 // Fixed viewing settings (not adjustable by visitors).
 const FOV = 90;
-const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 2000);
+const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 2000); // near 0.1: better depth precision on phones (walk radius is 0.17)
 camera.rotation.order = 'YXZ';
 
 function resize() {

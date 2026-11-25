@@ -7,7 +7,9 @@ import './tour.css';
 /* ---------- where the 3D assets live (Cloudflare R2 in production) ---------- */
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
-const BASE = `${ASSET_ROOT}/${TYPE}/v2/`;
+// Assets are cached as immutable, so every asset update must ship under a new version folder.
+const ASSET_VERSION = { 'g-type': 'v3' };
+const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
 const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
 document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
 for (const [id, text] of [['brandType', `${TYPE_LABEL} · 3D 둘러보기`], ['startTitle', `${TYPE_LABEL} 세대 둘러보기`]]) {

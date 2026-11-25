@@ -8,7 +8,7 @@ import './tour.css';
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
 // Assets are cached as immutable, so every asset update must ship under a new version folder.
-const ASSET_VERSION = { 'g-type': 'v4' };
+const ASSET_VERSION = { 'g-type': 'v5' };
 const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
 const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
 document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
@@ -88,7 +88,9 @@ const CLS = {
   steel: { metal: 1, color: 0x9d9a95, r: 0.32, env: 0.85, emis: 0.30 }, bronze: { metal: 1, color: 0x6b5442, r: 0.36, env: 1.0, emis: 0.55 },
   brass: { metal: 1, color: 0xd9ad6b, r: 0.24, env: 1.0, emis: 0.35 }, darkmetal: { metal: 1, color: 0x5a4c40, r: 0.32, env: 1.0, emis: 0.55 },
   // mirrors: pure reflection of the room probe (a baked mirror is only a flat stand-in colour and reads as a hole)
-  mirror: { metal: 1, color: 0xf2f4f4, r: 0.02, env: 1.0, emis: 0 }
+  mirror: { metal: 1, color: 0xf2f4f4, r: 0.02, env: 1.0, emis: 0 },
+  // softer gold for thin frames/hardware: a very glossy thin metal edge sparkles while the camera moves
+  brass_soft: { metal: 1, color: 0xd5ab6c, r: 0.42, env: 0.75, emis: 0.45 }
 };
 const MATCLS = {};
 const put = (c, names) => names.forEach(n => MATCLS[n] = c);
@@ -123,14 +125,23 @@ vec3 tcBoxProject(vec3 r) {
   mat.customProgramCacheKey = () => 'tcbox';
 }
 const reflective = [];   // materials that receive the current room probe
+// Surfaces mounted a few mm in front of another (TV glass, pictures, downlight lenses, flush hardware) z-fight
+// on GPUs with low depth precision; a polygon offset (in depth-buffer units, so it scales with the device)
+// keeps the front surface in front. Level 2 sits above level 1 (e.g. a picture on its frame on wall panelling).
+const DECAL = data.decal || {};
+function decal(m, key) {
+  const lv = DECAL[key];
+  if (lv) { m.polygonOffset = true; m.polygonOffsetFactor = -lv; m.polygonOffsetUnits = -4 * lv; }
+  return m;
+}
 function makeMat(name, baked) {
-  const key = MATCLS[name] ? name : name.replace(/\.\d{3}$/, '');
+  const key = MATCLS[name] || DECAL[name] ? name : name.replace(/\.\d{3}$/, '');
   const c = CLS[MATCLS[key]];
-  if (!c) return new THREE.MeshBasicMaterial({ map: baked });
-  const m = new THREE.MeshStandardMaterial({
+  if (!c) return decal(new THREE.MeshBasicMaterial({ map: baked }), key);
+  const m = decal(new THREE.MeshStandardMaterial({
     color: c.metal ? c.color : 0x000000, metalness: c.metal ? 1 : 0, roughness: IS_MOBILE ? Math.max(c.r, 0.08) : c.r,
     emissive: 0xffffff, emissiveMap: baked, emissiveIntensity: c.emis ?? 1, envMapIntensity: c.env
-  });
+  }), key);
   m.userData.cls = MATCLS[key]; boxProject(m); reflective.push(m); return m;
 }
 

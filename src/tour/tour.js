@@ -8,7 +8,7 @@ import './tour.css';
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
 // Assets are cached as immutable, so every asset update must ship under a new version folder.
-const ASSET_VERSION = { 'g-type': 'v7', 'e-type': 'v3', 'm-type': 'v3' };
+const ASSET_VERSION = { 'g-type': 'v7', 'e-type': 'v3', 'm-type': 'v4' };
 const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
 const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
 document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;

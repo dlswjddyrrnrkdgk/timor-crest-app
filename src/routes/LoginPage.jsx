@@ -14,6 +14,7 @@ import { useLanguage } from "../i18n/LanguageProvider.jsx";
 const UNIT_TOURS = [
   { slug: "e-type", label: "E-Type", summary: "방 3 · 욕실 2 · 테라스" },
   { slug: "g-type", label: "G-Type", summary: "방 3 · 알파룸 · 욕실 2 · 테라스" },
+  { slug: "m-type", label: "M-Type", summary: "방 3 · 드레스룸 · 욕실 2 · 테라스" },
 ];
 
 export default function LoginPage() {

@@ -7,7 +7,14 @@ import './tour.css';
 /* ---------- where the 3D assets live (Cloudflare R2 in production) ---------- */
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
-const BASE = `${ASSET_ROOT}/${TYPE}/v2/`;
+// Assets are cached as immutable, so every asset update must ship under a new version folder.
+const ASSET_VERSION = { 'g-type': 'v7', 'e-type': 'v3', 'm-type': 'v4' };
+const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
+const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
+document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
+for (const [id, text] of [['brandType', `${TYPE_LABEL} · 3D 둘러보기`], ['startTitle', `${TYPE_LABEL} 세대 둘러보기`]]) {
+  const el = document.getElementById(id); if (el) el.textContent = text;
+}
 const url = (p) => (/^https?:/.test(p) ? p : BASE + p);
 
 const isTouch = matchMedia('(pointer:coarse)').matches;
@@ -26,7 +33,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fb4c4);
 // Fixed viewing settings (not adjustable by visitors).
 const FOV = 90;
-const camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 2000);
+const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 2000); // near 0.1: better depth precision on phones (walk radius is 0.17)
 camera.rotation.order = 'YXZ';
 
 function resize() {
@@ -79,7 +86,11 @@ const CLS = {
   polished: { r: 0.12, env: 1.0 }, stone: { r: 0.26, env: 0.9 }, lacquer: { r: 0.30, env: 0.8 },
   wood: { r: 0.42, env: 0.6 }, satin: { r: 0.55, env: 0.45 }, blackglass: { r: 0.03, env: 1.0 },
   steel: { metal: 1, color: 0x9d9a95, r: 0.32, env: 0.85, emis: 0.30 }, bronze: { metal: 1, color: 0x6b5442, r: 0.36, env: 1.0, emis: 0.55 },
-  brass: { metal: 1, color: 0xd9ad6b, r: 0.24, env: 1.0, emis: 0.35 }, darkmetal: { metal: 1, color: 0x5a4c40, r: 0.32, env: 1.0, emis: 0.55 }
+  brass: { metal: 1, color: 0xd9ad6b, r: 0.24, env: 1.0, emis: 0.35 }, darkmetal: { metal: 1, color: 0x5a4c40, r: 0.32, env: 1.0, emis: 0.55 },
+  // mirrors: pure reflection of the room probe (a baked mirror is only a flat stand-in colour and reads as a hole)
+  mirror: { metal: 1, color: 0xf2f4f4, r: 0.02, env: 1.0, emis: 0 },
+  // softer gold for thin frames/hardware: a very glossy thin metal edge sparkles while the camera moves
+  brass_soft: { metal: 1, color: 0xd5ab6c, r: 0.42, env: 0.75, emis: 0.45 }
 };
 const MATCLS = {};
 const put = (c, names) => names.forEach(n => MATCLS[n] = c);
@@ -91,6 +102,8 @@ put('satin', ['MAT_RI_CARCASS_DARK', 'MAT_RI_TRIM_WHITE', 'MAT_DOOR_LIGHT_GREY',
 put('blackglass', ['MAT_RI_APPLIANCE_GLASS', 'MAT_RI_TV_BLACK', 'BlackGlass']);
 put('steel', ['MAT_RI_STEEL_BRUSHED']); put('bronze', ['MAT_RI_BRONZE_DARK']); put('brass', ['MAT_RI_BRASS']);
 put('darkmetal', ['MI_MetalChromeScratched01', 'M_amalfi_darck_menal']);
+// per-unit material classes shipped with the scene (e.g. G-type MAT_G_* names)
+for (const [c, names] of Object.entries(data.matcls || {})) put(c, names);
 
 const probe = { min: { value: new THREE.Vector3(-1e4, -1e4, -1e4) }, max: { value: new THREE.Vector3(1e4, 1e4, 1e4) }, pos: { value: new THREE.Vector3() } };
 const BOX_CHUNK = THREE.ShaderChunk.envmap_physical_pars_fragment.replace(
@@ -112,14 +125,24 @@ vec3 tcBoxProject(vec3 r) {
   mat.customProgramCacheKey = () => 'tcbox';
 }
 const reflective = [];   // materials that receive the current room probe
+// Surfaces mounted a few mm in front of another (TV glass, pictures, downlight lenses, flush hardware) z-fight
+// on GPUs with low depth precision; a polygon offset (in depth-buffer units, so it scales with the device)
+// keeps the front surface in front. Level 2 sits above level 1 (e.g. a picture on its frame on wall panelling).
+const DECAL = data.decal || {};
+function decal(m, key) {
+  const lv = DECAL[key];
+  if (lv) { m.polygonOffset = true; m.polygonOffsetFactor = -lv; m.polygonOffsetUnits = -4 * lv; }
+  return m;
+}
 function makeMat(name, baked) {
-  const c = CLS[MATCLS[name]];
-  if (!c) return new THREE.MeshBasicMaterial({ map: baked });
-  const m = new THREE.MeshStandardMaterial({
+  const key = MATCLS[name] || DECAL[name] ? name : name.replace(/\.\d{3}$/, '');
+  const c = CLS[MATCLS[key]];
+  if (!c) return decal(new THREE.MeshBasicMaterial({ map: baked }), key);
+  const m = decal(new THREE.MeshStandardMaterial({
     color: c.metal ? c.color : 0x000000, metalness: c.metal ? 1 : 0, roughness: IS_MOBILE ? Math.max(c.r, 0.08) : c.r,
     emissive: 0xffffff, emissiveMap: baked, emissiveIntensity: c.emis ?? 1, envMapIntensity: c.env
-  });
-  m.userData.cls = MATCLS[name]; boxProject(m); reflective.push(m); return m;
+  }), key);
+  m.userData.cls = MATCLS[key]; boxProject(m); reflective.push(m); return m;
 }
 
 const jobs = data.groups.map(async g => {
@@ -458,7 +481,7 @@ renderer.setAnimationLoop(() => {
   }
   camera.position.set(player.x, player.y + Math.sin(bob) * 0.012, player.z);
   camera.rotation.set(pitch, yaw, 0);
-  const rn = roomName(); if (rn !== lastRoom) { lastRoom = rn; roomEl.textContent = rn || 'E-Type'; }
+  const rn = roomName(); if (rn !== lastRoom) { lastRoom = rn; roomEl.textContent = rn || TYPE_LABEL; }
   const rid = roomId(); if (rid) setProbe(probeFor(rid));
   drawMap();
   renderer.render(scene, camera);

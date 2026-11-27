@@ -8,7 +8,7 @@ import './tour.css';
 const TYPE = (location.pathname.match(/\/tour\/([\w-]+)/) || [null, 'e-type'])[1];
 const ASSET_ROOT = (import.meta.env.VITE_TOUR_ASSET_BASE || '/tour-assets').replace(/\/$/, '');
 // Assets are cached as immutable, so every asset update must ship under a new version folder.
-const ASSET_VERSION = { 'g-type': 'v8', 'e-type': 'v3', 'm-type': 'v6' };
+const ASSET_VERSION = { 'g-type': 'v8', 'e-type': 'v3', 'm-type': 'v6', 'pa-type': 'v1', 'pb-type': 'v1' };
 const BASE = `${ASSET_ROOT}/${TYPE}/${ASSET_VERSION[TYPE] || 'v2'}/`;
 const TYPE_LABEL = TYPE.replace(/-type$/i, '').toUpperCase() + '-Type';
 document.title = `TIMOR CREST · ${TYPE_LABEL} 3D 둘러보기`;
@@ -422,7 +422,8 @@ const planImg = document.createElement('canvas'); planImg.width = map.width; pla
   c.fillStyle = 'rgba(244,239,232,.85)';
   W.forEach(b => c.fillRect(mx(b[0]), mz(b[1]), Math.max(1.5, (b[2] - b[0]) * S), Math.max(1.5, (b[3] - b[1]) * S)));
   c.font = '500 17px "Noto Sans KR", sans-serif'; c.fillStyle = 'rgba(244,239,232,.55)'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  data.rooms.forEach(r => c.fillText(r.label, mx((r.r[0] + r.r[2]) / 2), mz((r.r[1] + r.r[3]) / 2)));
+  // r.hide: extra rect of a room already labelled; r.lp: explicit label point (x, z) for L-shaped / wrap-around rooms
+  data.rooms.forEach(r => { if (r.hide) return; const p = r.lp || [(r.r[0] + r.r[2]) / 2, (r.r[1] + r.r[3]) / 2]; c.fillText(r.label, mx(p[0]), mz(p[1])); });
 }
 function drawMap() {
   mc.clearRect(0, 0, map.width, map.height); mc.drawImage(planImg, 0, 0);

@@ -48,3 +48,14 @@ next to E-Type and fix whatever looks flatter, darker or more artificial.
 - Assets ship under a new version folder (`public/tour-assets/<type>/vN`, bump `ASSET_VERSION`) because they are
   cached as immutable.
 - Final check on the Netlify deploy preview: the tour loads the new version and the rooms look the same as the local check.
+
+## Penthouse (PA / PB) notes
+- Floor-to-floor 3,000, ceiling 2,800. Door head 2,150, window head 2,450 and sills match the other unit types; the
+  extra height goes into tray ceilings (band at 2,620) and bulkheads over built-ins and kitchen uppers.
+- Large units are split into more lightmap groups (living, kitchen/dining, corridor, alpha, service, two terraces)
+  so each 4K map keeps the same texel density as the smaller types.
+- Keep thousands of tiny islands out of a baked group: crystal chandelier prisms go to the GLASS group, otherwise
+  they eat a large part of the room's lightmap.
+- A mirror that faces a dark wall reads as a black hole in the tour (probe reflection); use art there instead.
+- Rooms in `scene.json` use the web group names as ids so each room switches to its own reflection probe;
+  `hide` / `lp` keep the minimap labels readable for wrap-around rooms.

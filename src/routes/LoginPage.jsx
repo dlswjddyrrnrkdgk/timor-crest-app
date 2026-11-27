@@ -15,6 +15,8 @@ const UNIT_TOURS = [
   { slug: "e-type", label: "E-Type", summary: "방 3 · 욕실 2 · 테라스" },
   { slug: "g-type", label: "G-Type", summary: "방 3 · 알파룸 · 욕실 2 · 테라스" },
   { slug: "m-type", label: "M-Type", summary: "방 3 · 드레스룸 · 욕실 2 · 테라스" },
+  { slug: "pa-type", label: "PA-Type", summary: "펜트하우스 · 방 4 · 알파룸 · 드레스룸 · 욕실 4 · 정원 테라스" },
+  { slug: "pb-type", label: "PB-Type", summary: "펜트하우스 · 방 4 · 알파룸 · 드레스룸 · 욕실 4 · 테라스" },
 ];
 
 export default function LoginPage() {

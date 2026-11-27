@@ -231,8 +231,10 @@ const BLOCK = data.boxes.filter(b => b.k === 'block');
 const FLOORS = data.boxes.filter(b => b.k === 'floor');
 const R = 0.17, STEP = 0.32;
 const EYE = 1.4; // fixed eye height (m)
-const player = new THREE.Vector3(...data.spawn.p);
-let yaw = data.spawn.yaw, pitch = 0, feet = player.y - EYE;
+// Every tour starts at the entrance (the '현관' viewpoint); scene.json spawn is only a fallback.
+const START = data.views.find(v => v.label === '현관') || data.spawn;
+const player = new THREE.Vector3(...START.p);
+let yaw = START.yaw, pitch = 0, feet = player.y - EYE;
 
 function floorAt(x, z, cur) {
   let best = null;

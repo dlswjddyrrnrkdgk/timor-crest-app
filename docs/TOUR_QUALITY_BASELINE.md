@@ -34,6 +34,9 @@ next to E-Type and fix whatever looks flatter, darker or more artificial.
 ## Geometry
 - No flicker (z-fighting) on pictures, TVs, rugs, mirrors, wall reveals or downlights while moving or turning.
   Thin layers sit on a decal offset (`scene.json` `decal`) or a real gap.
+- No shimmer ("지지직") on marble, wood, slats or tile joints while walking: every lightmap KTX2 ships with a full
+  mip chain (`ktx_mip.py`, ETC1S, linear-light box filter). Blender's glTF KTX2 export writes one level only, so
+  never ship its output directly; check `levelCount` > 1 in the KTX2 header.
 - No black blotches, torn faces or see-through cushions on bedding, sofas or chairs. Cloth layers have consistent
   normals facing the open side before baking.
 - Curved props are smooth: faucets, pendants, flowers, vases, handles, plants. No faceted or ball-like stand-ins.
@@ -57,5 +60,10 @@ next to E-Type and fix whatever looks flatter, darker or more artificial.
 - Keep thousands of tiny islands out of a baked group: crystal chandelier prisms go to the GLASS group, otherwise
   they eat a large part of the room's lightmap.
 - A mirror that faces a dark wall reads as a black hole in the tour (probe reflection); use art there instead.
-- Rooms in `scene.json` use the web group names as ids so each room switches to its own reflection probe;
-  `hide` / `lp` keep the minimap labels readable for wrap-around rooms.
+- Rooms in `scene.json` are the architectural rooms (`TOUR_ROOMS` in the unit cfg) with the web group as `id`, so the
+  floor-plan labels sit in the real room while each room still switches to its own reflection probe. The web group
+  rects follow as hidden fallbacks for door openings. `lp` places a label, `fs` shrinks it for narrow rooms, `hide`
+  drops it (small service rooms).
+- Wet-room cladding must not run along the joint between two rects of the same room (a toilet / tub alcove would be
+  sealed behind a tile skin); `clad(..., others=)` cuts those edges.
+- Terrace floors meet the lawn with no gap: a strip without a floor box blocks walking and shows as a dark slot.
